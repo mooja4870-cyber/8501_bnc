@@ -40,6 +40,8 @@ class Scanner:
 
         # 콜백: 신호 발생 시 외부에서 주입
         self.on_signal: Optional[Callable[[Signal], None]] = None
+        # 콜백: 스캔 1회꽀 완료 시 외부에서 주입 (첨산 감지용)
+        self.on_scan_complete: Optional[Callable[[], None]] = None
 
     # ── 제어 ───────────────────────────────────────────
 
@@ -135,6 +137,13 @@ class Scanner:
             f"신호 {signal_count}개 · "
             f"{datetime.now().strftime('%H:%M:%S')}"
         )
+
+        # 스캔 완료 콜백 (첨산 감지 등)
+        if self.on_scan_complete:
+            try:
+                self.on_scan_complete()
+            except Exception as e:
+                logger.warning(f"on_scan_complete 콜백 오류: {e}")
 
     # ── 로그 ───────────────────────────────────────────
 

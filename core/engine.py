@@ -10,6 +10,7 @@ from core.exchange import OKXClient
 from core.scanner import Scanner
 from core.trader import AutoTrader
 from core.config import CFG
+import core.stats as stats_store
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class QuantumEngine:
         self.cfg = CFG
         self._lock = threading.Lock()
         self._initialized = False
+        self._prev_position_symbols: set = set()  # 청산 감지용 스냅샷
 
     def initialize(self, api_key: str, secret_key: str, passphrase: str) -> tuple[bool, str]:
         """API 연결 및 모듈 초기화"""
@@ -38,6 +40,8 @@ class QuantumEngine:
                     
                     # 스캐너와 트레이더 연결 (콜백)
                     self.scanner.on_signal = self.trader.on_signal
+                    # 스캔 완료 시 청산 감지 콜백 등록
+                    self.scanner.on_scan_complete = self._check_closed_positions
                     
                     self._initialized = True
                     return True, "✅ 엔진 초기화 및 마켓 로드 성공"
@@ -100,3 +104,33 @@ class QuantumEngine:
     def get_trade_history(self, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
         """거래소 체결 내역 조회"""
         return self.client.get_trade_history(symbol, limit) if self.client else []
+
+    # ── 청산 감지 & 승패 기록 ──────────────────────────
+
+    def _check_closed_positions(self):
+        """스캔 완료 시마다 호출 — 청산된 포지션 감지 후 승/패 기록"""
+        if not self.is_ready:
+            return
+        try:
+            current = {p["symbol"] for p in self.client.get_positions()}
+            closed = self._prev_position_symbols - current  # 사라진 심볼 = 청산됨
+
+            if closed:
+                closed_records = self.client.get_closed_positions_pnl(limit=10)
+                for sym in closed:
+                    matched = next(
+                        (r for r in closed_records
+                         if r["symbol"].replace("-SWAP", "/USDT:USDT") == sym
+                         or r["symbol"] == sym.replace("/USDT:USDT", "-USDT-SWAP")),
+                        None
+                    )
+                    pnl = matched["pnl_usdt"] if matched else 0.0
+                    stats_store.record_result(pnl)
+                    logger.info(
+                        f"[CLOSED] {sym} PnL={pnl:+.4f} USDT"
+                        f" -> {'WIN' if pnl >= 0 else 'LOSS'} 기록"
+                    )
+
+            self._prev_position_symbols = current
+        except Exception as e:
+            logger.error(f"청산 감지 오류: {e}")
