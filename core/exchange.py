@@ -332,3 +332,12 @@ class OKXClient:
         except Exception as e:
             logger.error(f"청산 실패 ({symbol}): {e}")
             return False
+
+    def close_all_positions(self) -> int:
+        """모든 활성 포지션 일괄 청산 (시장가)"""
+        positions = self.get_positions()
+        success_count = 0
+        for p in positions:
+            if self.close_position(p["symbol"], p["side"]):
+                success_count += 1
+        return success_count

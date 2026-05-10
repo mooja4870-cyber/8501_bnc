@@ -13,6 +13,8 @@
 - Wrote a comprehensive operational manual (`4ref.md`) detailing the Triple-Indicator strategy, risk management logic, and dashboard features.
 - Added "즉시청산" buttons for individual positions and a "모든 종목 일괄청산" button for bulk liquidation.
 - Adjusted liquidation buttons' font size and height to 77% of standard size for a more compact UI.
+- Fixed `ModuleNotFoundError: plotly` by reinstalling dependencies in the correct Python environment.
+- Restored and verified dashboard functionality on port 8502.
 
 ## Active Issues
 - None.
