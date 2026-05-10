@@ -167,7 +167,30 @@ def init_session():
         if k not in st.session_state:
             st.session_state[k] = v
 
+def connect_api(api_key, secret_key, passphrase):
+    try:
+        client = OKXClient(api_key, secret_key, passphrase)
+        if client.load_markets():
+            scanner = Scanner(client)
+            trader = AutoTrader(client)
+            scanner.on_signal = trader.on_signal
+            st.session_state.client = client
+            st.session_state.scanner = scanner
+            st.session_state.trader = trader
+            st.session_state.api_connected = True
+            return True, "✅ OKX API 연결 완료"
+        return False, "❌ 마켓 로드 실패"
+    except Exception as e:
+        return False, f"❌ 연결 오류: {e}"
+
 init_session()
+
+if not st.session_state.api_connected:
+    ak = os.getenv("OKX_API_KEY", "")
+    sk = os.getenv("OKX_SECRET_KEY", "")
+    pw = os.getenv("OKX_PASSPHRASE", "")
+    if ak and sk and pw:
+        connect_api(ak, sk, pw)
 
 
 # ── Plotly 공통 레이아웃 ──────────────────────────────
@@ -209,22 +232,11 @@ with st.sidebar:
 
     if st.button("🔗  OKX 연결", use_container_width=True):
         with st.spinner("연결 중..."):
-            try:
-                client = OKXClient(api_key, secret_key, passphrase)
-                ok = client.load_markets()
-                if ok:
-                    scanner = Scanner(client)
-                    trader = AutoTrader(client)
-                    scanner.on_signal = trader.on_signal
-                    st.session_state.client = client
-                    st.session_state.scanner = scanner
-                    st.session_state.trader = trader
-                    st.session_state.api_connected = True
-                    st.success("✅ OKX API 연결 완료")
-                else:
-                    st.error("❌ 마켓 로드 실패")
-            except Exception as e:
-                st.error(f"❌ 연결 오류: {e}")
+            success, msg = connect_api(api_key, secret_key, passphrase)
+            if success:
+                st.success(msg)
+            else:
+                st.error(msg)
 
     st.markdown("---")
     st.markdown(
