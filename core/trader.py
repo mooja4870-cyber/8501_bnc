@@ -157,7 +157,7 @@ class AutoTrader:
         result: Optional[Dict] = None,
     ):
         entry = {
-            "timestamp": datetime.now(),
+            "timestamp": datetime.utcnow() + timedelta(hours=9),
             "symbol": sig.symbol,
             "direction": sig.direction,
             "strength": sig.strength,

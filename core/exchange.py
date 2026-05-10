@@ -115,7 +115,7 @@ class OKXClient:
             result = []
             for t in trades:
                 result.append({
-                    "timestamp": pd.to_datetime(t["timestamp"], unit="ms"),
+                    "timestamp": pd.to_datetime(t["timestamp"], unit="ms") + pd.Timedelta(hours=9),
                     "symbol": t["symbol"],
                     "side": t["side"],
                     "price": round(t.get("price", 0), 6),
