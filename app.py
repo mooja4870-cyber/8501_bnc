@@ -683,7 +683,7 @@ with tabs[3]:
         history = client.get_trade_history(symbol=sym_filter, limit=100)
 
         if history:
-            df_hist = pd.DataFrame(history)
+            df_hist = pd.DataFrame(history[::-1])
             df_hist["timestamp"] = df_hist["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
             df_hist.columns = ["시각","종목","방향","체결가","수량","금액(USDT)","수수료","주문ID"]
             df_hist["방향"] = df_hist["방향"].map({"buy":"🟢 BUY","sell":"🔴 SELL"}).fillna(df_hist["방향"])
