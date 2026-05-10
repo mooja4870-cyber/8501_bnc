@@ -359,9 +359,11 @@ with col_time:
 
 with col_status:
     if st.session_state.auto_trading:
-        st.markdown('<div class="badge-live">● LIVE</div>', unsafe_allow_html=True)
+        st.markdown('<div class="badge-live" style="margin-bottom:8px;">● LIVE</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="badge-stopped">● STOPPED</div>', unsafe_allow_html=True)
+        st.markdown('<div class="badge-stopped" style="margin-bottom:8px;">● STOPPED</div>', unsafe_allow_html=True)
+    if st.button("🔄 새로고침", key="global_refresh", use_container_width=True):
+        st.rerun()
 
 st.markdown('<hr style="margin: 8px 0 16px;">', unsafe_allow_html=True)
 
