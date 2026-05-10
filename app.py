@@ -19,7 +19,7 @@ from core.trader import AutoTrader
 from core.backtest import BacktestEngine
 from core.config import CFG
 
-load_dotenv()
+load_dotenv(override=True)
 
 # ── 페이지 설정 ───────────────────────────────────────
 st.set_page_config(
@@ -166,6 +166,14 @@ def init_session():
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
+
+    # .env 값이 있으면 UI 입력창 세션 상태 강제 초기화
+    for state_key, env_key in [("api_key_input", "OKX_API_KEY"), 
+                               ("secret_input", "OKX_SECRET_KEY"), 
+                               ("pass_input", "OKX_PASSPHRASE")]:
+        env_val = os.getenv(env_key, "")
+        if env_val and (state_key not in st.session_state or not st.session_state[state_key]):
+            st.session_state[state_key] = env_val
 
 def connect_api(api_key, secret_key, passphrase):
     if not api_key or not secret_key or not passphrase:
