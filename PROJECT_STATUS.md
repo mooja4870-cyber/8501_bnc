@@ -10,9 +10,10 @@
 - Fixed an issue where `load_dotenv()` failed to hot-reload `.env` edits and UI inputs cached empty values.
 - Fixed scanner yielding empty results because OKX's `quoteVolume` returned None, by manually calculating `baseVolume * last_price`.
 - Fixed backtest "데이터 없음" error by implementing pagination in `get_ohlcv` to fetch up to 1500+ candles and rewriting the backtest loop to be fully vectorized instead of losing history through sliced indicator calculations.
+- Wrote a comprehensive operational manual (`4ref.md`) detailing the Triple-Indicator strategy, risk management logic, and dashboard features.
 
 ## Active Issues
 - None.
 
 ## Next Steps
-- Commit with version tag v1.0.4.
+- Commit with version tag v1.0.5.
