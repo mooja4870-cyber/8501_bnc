@@ -1,0 +1,53 @@
+"""
+AI QUANTUM — OKX Auto-Trading System
+핵심 설정 파라미터 (슬라이드 설계안 기준)
+"""
+from dataclasses import dataclass, field
+from typing import List
+
+
+@dataclass
+class TradingConfig:
+    # ── 거래소 ──────────────────────────────────────────
+    EXCHANGE_ID: str = "okx"
+    BASE_URL: str = "https://www.okx.com"
+
+    # ── 포지션 설정 ──────────────────────────────────────
+    LEVERAGE: int = 10                     # 10배 고정
+    MARGIN_MODE: str = "isolated"          # 격리 마진
+    ORDER_USDT: float = 10.0              # 종목당 진입 금액 (USDT)
+    MAX_POSITIONS: int = 5                # 최대 동시 보유 종목 수
+    ALLOW_LONG: bool = True
+    ALLOW_SHORT: bool = True
+
+    # ── 손익 설정 ──────────────────────────────────────
+    STOP_LOSS_PCT: float = 0.02           # 손절 2% (증거금 기준 -20%)
+    TAKE_PROFIT_PCT: float = 0.05         # 익절 5% (증거금 기준 +50%)
+    PROFIT_FACTOR_MIN: float = 2.0        # Profit Factor 최소 기준
+
+    # ── 리스크 한도 ────────────────────────────────────
+    MAX_DRAWDOWN_PCT: float = 0.15        # 최대 낙폭 15% 초과 시 전략 중단
+    DAILY_LOSS_LIMIT_USDT: float = 30.0  # 일일 손실 한도
+
+    # ── 스캐너 설정 ────────────────────────────────────
+    SCAN_INTERVAL_SEC: int = 30           # 스캔 주기(초)
+    MIN_VOLUME_USDT: float = 5_000_000.0   # 최소 24h 거래대금 (5백만 USDT)
+    QUOTE_CURRENCY: str = "USDT"
+    MARKET_TYPE: str = "swap"             # 선물(영구 계약)
+
+    # ── 지표 파라미터 ──────────────────────────────────
+    EMA_PERIOD: int = 200
+    BB_PERIOD: int = 20
+    BB_STD: float = 2.0
+    MACD_FAST: int = 12
+    MACD_SLOW: int = 26
+    MACD_SIGNAL: int = 9
+    TIMEFRAME: str = "1h"                 # 캔들 타임프레임
+
+    # ── 백테스트 설정 ──────────────────────────────────
+    BT_COMMISSION: float = 0.0005         # 수수료 0.05%
+    BT_SLIPPAGE: float = 0.0003          # 슬리피지 0.03%
+
+
+# ── 전역 설정 인스턴스 ────────────────────────────────
+CFG = TradingConfig()
