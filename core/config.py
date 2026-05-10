@@ -21,8 +21,8 @@ class TradingConfig:
     ALLOW_SHORT: bool = True
 
     # ── 손익 설정 ──────────────────────────────────────
-    STOP_LOSS_PCT: float = 0.02           # 손절 2% (증거금 기준 -20%)
-    TAKE_PROFIT_PCT: float = 0.05         # 익절 5% (증거금 기준 +50%)
+    STOP_LOSS_PCT: float = 0.015          # 손절 1.5%
+    TAKE_PROFIT_PCT: float = 0.02         # 익절 2.0%
     PROFIT_FACTOR_MIN: float = 2.0        # Profit Factor 최소 기준
 
     # ── 리스크 한도 ────────────────────────────────────
@@ -31,7 +31,7 @@ class TradingConfig:
 
     # ── 스캐너 설정 ────────────────────────────────────
     SCAN_INTERVAL_SEC: int = 30           # 스캔 주기(초)
-    MIN_VOLUME_USDT: float = 5_000_000.0   # 최소 24h 거래대금 (5백만 USDT)
+    MIN_VOLUME_USDT: float = 1_000_000.0   # 최소 24h 거래대금 (1백만 USDT)
     QUOTE_CURRENCY: str = "USDT"
     MARKET_TYPE: str = "swap"             # 선물(영구 계약)
 
