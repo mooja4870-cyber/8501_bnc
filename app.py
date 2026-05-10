@@ -661,9 +661,11 @@ with tabs[4]:
         CFG.LEVERAGE = st.slider("레버리지 (x)", 1, 20, CFG.LEVERAGE)
         CFG.ORDER_USDT = st.number_input("종목당 진입금액 (USDT)", 10.0, 1000.0, CFG.ORDER_USDT, step=10.0)
         CFG.MAX_POSITIONS = st.slider("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS)
-        CFG.STOP_LOSS_PCT = st.slider("손절 (%)", 0.01, 0.10, CFG.STOP_LOSS_PCT, step=0.005)
+        sl_val = st.slider("손절 (%)", 1.0, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.5)
+        CFG.STOP_LOSS_PCT = sl_val / 100.0
     with s2:
-        CFG.TAKE_PROFIT_PCT = st.slider("익절 (%)", 0.01, 0.20, CFG.TAKE_PROFIT_PCT, step=0.005)
+        tp_val = st.slider("익절 (%)", 1.0, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.5)
+        CFG.TAKE_PROFIT_PCT = tp_val / 100.0
         CFG.MIN_VOLUME_USDT = st.number_input("최소 거래대금 (USDT)", 1_000_000.0, 50_000_000.0, float(CFG.MIN_VOLUME_USDT), step=1_000_000.0)
         CFG.SCAN_INTERVAL_SEC = st.slider("스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10)
         CFG.MAX_DRAWDOWN_PCT = st.slider("MDD 한도 (%)", 0.05, 0.50, CFG.MAX_DRAWDOWN_PCT, step=0.01)
