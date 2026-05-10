@@ -168,6 +168,8 @@ def init_session():
             st.session_state[k] = v
 
 def connect_api(api_key, secret_key, passphrase):
+    if not api_key or not secret_key or not passphrase:
+        return False, "❌ API 키를 모두 입력해주세요."
     try:
         client = OKXClient(api_key, secret_key, passphrase)
         if client.load_markets():
@@ -232,7 +234,10 @@ with st.sidebar:
 
     if st.button("🔗  OKX 연결", use_container_width=True):
         with st.spinner("연결 중..."):
-            success, msg = connect_api(api_key, secret_key, passphrase)
+            ak = api_key if api_key else os.getenv("OKX_API_KEY", "")
+            sk = secret_key if secret_key else os.getenv("OKX_SECRET_KEY", "")
+            pw = passphrase if passphrase else os.getenv("OKX_PASSPHRASE", "")
+            success, msg = connect_api(ak, sk, pw)
             if success:
                 st.success(msg)
             else:
