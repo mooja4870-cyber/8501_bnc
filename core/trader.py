@@ -10,6 +10,7 @@ from datetime import datetime, date
 from core.exchange import OKXClient
 from core.strategy import Signal
 from core.config import CFG
+import core.stats as stats_store
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +30,10 @@ class AutoTrader:
         self.allow_long: bool = True
         self.allow_short: bool = True
 
-        # 통계
-        self.orders_today: int = 0
-        self.daily_pnl_usdt: float = 0.0
+        # 통계 — 파일에서 불러오기 (재시작 후에도 유지)
+        _s = stats_store.load_stats()
+        self.orders_today: int = _s.get("orders_today", 0)
+        self.daily_pnl_usdt: float = _s.get("daily_pnl_usdt", 0.0)
         self.trade_log: List[Dict] = []
         self._today: date = date.today()
 
@@ -92,6 +94,7 @@ class AutoTrader:
 
             if result:
                 self.orders_today += 1
+                stats_store.record_order()
                 self._log_trade(sig, status="EXECUTED", result=result)
                 logger.info(f"[ORDER] {sig.symbol} {sig.direction.upper()} 실행 완료")
             else:
@@ -131,6 +134,11 @@ class AutoTrader:
             self.daily_pnl_usdt = 0.0
             self.orders_today = 0
             self._today = today
+            # 파일에도 리셋 반영
+            _s = stats_store.load_stats()
+            _s["orders_today"] = 0
+            _s["daily_pnl_usdt"] = 0.0
+            stats_store.save_stats(_s)
 
     # ── 로그 ───────────────────────────────────────────
 

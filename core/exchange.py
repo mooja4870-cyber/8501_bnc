@@ -129,6 +129,17 @@ class OKXClient:
             logger.error(f"거래 이력 조회 실패: {e}")
             return []
 
+
+    def get_closed_positions_pnl(self, limit=20):
+        try:
+            raw = self.exchange.privateGetAccountPositionsHistory({'limit': str(limit)})
+            return [
+                {'symbol': r.get('instId',''), 'pnl_usdt': float(r.get('realizedPnl', 0) or 0)}
+                for r in raw.get('data', [])
+            ]
+        except Exception as e:
+            logger.error(f'closed pnl error: {e}')
+            return []
     # ── 시장 데이터 ────────────────────────────────────
 
     def get_ohlcv(

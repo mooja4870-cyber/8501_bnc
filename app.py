@@ -19,6 +19,7 @@ from core.trader import AutoTrader
 from core.engine import QuantumEngine
 from core.backtest import BacktestEngine
 from core.config import CFG
+import core.stats as stats_store
 
 load_dotenv(override=True)
 
@@ -515,11 +516,18 @@ with tabs[0]:
                 '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">RISK METRICS</p>',
                 unsafe_allow_html=True,
             )
-            orders_today = engine.trader.orders_today if engine.trader else 0
+            _st = stats_store.load_stats()
+            orders_today = _st.get("orders_today", 0)
+            win_rate = stats_store.get_win_rate()
+            total_wins = _st.get("total_wins", 0)
+            total_losses = _st.get("total_losses", 0)
+            total_trades = total_wins + total_losses
+            win_label = f"{win_rate:.1f}%" if total_trades > 0 else "-"
+            win_delta = f"{total_wins}W / {total_losses}L" if total_trades > 0 else "매매 데이터 없음"
 
             r1, r2 = st.columns(2)
             r1.metric("Profit Factor", "2.45", "목표 ≥ 2.0")
-            r2.metric("승률", "44.8%", "손익비 중심")
+            r2.metric("승률", win_label, win_delta)
             r3, r4 = st.columns(2)
             r3.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%")
             r4.metric("금일 주문", f"{orders_today}건")
