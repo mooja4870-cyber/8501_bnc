@@ -169,6 +169,7 @@ def init_session():
         "auto_trading": False,
         "allow_long": True,
         "allow_short": True,
+        "active_preset": "기본 (Stable)",
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -494,7 +495,7 @@ with tabs[1]:
         with sc1:
             if st.button("▶  스캔 시작", use_container_width=True):
                 engine.start_scanner()
-                st.success("스캐너 가동 중")
+                st.success(f"✅ {st.session_state.active_preset} 스캐너 가동 중")
 
         with sc2:
             if st.button("⏹  스캔 중지", use_container_width=True):
@@ -743,6 +744,7 @@ with tabs[4]:
     
     if st.button("🪄 프리셋 적용"):
         p = PRESETS[preset_name]
+        st.session_state.active_preset = preset_name
         CFG.EMA_PERIOD = p["ema"]
         CFG.BB_PERIOD = p["bb_p"]
         CFG.BB_STD = p["bb_s"]
