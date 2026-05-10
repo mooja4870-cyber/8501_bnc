@@ -27,3 +27,11 @@
 ## Next Steps
 - Implement advanced risk management features (e.g., dynamic TP/SL).
 - Enhance the Test Harness with mock exchange capabilities for CI/CD.
+
+## v1.1.10 (2026-05-10)
+- [Feature] 동적 자금 관리(1% Rule) 적용: 고정 진입금액을 폐지하고 전체 잔고의 1%를 증거금으로 사용하도록 변경.
+- [Feature] One-Shot Rule: 동일 종목 중복 진입 방지 로직 점검 및 유지.
+- [UI] 포트폴리오 배분을 실전 투입 100%로 변경 (v1.1.9) 및 설정 UI의 진입 금액 입력을 비율(%) 입력으로 교체.
+
+## v1.1.11 (2026-05-11)
+- [Feature] 증거금 설정 방식 롤백: 1% 자동 비중에서 사용자가 직접 진입 증거금(USDT)을 고정값으로 입력하도록 변경 (UI 포함).

@@ -329,7 +329,7 @@ with st.sidebar:
     st.markdown(
         f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:#444;">
         레버리지: {CFG.LEVERAGE}x ISOLATED<br>
-        진입 비중: 잔고의 {CFG.MARGIN_PCT*100:.1f}%<br>
+        1회 증거금: {CFG.MARGIN_USDT} USDT<br>
         최대 포지션: {CFG.MAX_POSITIONS}개<br>
         SL: {CFG.STOP_LOSS_PCT*100:.0f}% / TP: {CFG.TAKE_PROFIT_PCT*100:.0f}%
         </div>""",
@@ -847,7 +847,7 @@ with tabs[5]:
     s1, s2 = st.columns(2)
     with s1:
         CFG.LEVERAGE = st.slider("레버리지 (x)", 1, 20, CFG.LEVERAGE)
-        CFG.MARGIN_PCT = st.number_input("1회 진입 증거금 비중 (%)", 0.1, 10.0, float(CFG.MARGIN_PCT*100), step=0.1) / 100.0
+        CFG.MARGIN_USDT = st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0)
         CFG.MAX_POSITIONS = st.slider("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS)
         sl_val = st.slider("손절 (%)", 1.0, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.5)
         CFG.STOP_LOSS_PCT = sl_val / 100.0
@@ -863,8 +863,8 @@ with tabs[5]:
     st.markdown(
         f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:#555;line-height:2;">
         손익비: 1 : {CFG.TAKE_PROFIT_PCT / CFG.STOP_LOSS_PCT:.1f} &nbsp;|&nbsp;
-        증거금/종목: 원금의 {CFG.MARGIN_PCT*100:.1f}% &nbsp;|&nbsp;
-        최대 노출: 원금의 {CFG.MARGIN_PCT*100*CFG.LEVERAGE*CFG.MAX_POSITIONS:.0f}%
+        증거금/종목: ${CFG.MARGIN_USDT:.2f} USDT &nbsp;|&nbsp;
+        최대 노출: ${CFG.MARGIN_USDT * CFG.LEVERAGE * CFG.MAX_POSITIONS:.2f} USDT
         </div>""",
         unsafe_allow_html=True,
     )
