@@ -497,12 +497,12 @@ with tabs[0]:
                 unsafe_allow_html=True,
             )
             fig_alloc = go.Figure(go.Pie(
-                labels=["실전 투입 (60%)", "예비 유동성 (25%)", "리스크 리저브 (15%)"],
-                values=[60, 25, 15],
+                labels=["실전 투입 (100%)", "예비 유동성 (0%)", "리스크 리저브 (0%)"],
+                values=[100, 0.001, 0.001],
                 hole=0.55,
                 marker=dict(colors=["#c8f53b", "#3b82f6", "#555555"]),
                 textfont=dict(family="IBM Plex Mono", size=10),
-                textinfo="label+percent",
+                textinfo="label",
             ))
             fig_alloc.update_layout(
                 **PLOT_LAYOUT,
