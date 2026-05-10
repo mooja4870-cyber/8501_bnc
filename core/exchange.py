@@ -154,12 +154,18 @@ class OKXClient:
         """현재가 조회"""
         try:
             t = self.exchange.fetch_ticker(symbol)
+            last_price = t.get("last", 0)
+            usdt_vol = t.get("quoteVolume")
+            if not usdt_vol:
+                base_vol = t.get("baseVolume", 0)
+                usdt_vol = base_vol * last_price if base_vol and last_price else 0
+
             return {
                 "symbol": symbol,
-                "last": t.get("last", 0),
+                "last": last_price,
                 "bid": t.get("bid", 0),
                 "ask": t.get("ask", 0),
-                "volume": t.get("quoteVolume", 0),
+                "volume": usdt_vol,
                 "change_pct": round(t.get("percentage", 0) or 0, 2),
             }
         except Exception as e:
