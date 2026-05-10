@@ -722,9 +722,36 @@ with tabs[4]:
 
     st.markdown("---")
     st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">INDICATOR PARAMETERS</p>',
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">INDICATOR PARAMETERS & PRESETS</p>',
         unsafe_allow_html=True,
     )
+
+    # 프리셋 정의
+    PRESETS = {
+        "기본 (Stable)": {
+            "ema": 200, "bb_p": 20, "bb_s": 2.0, "macd_f": 12, "macd_sl": 26, "macd_si": 9
+        },
+        "1차 공격적 (Trend)": {
+            "ema": 100, "bb_p": 20, "bb_s": 1.8, "macd_f": 10, "macd_sl": 22, "macd_si": 7
+        },
+        "2차 공격적 (Scalping)": {
+            "ema": 50, "bb_p": 14, "bb_s": 1.5, "macd_f": 8, "macd_sl": 18, "macd_si": 5
+        }
+    }
+
+    preset_name = st.selectbox("전략 프리셋 선택", list(PRESETS.keys()), index=0)
+    
+    if st.button("🪄 프리셋 적용"):
+        p = PRESETS[preset_name]
+        CFG.EMA_PERIOD = p["ema"]
+        CFG.BB_PERIOD = p["bb_p"]
+        CFG.BB_STD = p["bb_s"]
+        CFG.MACD_FAST = p["macd_f"]
+        CFG.MACD_SLOW = p["macd_sl"]
+        CFG.MACD_SIGNAL = p["macd_si"]
+        st.toast(f"✅ {preset_name} 파라미터 적용됨")
+        time.sleep(0.5)
+        st.rerun()
 
     p1, p2, p3 = st.columns(3)
     with p1:
