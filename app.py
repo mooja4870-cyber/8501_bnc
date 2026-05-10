@@ -173,6 +173,32 @@ st.markdown(
         animation: pink-fade 1.5s infinite ease-in-out;
         box-shadow: 0 0 10px rgba(255, 20, 147, 0.2);
     }
+    .badge-green-blink {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(200, 245, 59, 0.15);
+        border: 1px solid rgba(200, 245, 59, 0.5);
+        border-radius: 6px;
+        padding: 6px 16px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #c8f53b;
+        animation: pink-fade 1.5s infinite ease-in-out;
+        box-shadow: 0 0 10px rgba(200, 245, 59, 0.2);
+    }
+    .badge-red-blink {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(239, 68, 68, 0.5);
+        border-radius: 6px;
+        padding: 6px 16px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #ef4444;
+        animation: pink-fade 1.5s infinite ease-in-out;
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -527,11 +553,18 @@ with tabs[1]:
                     unsafe_allow_html=True,
                 )
 
-        # 상태 표시 배지 (분홍색 깜빡임 연동)
+        # 상태 표시 배지 (상황별 색상 연동)
         if engine.scanner and engine.scanner.is_running:
+            preset = st.session_state.active_preset
+            badge_class = "badge-green-blink"
+            if "1차" in preset:
+                badge_class = "badge-pink-blink"
+            elif "2차" in preset:
+                badge_class = "badge-red-blink"
+                
             st.markdown(
                 f'<div style="text-align:center; margin-bottom: 20px;">'
-                f'<div class="badge-pink-blink">📡 {st.session_state.active_preset} 스캐너 가동 중</div>'
+                f'<div class="{badge_class}">📡 {preset} 스캐너 가동 중</div>'
                 f'</div>',
                 unsafe_allow_html=True
             )
