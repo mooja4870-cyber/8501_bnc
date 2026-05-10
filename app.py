@@ -364,10 +364,21 @@ with tabs[0]:
         col_pos, col_log = st.columns([1.2, 1])
 
         with col_pos:
-            st.markdown(
-                '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">ACTIVE POSITIONS</p>',
-                unsafe_allow_html=True,
-            )
+            col_title, col_bulk = st.columns([1, 1])
+            with col_title:
+                st.markdown(
+                    '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">ACTIVE POSITIONS</p>',
+                    unsafe_allow_html=True,
+                )
+            with col_bulk:
+                if positions:
+                    if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
+                        count = client.close_all_positions()
+                        if count > 0:
+                            st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
+                            time.sleep(1)
+                            st.rerun()
+
             if not positions:
                 st.markdown(
                     '<p style="color:#444;font-family:\'IBM Plex Mono\',monospace;font-size:0.8rem;">포지션 없음</p>',
@@ -379,26 +390,35 @@ with tabs[0]:
                     side_badge = (
                         "🟢 LONG" if p["side"] == "long" else "🔴 SHORT"
                     )
-                    st.markdown(
-                        f"""
-                        <div style="background:#161616;border:1px solid rgba(255,255,255,0.07);
-                                    border-radius:8px;padding:12px 14px;margin-bottom:8px;">
-                          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                            <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;">{p['symbol']}</span>
-                            <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;color:{pnl_color};">
-                              {p['pnl_usdt']:+.4f} USDT ({p['pnl_pct']:+.1f}%)
-                            </span>
-                          </div>
-                          <div style="font-family:'IBM Plex Mono';font-size:0.7rem;color:#555;display:flex;gap:16px;">
-                            <span>{side_badge}</span>
-                            <span>진입가 ${p['entry_price']:,.4f}</span>
-                            <span>현재가 ${p['mark_price']:,.4f}</span>
-                            <span>{p['leverage']}x LEV</span>
-                          </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
+                    pc1, pc2 = st.columns([3.5, 1])
+                    with pc1:
+                        st.markdown(
+                            f"""
+                            <div style="background:#161616;border:1px solid rgba(255,255,255,0.07);
+                                        border-radius:8px;padding:12px 14px;margin-bottom:8px;">
+                              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;">{p['symbol']}</span>
+                                <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;color:{pnl_color};">
+                                  {p['pnl_usdt']:+.4f} USDT ({p['pnl_pct']:+.1f}%)
+                                </span>
+                              </div>
+                              <div style="font-family:'IBM Plex Mono';font-size:0.7rem;color:#555;display:flex;gap:16px;">
+                                <span>{side_badge}</span>
+                                <span>진입가 ${p['entry_price']:,.4f}</span>
+                                <span>현재가 ${p['mark_price']:,.4f}</span>
+                                <span>{p['leverage']}x LEV</span>
+                              </div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                    with pc2:
+                        st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+                        if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
+                            if client.close_position(p["symbol"], p["side"]):
+                                st.toast(f"✅ {p['symbol']} 청산 완료")
+                                time.sleep(1)
+                                st.rerun()
 
         with col_log:
             st.markdown(

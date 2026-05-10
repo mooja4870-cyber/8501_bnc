@@ -11,9 +11,10 @@
 - Fixed scanner yielding empty results because OKX's `quoteVolume` returned None, by manually calculating `baseVolume * last_price`.
 - Fixed backtest "데이터 없음" error by implementing pagination in `get_ohlcv` to fetch up to 1500+ candles and rewriting the backtest loop to be fully vectorized instead of losing history through sliced indicator calculations.
 - Wrote a comprehensive operational manual (`4ref.md`) detailing the Triple-Indicator strategy, risk management logic, and dashboard features.
+- Added "즉시청산" buttons for individual positions and a "모든 종목 일괄청산" button for bulk liquidation.
 
 ## Active Issues
 - None.
 
 ## Next Steps
-- Commit with version tag v1.0.5.
+- Implement advanced risk management features (e.g., dynamic TP/SL).
