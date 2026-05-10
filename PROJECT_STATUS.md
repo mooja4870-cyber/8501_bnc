@@ -47,3 +47,6 @@
 
 ## v1.1.15 (2026-05-11)
 - [Fix] BacktestEngine compatibility: fallback to MARGIN_USDT when ORDER_USDT is missing, preventing AttributeError during backtest run.
+
+## v1.1.16 (2026-05-11)
+- [Config] 1회 진입 증거금 기본값을 1 USDT에서 5 USDT로 상향 조정.

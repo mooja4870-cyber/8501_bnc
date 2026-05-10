@@ -15,7 +15,7 @@ class TradingConfig:
     # ── 포지션 설정 ──────────────────────────────────────
     LEVERAGE: int = 10                     # 10배 고정
     MARGIN_MODE: str = "isolated"          # 격리 마진
-    MARGIN_USDT: float = 1.0               # 1회 진입 증거금 (USDT)
+    MARGIN_USDT: float = 5.0               # 1회 진입 증거금 (USDT)
     MAX_POSITIONS: int = 5                # 최대 동시 보유 종목 수
     ALLOW_LONG: bool = True
     ALLOW_SHORT: bool = True
