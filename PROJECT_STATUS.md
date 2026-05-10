@@ -16,6 +16,7 @@
 - Fixed `ModuleNotFoundError: plotly` by reinstalling dependencies in the correct Python environment.
 - Restored and verified dashboard functionality on port 8502.
 - Updated Trade History to display the latest trades at the top.
+- Updated Backtest Trade List to display the latest trades at the top.
 
 ## Active Issues
 - None.

@@ -655,7 +655,7 @@ with tabs[2]:
                             "손익(USDT)": f"${t.pnl_usdt:+.4f}",
                             "청산사유": t.exit_reason.upper(),
                         }
-                        for t in report.trades[-100:]
+                        for t in reversed(report.trades[-100:])
                     ])
                     st.dataframe(df_trades, use_container_width=True, hide_index=True)
 
