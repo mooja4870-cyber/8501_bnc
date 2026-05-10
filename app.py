@@ -145,6 +145,14 @@ st.markdown(
     .neon { color: #c8f53b !important; }
     .green { color: #22c55e !important; }
     .red { color: #ef4444 !important; }
+    /* 청산 버튼 특화 스타일 (77% 축소) */
+    .small-btn button {
+        font-size: 0.65rem !important;
+        height: 28px !important;
+        min-height: 28px !important;
+        padding-top: 0px !important;
+        padding-bottom: 0px !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -372,12 +380,14 @@ with tabs[0]:
                 )
             with col_bulk:
                 if positions:
+                    st.markdown('<div class="small-btn">', unsafe_allow_html=True)
                     if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
                         count = client.close_all_positions()
                         if count > 0:
                             st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
                             time.sleep(1)
                             st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
 
             if not positions:
                 st.markdown(
@@ -414,11 +424,13 @@ with tabs[0]:
                         )
                     with pc2:
                         st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+                        st.markdown('<div class="small-btn">', unsafe_allow_html=True)
                         if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
                             if client.close_position(p["symbol"], p["side"]):
                                 st.toast(f"✅ {p['symbol']} 청산 완료")
                                 time.sleep(1)
                                 st.rerun()
+                        st.markdown('</div>', unsafe_allow_html=True)
 
         with col_log:
             st.markdown(
