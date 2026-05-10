@@ -196,7 +196,7 @@ class BacktestEngine:
                         raw_return = (entry_price - adj_exit) / entry_price
 
                     leveraged_return = raw_return * self.cfg.LEVERAGE
-                    pnl_usdt = capital * (self.cfg.ORDER_USDT / initial_capital) * leveraged_return
+                    pnl_usdt = capital * (getattr(self.cfg, 'MARGIN_USDT', 1.0) / initial_capital) * leveraged_return
                     capital += pnl_usdt
 
                     trade = Trade(

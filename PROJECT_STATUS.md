@@ -44,3 +44,6 @@
 
 ## v1.1.14 (2026-05-11)
 - [UI] 메인 화면 및 사이드바 타이틀 변경: AI QUANTUM 관련 텍스트를 모두 삭제하고 프로젝트 본질에 맞게 MACD-BB-EMA v1.1.14 로 교체.
+
+## v1.1.15 (2026-05-11)
+- [Fix] BacktestEngine compatibility: fallback to MARGIN_USDT when ORDER_USDT is missing, preventing AttributeError during backtest run.

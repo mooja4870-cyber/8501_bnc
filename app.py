@@ -269,7 +269,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.14</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.15</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
