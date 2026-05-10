@@ -97,27 +97,56 @@ class BacktestEngine:
         highs = df["high"].values
         lows = df["low"].values
         times = df.index
+        
+        ema200 = df["ema200"].values
+        bb_upper = df["bb_upper"].values
+        bb_lower = df["bb_lower"].values
+        macd_hist = df["macd_hist"].values
+        rsi = df["rsi"].values
 
         sl_pct = self.cfg.STOP_LOSS_PCT
         tp_pct = self.cfg.TAKE_PROFIT_PCT
         commission = self.cfg.BT_COMMISSION
         slippage = self.cfg.BT_SLIPPAGE
 
-        for i in range(200, len(df)):
-            slice_df = df.iloc[: i + 1]
-            sig = self.strategy.generate_signal(slice_df, symbol)
+        for i in range(2, len(df)):
             price = closes[i]
 
+            # 신호 평가
+            sig_dir = "none"
             if not in_position:
-                if sig.direction in ("long", "short"):
-                    # 진입 수수료 + 슬리피지 적용
+                prev_close = closes[i-1]
+                prev2_close = closes[i-2]
+                prev_lower = bb_lower[i-1]
+                prev2_lower = bb_lower[i-2]
+                prev_upper = bb_upper[i-1]
+                prev2_upper = bb_upper[i-2]
+                prev_hist = macd_hist[i-1]
+                cur_hist = macd_hist[i]
+
+                long_ema = price > ema200[i]
+                long_bb = (prev_close <= prev_lower or prev2_close <= prev2_lower) and price > bb_lower[i]
+                long_macd = prev_hist < 0 and cur_hist > prev_hist
+                long_rsi = rsi[i] < 60
+
+                short_ema = price < ema200[i]
+                short_bb = (prev_close >= prev_upper or prev2_close >= prev2_upper) and price < bb_upper[i]
+                short_macd = prev_hist > 0 and cur_hist < prev_hist
+                short_rsi = rsi[i] > 40
+
+                if long_ema and long_bb and long_macd and long_rsi and self.cfg.ALLOW_LONG:
+                    sig_dir = "long"
+                elif short_ema and short_bb and short_macd and short_rsi and self.cfg.ALLOW_SHORT:
+                    sig_dir = "short"
+
+                if sig_dir in ("long", "short"):
                     adjusted_entry = price * (
                         1 + slippage + commission
-                        if sig.direction == "long"
+                        if sig_dir == "long"
                         else 1 - slippage - commission
                     )
                     in_position = True
-                    direction = sig.direction
+                    direction = sig_dir
                     entry_price = adjusted_entry
                     entry_idx = i
 
@@ -138,7 +167,7 @@ class BacktestEngine:
                         tp_hit = True
                         exit_price = tp_level
                         exit_reason = "tp"
-                    elif sig.direction == "short":
+                    elif sig_dir == "short":
                         exit_reason = "signal"
                 else:
                     sl_level = entry_price * (1 + sl_pct)
@@ -151,10 +180,10 @@ class BacktestEngine:
                         tp_hit = True
                         exit_price = tp_level
                         exit_reason = "tp"
-                    elif sig.direction == "long":
+                    elif sig_dir == "long":
                         exit_reason = "signal"
 
-                if sl_hit or tp_hit or (sig.direction != direction and sig.direction != "none"):
+                if sl_hit or tp_hit or (sig_dir != direction and sig_dir != "none"):
                     # 청산 수수료 적용
                     adj_exit = exit_price * (
                         1 - commission - slippage

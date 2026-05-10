@@ -139,7 +139,21 @@ class OKXClient:
     ) -> pd.DataFrame:
         """OHLCV 캔들 데이터 조회"""
         try:
-            raw = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+            if limit <= 300:
+                raw = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+            else:
+                tf_ms = self.exchange.parse_timeframe(timeframe) * 1000
+                since = self.exchange.milliseconds() - (limit * tf_ms)
+                raw = []
+                while len(raw) < limit:
+                    fetch_limit = min(300, limit - len(raw))
+                    chunk = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since, limit=fetch_limit)
+                    if not chunk:
+                        break
+                    raw.extend(chunk)
+                    since = chunk[-1][0] + tf_ms
+                    import time
+                    time.sleep(0.1)
             df = pd.DataFrame(
                 raw, columns=["timestamp", "open", "high", "low", "close", "volume"]
             )

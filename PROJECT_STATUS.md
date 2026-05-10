@@ -9,9 +9,10 @@
 - Added "🎯 포지션 진입" tab between "매매 이력" and "설정" to display and adjust MACD, BB, and EMA entry conditions.
 - Fixed an issue where `load_dotenv()` failed to hot-reload `.env` edits and UI inputs cached empty values.
 - Fixed scanner yielding empty results because OKX's `quoteVolume` returned None, by manually calculating `baseVolume * last_price`.
+- Fixed backtest "데이터 없음" error by implementing pagination in `get_ohlcv` to fetch up to 1500+ candles and rewriting the backtest loop to be fully vectorized instead of losing history through sliced indicator calculations.
 
 ## Active Issues
 - None.
 
 ## Next Steps
-- Commit with version tag v1.0.3.
+- Commit with version tag v1.0.4.
