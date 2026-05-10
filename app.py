@@ -269,7 +269,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo">⚡ AI QUANTUM<br><span>OKX Auto-Trader v2.1</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.14</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -345,7 +345,7 @@ col_logo, col_time, col_status = st.columns([3, 2, 1])
 
 with col_logo:
     st.markdown(
-        '<div class="quantum-logo" style="font-size:1.3rem;">⚡ AI QUANTUM <span>/ OKX 자동매매 시스템</span></div>',
+        '',
         unsafe_allow_html=True,
     )
 
