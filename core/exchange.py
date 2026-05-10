@@ -225,7 +225,7 @@ class OKXClient:
         self,
         symbol: str,
         side: str,          # "buy" | "sell"
-        usdt_amount: float = CFG.ORDER_USDT,
+        margin_usdt: float,
         stop_loss_pct: float = CFG.STOP_LOSS_PCT,
         take_profit_pct: float = CFG.TAKE_PROFIT_PCT,
     ) -> Optional[Dict]:
@@ -245,7 +245,7 @@ class OKXClient:
 
             market = self._markets.get(symbol, {})
             contract_size = market.get("contractSize", 1)
-            notional = usdt_amount * CFG.LEVERAGE
+            notional = margin_usdt * CFG.LEVERAGE
             amount = notional / (price * contract_size)
 
             # ccxt precision 적용
@@ -312,7 +312,7 @@ class OKXClient:
                 "amount": float(amount),
                 "sl_price": sl_price,
                 "tp_price": tp_price,
-                "usdt_margin": usdt_amount / CFG.LEVERAGE,
+                "usdt_margin": margin_usdt,
             }
             logger.info(f"주문 완료: {result}")
             return result

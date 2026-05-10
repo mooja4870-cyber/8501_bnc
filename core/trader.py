@@ -86,10 +86,20 @@ class AutoTrader:
 
             # ── 주문 실행 ─────────────────────────────
             side = "buy" if sig.direction == "long" else "sell"
+            
+            # 1% Rule: 현재 총 잔고의 1%를 증거금으로 사용
+            bal = self.client.get_balance()
+            total_bal = bal.get("total", 0)
+            margin_usdt = total_bal * self.cfg.MARGIN_PCT
+
+            if margin_usdt < 1.0:
+                logger.warning(f"[SKIP] 증거금 부족 (최소 $1): {margin_usdt:.2f} USDT")
+                return
+
             result = self.client.place_order(
                 symbol=sig.symbol,
                 side=side,
-                usdt_amount=self.cfg.ORDER_USDT,
+                margin_usdt=margin_usdt,
             )
 
             if result:
@@ -122,7 +132,7 @@ class AutoTrader:
 
         # 4. 가용 증거금 확인
         free = balance.get("free", 0)
-        required_margin = self.cfg.ORDER_USDT / self.cfg.LEVERAGE
+        required_margin = total * self.cfg.MARGIN_PCT
         if free < required_margin * 1.5:
             return False, f"가용 증거금 부족: {free:.2f} < {required_margin * 1.5:.2f}"
 
