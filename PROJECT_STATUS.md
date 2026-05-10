@@ -12,6 +12,7 @@
 - Fixed backtest "데이터 없음" error by implementing pagination in `get_ohlcv` to fetch up to 1500+ candles and rewriting the backtest loop to be fully vectorized instead of losing history through sliced indicator calculations.
 - Wrote a comprehensive operational manual (`4ref.md`) detailing the Triple-Indicator strategy, risk management logic, and dashboard features.
 - Added "즉시청산" buttons for individual positions and a "모든 종목 일괄청산" button for bulk liquidation.
+- Adjusted liquidation buttons' font size and height to 77% of standard size for a more compact UI.
 
 ## Active Issues
 - None.
