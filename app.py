@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 from core.exchange import OKXClient
 from core.scanner import Scanner
 from core.trader import AutoTrader
+from core.engine import QuantumEngine
 from core.backtest import BacktestEngine
 from core.config import CFG
 
@@ -163,9 +164,7 @@ st.markdown(
 
 def init_session():
     defaults = {
-        "client": None,
-        "scanner": None,
-        "trader": None,
+        "engine": QuantumEngine(),
         "api_connected": False,
         "auto_trading": False,
         "allow_long": True,
@@ -186,20 +185,14 @@ def init_session():
 def connect_api(api_key, secret_key, passphrase):
     if not api_key or not secret_key or not passphrase:
         return False, "❌ API 키를 모두 입력해주세요."
-    try:
-        client = OKXClient(api_key, secret_key, passphrase)
-        if client.load_markets():
-            scanner = Scanner(client)
-            trader = AutoTrader(client)
-            scanner.on_signal = trader.on_signal
-            st.session_state.client = client
-            st.session_state.scanner = scanner
-            st.session_state.trader = trader
-            st.session_state.api_connected = True
-            return True, "✅ OKX API 연결 완료"
-        return False, "❌ 마켓 로드 실패"
-    except Exception as e:
-        return False, f"❌ 연결 오류: {e}"
+    
+    engine: QuantumEngine = st.session_state.engine
+    success, msg = engine.initialize(api_key, secret_key, passphrase)
+    
+    if success:
+        st.session_state.api_connected = True
+        return True, msg
+    return False, msg
 
 init_session()
 
@@ -269,19 +262,21 @@ with st.sidebar:
     longs = st.toggle("롱 포지션 허용", value=st.session_state.allow_long)
     shorts = st.toggle("숏 포지션 허용", value=st.session_state.allow_short)
 
+    engine: QuantumEngine = st.session_state.engine
+    
     if auto != st.session_state.auto_trading:
         st.session_state.auto_trading = auto
-        if st.session_state.trader:
+        if engine.is_ready:
             if auto:
-                st.session_state.trader.enable()
-                if st.session_state.scanner and not st.session_state.scanner.is_running:
-                    st.session_state.scanner.start()
+                engine.enable_trading()
+                engine.start_scanner()
             else:
-                st.session_state.trader.disable()
+                engine.disable_trading()
+                engine.stop_scanner()
 
-    if st.session_state.trader:
-        st.session_state.trader.allow_long = longs
-        st.session_state.trader.allow_short = shorts
+    if engine.is_ready and engine.trader:
+        engine.trader.allow_long = longs
+        engine.trader.allow_short = shorts
 
     st.markdown("---")
     st.markdown(
@@ -343,28 +338,27 @@ tabs = st.tabs([
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with tabs[0]:
-    client: OKXClient = st.session_state.client
+    engine: QuantumEngine = st.session_state.engine
 
-    if not st.session_state.api_connected or not client:
+    if not st.session_state.api_connected or not engine.is_ready:
         st.info("사이드바에서 OKX API를 연결하세요.")
     else:
-        # ── 잔고 조회 ──────────────────────────────
-        balance = client.get_balance()
-        positions = client.get_positions()
+        # ── 데이터 통합 조회 ──────────────────────────
+        dash = engine.get_dashboard_data()
+        positions = dash.get("positions", [])
 
         # ── 상단 지표 ──────────────────────────────
         m1, m2, m3, m4 = st.columns(4)
         with m1:
-            st.metric("💰 총 잔고 (USDT)", f"${balance['total']:,.2f}")
+            st.metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
         with m2:
             total_upnl = sum(p["pnl_usdt"] for p in positions)
             st.metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}")
         with m3:
-            trader: AutoTrader = st.session_state.trader
-            dpnl = trader.daily_pnl_usdt if trader else 0.0
+            dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
             st.metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}")
         with m4:
-            st.metric("가용 증거금", f"${balance['free']:,.2f}")
+            st.metric("가용 증거금", f"${dash['free_margin']:,.2f}")
 
         st.markdown("---")
 
@@ -382,7 +376,7 @@ with tabs[0]:
                 if positions:
                     st.markdown('<div class="small-btn">', unsafe_allow_html=True)
                     if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
-                        count = client.close_all_positions()
+                        count = engine.client.close_all_positions()
                         if count > 0:
                             st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
                             time.sleep(1)
@@ -426,7 +420,7 @@ with tabs[0]:
                         st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
                         st.markdown('<div class="small-btn">', unsafe_allow_html=True)
                         if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
-                            if client.close_position(p["symbol"], p["side"]):
+                            if engine.client.close_position(p["symbol"], p["side"]):
                                 st.toast(f"✅ {p['symbol']} 청산 완료")
                                 time.sleep(1)
                                 st.rerun()
@@ -437,8 +431,8 @@ with tabs[0]:
                 '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">SYSTEM LOG</p>',
                 unsafe_allow_html=True,
             )
-            scanner: Scanner = st.session_state.scanner
-            logs = scanner.get_logs(30) if scanner else ["[SYS] 스캐너 미연결"]
+            engine: QuantumEngine = st.session_state.engine
+            logs = engine.scanner.get_logs(30) if engine.scanner else ["[SYS] 엔진 미연결"]
             log_text = "\n".join(reversed(logs))
             st.markdown(
                 f'<div class="log-box">{log_text}</div>',
@@ -475,8 +469,7 @@ with tabs[0]:
                 '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">RISK METRICS</p>',
                 unsafe_allow_html=True,
             )
-            trader = st.session_state.trader
-            orders_today = trader.orders_today if trader else 0
+            orders_today = engine.trader.orders_today if engine.trader else 0
 
             r1, r2 = st.columns(2)
             r1.metric("Profit Factor", "2.45", "목표 ≥ 2.0")
@@ -491,32 +484,31 @@ with tabs[0]:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with tabs[1]:
-    scanner: Scanner = st.session_state.scanner
+    engine: QuantumEngine = st.session_state.engine
 
-    if not st.session_state.api_connected or not scanner:
+    if not st.session_state.api_connected or not engine.is_ready:
         st.info("사이드바에서 OKX API를 연결하세요.")
     else:
         sc1, sc2, sc3 = st.columns([2, 1, 1])
 
         with sc1:
             if st.button("▶  스캔 시작", use_container_width=True):
-                if not scanner.is_running:
-                    scanner.start()
+                engine.start_scanner()
                 st.success("스캐너 가동 중")
 
         with sc2:
             if st.button("⏹  스캔 중지", use_container_width=True):
-                scanner.stop()
+                engine.stop_scanner()
 
         with sc3:
-            last = scanner.last_scan_time
+            last = engine.scanner.last_scan_time if engine.scanner else None
             if last:
                 st.markdown(
                     f'<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;">마지막 스캔: {last.strftime("%H:%M:%S")}</p>',
                     unsafe_allow_html=True,
                 )
 
-        results = scanner.get_results()
+        results = engine.get_scan_results()
 
         if results:
             df_scan = pd.DataFrame(results)
@@ -560,9 +552,9 @@ with tabs[1]:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with tabs[2]:
-    client: OKXClient = st.session_state.client
+    engine: QuantumEngine = st.session_state.engine
 
-    if not st.session_state.api_connected or not client:
+    if not st.session_state.api_connected or not engine.is_ready:
         st.info("사이드바에서 OKX API를 연결하세요.")
     else:
         bt1, bt2, bt3 = st.columns([2, 1, 1])
@@ -582,9 +574,9 @@ with tabs[2]:
             limit = period_days * 24  # 1h 캔들 수
 
             with st.spinner(f"{bt_symbol} {bt_period} 백테스트 실행 중..."):
-                df_bt = client.get_ohlcv(bt_symbol, timeframe="1h", limit=min(limit, 1500))
-                engine = BacktestEngine()
-                report = engine.run(df_bt, bt_symbol, bt_period)
+                df_bt = engine.client.get_ohlcv(bt_symbol, timeframe="1h", limit=min(limit, 1500))
+                bt_engine = BacktestEngine()
+                report = bt_engine.run(df_bt, bt_symbol, bt_period)
 
             if report.total_trades == 0:
                 st.warning("백테스트 결과가 없습니다. 데이터를 확인하세요.")
@@ -665,9 +657,9 @@ with tabs[2]:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with tabs[3]:
-    client: OKXClient = st.session_state.client
+    engine: QuantumEngine = st.session_state.engine
 
-    if not st.session_state.api_connected or not client:
+    if not st.session_state.api_connected or not engine.is_ready:
         st.info("사이드바에서 OKX API를 연결하세요.")
     else:
         h1, h2 = st.columns([2, 1])
@@ -680,7 +672,7 @@ with tabs[3]:
                 st.rerun()
 
         sym_filter = None if hist_symbol == "전체" else hist_symbol
-        history = client.get_trade_history(symbol=sym_filter, limit=100)
+        history = engine.get_trade_history(symbol=sym_filter, limit=100)
 
         if history:
             df_hist = pd.DataFrame(history[::-1])
@@ -690,9 +682,8 @@ with tabs[3]:
             st.dataframe(df_hist, use_container_width=True, hide_index=True, height=500)
         else:
             # 자동매매 엔진 로그 표시
-            trader: AutoTrader = st.session_state.trader
-            if trader:
-                logs = trader.get_trade_log()
+            if engine.trader:
+                logs = engine.trader.get_trade_log()
                 if logs:
                     df_engine = pd.DataFrame(logs)
                     df_engine["timestamp"] = df_engine["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
