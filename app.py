@@ -154,6 +154,25 @@ st.markdown(
         padding-top: 0px !important;
         padding-bottom: 0px !important;
     }
+    /* 분홍색 깜빡임 애니메이션 */
+    @keyframes pink-fade {
+        0% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(0.98); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+    .badge-pink-blink {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: rgba(255, 20, 147, 0.15);
+        border: 1px solid rgba(255, 20, 147, 0.5);
+        border-radius: 6px;
+        padding: 6px 16px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #ff69b4;
+        animation: pink-fade 1.5s infinite ease-in-out;
+        box-shadow: 0 0 10px rgba(255, 20, 147, 0.2);
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -495,8 +514,7 @@ with tabs[1]:
         with sc1:
             if st.button("▶  스캔 시작", use_container_width=True):
                 engine.start_scanner()
-                st.success(f"✅ {st.session_state.active_preset} 스캐너 가동 중")
-
+        
         with sc2:
             if st.button("⏹  스캔 중지", use_container_width=True):
                 engine.stop_scanner()
@@ -508,6 +526,15 @@ with tabs[1]:
                     f'<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;">마지막 스캔: {last.strftime("%H:%M:%S")}</p>',
                     unsafe_allow_html=True,
                 )
+
+        # 상태 표시 배지 (분홍색 깜빡임 연동)
+        if engine.scanner and engine.scanner.is_running:
+            st.markdown(
+                f'<div style="text-align:center; margin-bottom: 20px;">'
+                f'<div class="badge-pink-blink">📡 {st.session_state.active_preset} 스캐너 가동 중</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
 
         results = engine.get_scan_results()
 
