@@ -317,6 +317,7 @@ tabs = st.tabs([
     "🔍  스캐너",
     "📈  백테스트",
     "📋  매매 이력",
+    "🎯  포지션 진입",
     "⚙️  설정",
 ])
 
@@ -664,10 +665,52 @@ with tabs[3]:
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# TAB 5: 설정
+# TAB 5: 포지션 진입
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with tabs[4]:
+    st.markdown(
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">ENTRY CONDITIONS</p>',
+        unsafe_allow_html=True,
+    )
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("**🟢 LONG 포지션 진입 조건**")
+        st.markdown("- **추세:** 현재가가 EMA 보다 높음")
+        st.markdown("- **반등:** 최근 2캔들 내 볼린저 밴드 하단 터치 후 상승 돌파")
+        st.markdown("- **모멘텀:** MACD 히스토그램이 상승 반전 (음수에서 양의 방향)")
+        st.markdown("- **필터:** RSI < 60 (과매수 아님)")
+
+    with c2:
+        st.markdown("**🔴 SHORT 포지션 진입 조건**")
+        st.markdown("- **추세:** 현재가가 EMA 보다 낮음")
+        st.markdown("- **반등:** 최근 2캔들 내 볼린저 밴드 상단 터치 후 하락 돌파")
+        st.markdown("- **모멘텀:** MACD 히스토그램이 하락 반전 (양수에서 음의 방향)")
+        st.markdown("- **필터:** RSI > 40 (과매도 아님)")
+
+    st.markdown("---")
+    st.markdown(
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">INDICATOR PARAMETERS</p>',
+        unsafe_allow_html=True,
+    )
+
+    p1, p2, p3 = st.columns(3)
+    with p1:
+        CFG.EMA_PERIOD = st.number_input("EMA 기간", 10, 500, CFG.EMA_PERIOD, step=10)
+    with p2:
+        CFG.BB_PERIOD = st.number_input("BB 기간", 5, 100, CFG.BB_PERIOD, step=5)
+        CFG.BB_STD = st.number_input("BB 편차 (x)", 1.0, 5.0, float(CFG.BB_STD), step=0.1)
+    with p3:
+        CFG.MACD_FAST = st.number_input("MACD 단기", 1, 50, CFG.MACD_FAST, step=1)
+        CFG.MACD_SLOW = st.number_input("MACD 장기", 1, 100, CFG.MACD_SLOW, step=1)
+        CFG.MACD_SIGNAL = st.number_input("MACD 시그널", 1, 50, CFG.MACD_SIGNAL, step=1)
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TAB 6: 설정
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+with tabs[5]:
     st.markdown(
         '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">STRATEGY PARAMETERS</p>',
         unsafe_allow_html=True,
@@ -685,7 +728,8 @@ with tabs[4]:
         CFG.TAKE_PROFIT_PCT = tp_val / 100.0
         CFG.MIN_VOLUME_USDT = st.number_input("최소 거래대금 (USDT)", 1_000_000.0, 50_000_000.0, float(CFG.MIN_VOLUME_USDT), step=1_000_000.0)
         CFG.SCAN_INTERVAL_SEC = st.slider("스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10)
-        CFG.MAX_DRAWDOWN_PCT = st.slider("MDD 한도 (%)", 0.05, 0.50, CFG.MAX_DRAWDOWN_PCT, step=0.01)
+        mdd_val = st.slider("MDD 한도 (%)", 5.0, 50.0, float(CFG.MAX_DRAWDOWN_PCT * 100), step=1.0)
+        CFG.MAX_DRAWDOWN_PCT = mdd_val / 100.0
 
     st.markdown("---")
     st.markdown(
