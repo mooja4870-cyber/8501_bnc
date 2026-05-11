@@ -577,7 +577,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.33</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.34</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1065,8 +1065,18 @@ with tabs[3]:
         if history:
             df_hist = pd.DataFrame(history[::-1])
             df_hist["timestamp"] = df_hist["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
-            df_hist.columns = ["시각","종목","방향","체결가","수량","금액(USDT)","수수료","주문ID"]
+            # 컬럼 순서 및 이름 정의
+            df_hist = df_hist[["timestamp", "symbol", "type", "side", "leverage", "price", "pnl_usdt", "pnl_pct", "fee"]]
+            df_hist.columns = ["시각", "종목", "구분", "방향", "레버리지", "체결가", "손익(USDT)", "수익률(%)", "수수료"]
+            
+            # 포맷팅 및 스타일링
             df_hist["방향"] = df_hist["방향"].map({"buy":"🟢 BUY","sell":"🔴 SELL"}).fillna(df_hist["방향"])
+            df_hist["구분"] = df_hist["구분"].apply(lambda x: f"🟡 {x}" if x == "청산" else x)
+            
+            # 손익 포맷팅
+            df_hist["손익(USDT)"] = df_hist["손익(USDT)"].apply(lambda x: f"📈 +{x:,.4f}" if x > 0 else (f"📉 {x:,.4f}" if x < 0 else "—"))
+            df_hist["수익률(%)"] = df_hist["수익률(%)"].apply(lambda x: f"+{x:.2f}%" if x > 0 else (f"{x:.2f}%" if x < 0 else "—"))
+
             st.dataframe(df_hist, use_container_width=True, hide_index=True, height=500)
         else:
             # 자동매매 엔진 로그 표시

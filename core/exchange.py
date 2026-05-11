@@ -109,18 +109,46 @@ class OKXClient:
             return []
 
     def get_trade_history(self, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
-        """체결 이력 조회"""
+        """체결 이력 조회 (진입/청산 구분 및 레버리지 포함)"""
         try:
             trades = self.exchange.fetch_my_trades(symbol=symbol, limit=limit)
             result = []
             for t in trades:
+                raw = t.get("info", {})
+                side = t.get("side")      # buy / sell
+                pos_side = raw.get("posSide")  # long / short
+                
+                # 진입/청산 구분 로직
+                trade_type = "—"
+                pnl_usdt = 0.0
+                pnl_pct = 0.0
+                
+                if pos_side == "long":
+                    trade_type = "진입" if side == "buy" else "청산"
+                elif pos_side == "short":
+                    trade_type = "진입" if side == "sell" else "청산"
+                
+                # 청산 시 손익 데이터 추출 (OKX v5: fillPnl)
+                if trade_type == "청산":
+                    pnl_usdt = float(raw.get("fillPnl", 0))
+                    # 수익률 추정 (비용 대비 손익 * 레버리지 개념)
+                    # 실제 정확한 수익률은 (청산가-진입가)/진입가 * 레버리지이나, 
+                    # 단일 fill 데이터에서는 fillPnl을 금액(cost)으로 나누어 추산 가능
+                    cost = float(t.get("cost", 0))
+                    if cost > 0:
+                        lever = float(raw.get("lever", CFG.LEVERAGE))
+                        pnl_pct = (pnl_usdt / cost) * 100 * lever
+
                 result.append({
                     "timestamp": pd.to_datetime(t["timestamp"], unit="ms") + pd.Timedelta(hours=9),
                     "symbol": t["symbol"],
-                    "side": t["side"],
+                    "type": trade_type,
+                    "side": side,
                     "price": round(t.get("price", 0), 6),
                     "amount": t.get("amount", 0),
-                    "cost": round(t.get("cost", 0), 4),
+                    "leverage": f"{raw.get('lever', CFG.LEVERAGE)}x",
+                    "pnl_usdt": round(pnl_usdt, 4),
+                    "pnl_pct": round(pnl_pct, 2),
                     "fee": round((t.get("fee") or {}).get("cost", 0), 6),
                     "order_id": t.get("order"),
                 })
@@ -234,8 +262,20 @@ class OKXClient:
         side: "buy" = 롱 진입, "sell" = 숏 진입
         """
         try:
-            # 1) 레버리지 설정
+            # 1) 레버리지 설정 및 실제 적용값 확인
             self.set_leverage(symbol, CFG.LEVERAGE)
+            
+            # 실제 적용된 레버리지 조회 (OKX 제한 사항 반영)
+            actual_leverage = CFG.LEVERAGE
+            try:
+                lev_info = self.exchange.privateGetAccountLeverageInfo({
+                    'instId': symbol.replace('/', '-').replace(':USDT', ''),
+                    'mgnMode': 'isolated'
+                })
+                actual_leverage = float(lev_info.get('data', [{}])[0].get('lever', CFG.LEVERAGE))
+                logger.info(f"실제 적용 레버리지 ({symbol}): {actual_leverage}x")
+            except Exception as e:
+                logger.warning(f"실제 레버리지 조회 실패, 설정값 사용: {e}")
 
             # 2) 현재가로 수량 계산
             ticker = self.get_ticker(symbol)
@@ -246,7 +286,7 @@ class OKXClient:
             market = self._markets.get(symbol, {})
             contract_size = market.get("contractSize", 1)
             target_margin = margin_usdt
-            target_notional = target_margin * CFG.LEVERAGE
+            target_notional = target_margin * actual_leverage
             amount = target_notional / (price * contract_size)
 
             # ccxt precision 적용
@@ -256,7 +296,7 @@ class OKXClient:
                 raise ValueError(f"주문 수량 계산 실패: {symbol} amount={amount}")
 
             estimated_notional = amount_float * price * contract_size
-            estimated_margin = estimated_notional / CFG.LEVERAGE
+            estimated_margin = estimated_notional / actual_leverage
             max_margin = target_margin + max(0.01, target_margin * 0.01)
             if estimated_margin > max_margin:
                 raise ValueError(
