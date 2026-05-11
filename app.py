@@ -374,7 +374,7 @@ st.markdown(
     }
     .tabline-time {
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 1.0em !important;
+        font-size: 0.9em !important;
         color: #ffffff !important;
         letter-spacing: 0.02em !important;
         margin: 8px 0 0 !important;
@@ -572,7 +572,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.52</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.58</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -693,18 +693,49 @@ with tabs[0]:
         dash = engine.get_dashboard_data()
         positions = dash.get("positions", [])
 
-        # ── 상단 지표 ──────────────────────────────
-        m1, m2, m3, m4 = st.columns(4)
+        # ── 상단 지표 (투명성 강화 버전) ──────────────────────
+        m1, m2, m3, m4, m5 = st.columns(5)
         with m1:
-            st.metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
+            st.metric("💰 총 잔고", f"${dash.get('total_balance', 0.0):,.2f}")
         with m2:
-            total_upnl = sum(p["pnl_usdt"] for p in positions)
-            st.metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}")
+            # 🔒 사용 중 증거금 상세 팝오버
+            with st.popover("🔒 사용 중 증거금"):
+                st.markdown("##### 🛡️ 증거금 상세 내역")
+                used_total = dash.get('used_margin', 0.0)
+                st.write(f"**합계:** `${used_total:,.2f} USDT`")
+                
+                # 1. 포지션 증거금
+                if positions:
+                    st.markdown("**📂 포지션 유지 증거금**")
+                    pos_df = pd.DataFrame([
+                        {"종목": p['symbol'], "방향": p['side'].upper(), "사용 증거금": f"${p['margin']:.2f}"}
+                        for p in positions
+                    ])
+                    st.table(pos_df)
+                
+                # 2. 미체결 주문 (예약 증거금)
+                open_orders = engine.client.get_open_orders()
+                if open_orders:
+                    st.markdown("**⏳ 미체결 주문 (예약 중)**")
+                    order_df = pd.DataFrame([
+                        {"종목": o['symbol'], "구분": o['side'].upper(), "수량": o['amount']}
+                        for o in open_orders
+                    ])
+                    st.table(order_df)
+                
+                if not positions and not open_orders:
+                    st.info("현재 사용 중인 증거금이 없습니다.")
+            
+            st.markdown(f'<p style="font-size:1.5rem; font-weight:bold; margin-top:-15px;">${dash.get("used_margin", 0.0):,.2f}</p>', unsafe_allow_html=True)
+            
         with m3:
-            dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
-            st.metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}")
+            st.metric("🔓 가용 증거금", f"${dash.get('free_margin', 0.0):,.2f}")
         with m4:
-            st.metric("가용 증거금", f"${dash['free_margin']:,.2f}")
+            total_upnl = sum(p.get("pnl_usdt", 0.0) for p in positions)
+            st.metric("미실현 손익", f"${total_upnl:+.2f}")
+        with m5:
+            dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
+            st.metric("금일 실현 손익", f"${dpnl:+.2f}")
 
         st.markdown("---")
 

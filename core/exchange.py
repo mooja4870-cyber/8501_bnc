@@ -263,24 +263,30 @@ class OKXClient:
         side: "buy" = 롱 진입, "sell" = 숏 진입
         """
         try:
-            # 1) 레버리지 설정 및 실제 적용값 확인
+            # 1) 레버리지 설정 및 실제 최대 한도 확인
+            # OKX는 종목마다, 계정 상태마다 최대 레버리지가 다름.
             self.set_leverage(symbol, CFG.LEVERAGE)
             
-            # 실제 적용된 레버리지 조회 (OKX 제한 사항 반영)
+            # 실제 가능한 최대 레버리지 조회
             actual_leverage = CFG.LEVERAGE
             try:
-                lev_info = self.exchange.privateGetAccountLeverageInfo({
+                # 계정별/종목별 최대 레버리지 정보 조회
+                lev_info = self.exchange.privateGetAccountMaxLeverage({
                     'instId': symbol.replace('/', '-').replace(':USDT', ''),
                     'mgnMode': 'isolated'
                 })
-                actual_leverage = float(lev_info.get('data', [{}])[0].get('lever', CFG.LEVERAGE))
-                logger.info(f"실제 적용 레버리지 ({symbol}): {actual_leverage}x")
+                # 거래소가 허용하는 최대값과 사용자가 설정한 값 중 최소값 선택
+                max_allowed = float(lev_info.get('data', [{}])[0].get('maxLvr', CFG.LEVERAGE))
+                actual_leverage = min(float(CFG.LEVERAGE), max_allowed)
+                logger.info(f"레버리지 확정 ({symbol}): 설정 {CFG.LEVERAGE}x / 실제 한도 {max_allowed}x -> 적용 {actual_leverage}x")
             except Exception as e:
-                logger.warning(f"실제 레버리지 조회 실패, 설정값 사용: {e}")
+                logger.warning(f"최대 레버리지 조회 실패, 설정값 사용: {e}")
 
-            # 2) 수량 계산 (고정 증거금 방식)
-            # 사용자가 설정한 '증거금($5)'을 고정하고, 레버리지는 가능한 범위 내에서 적용
+            # 2) 수량 계산 (고정 증거금 방식 - 절대 초과 금지)
+            # 사용자가 설정한 '증거금($5)'을 기준으로, 실제 가능한 레버리지를 곱해 노셔널 산출
+            # 예: $5 * 3배(한도) = $15 노셔널 (증거금은 딱 $5만 사용됨)
             target_margin = margin_usdt
+            target_notional = target_margin * actual_leverage
             
             ticker = self.get_ticker(symbol)
             price = ticker.get("last", 0)
@@ -289,10 +295,6 @@ class OKXClient:
 
             market = self._markets.get(symbol, {})
             contract_size = market.get("contractSize", 1)
-            
-            # 최종 노셔널 계산: 고정 증거금 * 실제 적용 레버리지
-            # 예: 증거금 $5 고정, 레버리지가 3배로 제한되면 $15치 진입
-            target_notional = target_margin * actual_leverage
             
             # 잔고 체크 (고정 증거금 기준)
             bal = self.get_balance()
@@ -417,3 +419,47 @@ class OKXClient:
             if self.close_position(p["symbol"], p["side"]):
                 success_count += 1
         return success_count
+
+    def cancel_order(self, symbol: str, order_id: str) -> bool:
+        """주문 취소"""
+        try:
+            self.exchange.cancel_order(order_id, symbol)
+            return True
+        except Exception as e:
+            logger.error(f"주문 취소 실패 ({symbol} {order_id}): {e}")
+            return False
+
+    def cancel_sl_tp_orders(self, symbol: str):
+        """특정 심볼의 모든 SL/TP(Stop) 주문 취소"""
+        try:
+            orders = self.get_open_orders()
+            for o in orders:
+                if o["symbol"] == symbol and o["type"] in ("stop", "trigger"):
+                    self.cancel_order(symbol, o["id"])
+        except Exception as e:
+            logger.error(f"SL/TP 주문 일괄 취소 실패 ({symbol}): {e}")
+
+    def place_sl_tp_orders(self, symbol: str, side: str, amount: float, entry_price: float, sl_pct: float, tp_pct: float):
+        """포지션에 대한 새로운 SL/TP 주문 전송"""
+        try:
+            sl_price = entry_price * (1 - sl_pct) if side == "long" else entry_price * (1 + sl_pct)
+            tp_price = entry_price * (1 + tp_pct) if side == "long" else entry_price * (1 - tp_pct)
+            
+            sl_price = float(self.exchange.price_to_precision(symbol, sl_price))
+            tp_price = float(self.exchange.price_to_precision(symbol, tp_price))
+            
+            # SL
+            self.exchange.create_order(
+                symbol=symbol, type="stop", side="sell" if side == "long" else "buy",
+                amount=amount, price=sl_price,
+                params={"stopPrice": sl_price, "tdMode": "isolated", "posSide": side, "reduceOnly": True}
+            )
+            # TP
+            self.exchange.create_order(
+                symbol=symbol, type="stop", side="sell" if side == "long" else "buy",
+                amount=amount, price=tp_price,
+                params={"stopPrice": tp_price, "tdMode": "isolated", "posSide": side, "reduceOnly": True}
+            )
+            logger.info(f"[SYNC] {symbol} SL/TP 갱신 완료 (SL:{sl_price}, TP:{tp_price})")
+        except Exception as e:
+            logger.error(f"SL/TP 갱신 주문 실패 ({symbol}): {e}")

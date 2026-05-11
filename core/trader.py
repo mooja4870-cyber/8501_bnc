@@ -234,3 +234,58 @@ class AutoTrader:
     def get_trade_log(self) -> List[Dict]:
         with self._lock:
             return list(reversed(self.trade_log))
+
+    def sync_sl_tp(self):
+        """
+        [v1.1.57] 실시간 SL/TP 동기화
+        보유 포지션의 손절/익절가가 현재 설정(CFG)과 다를 경우 주문을 취소하고 재전송한다.
+        """
+        if not self.enabled:
+            return
+            
+        try:
+            positions = self.client.get_positions()
+            if not positions:
+                return
+                
+            open_orders = self.client.get_open_orders()
+            
+            for p in positions:
+                symbol = p["symbol"]
+                side = p["side"]
+                size = p["size"]
+                entry_price = p["entry_price"]
+                
+                # 1. 현재 설정에 따른 목표가 계산
+                target_sl = entry_price * (1 - self.cfg.STOP_LOSS_PCT) if side == "long" else entry_price * (1 + self.cfg.STOP_LOSS_PCT)
+                target_tp = entry_price * (1 + self.cfg.TAKE_PROFIT_PCT) if side == "long" else entry_price * (1 - self.cfg.TAKE_PROFIT_PCT)
+                
+                # 2. 현재 걸려있는 SL/TP 주문 확인
+                existing_stops = [
+                    o for o in open_orders 
+                    if o["symbol"] == symbol and o["type"] in ("stop", "trigger")
+                ]
+                
+                # 만약 주문이 2개가 아니거나 가격 차이가 0.5% 이상 나면 갱신
+                needs_update = len(existing_stops) != 2
+                if not needs_update:
+                    for stop in existing_stops:
+                        # 가격 비교 (오차 범위 0.1% 내외면 유지)
+                        price = float(stop.get("price") or stop.get("stopPrice") or 0)
+                        if price == 0: continue
+                        
+                        target = target_sl if (side == "long" and price < entry_price) or (side == "short" and price > entry_price) else target_tp
+                        if abs(price - target) / target > 0.005: # 0.5% 차이 시 갱신
+                            needs_update = True
+                            break
+                
+                if needs_update:
+                    logger.info(f"[SYNC] {symbol} 설정 변경 감지 -> SL/TP 주문 갱신 시작")
+                    self.client.cancel_sl_tp_orders(symbol)
+                    self.client.place_sl_tp_orders(
+                        symbol, side, size, entry_price,
+                        self.cfg.STOP_LOSS_PCT, self.cfg.TAKE_PROFIT_PCT
+                    )
+                    
+        except Exception as e:
+            logger.error(f"SL/TP 동기화 오류: {e}")

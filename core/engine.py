@@ -90,6 +90,7 @@ class QuantumEngine:
         
         return {
             "total_balance": balance.get("total", 0),
+            "used_margin": balance.get("used", 0),
             "free_margin": balance.get("free", 0),
             "realized_pnl": balance.get("pnl", 0),
             "positions": positions,
@@ -138,5 +139,9 @@ class QuantumEngine:
                     )
 
             self._prev_position_symbols = current
+            
+            # [v1.1.57] 실시간 설정 동기화 실행
+            if self.trader:
+                self.trader.sync_sl_tp()
         except Exception as e:
             logger.error(f"청산 감지 오류: {e}")
