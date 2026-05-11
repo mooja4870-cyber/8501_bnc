@@ -200,6 +200,21 @@ st.markdown(
         animation: pink-fade 1.5s infinite ease-in-out;
         box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
     }
+    /* 최신 로그 강조 스타일 */
+    @keyframes latest-blink {
+        0% { opacity: 1; color: #ffffff; }
+        50% { opacity: 0.7; color: #c8f53b; }
+        100% { opacity: 1; color: #ffffff; }
+    }
+    .latest-log-line {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        animation: latest-blink 2s infinite ease-in-out;
+        display: block;
+        margin-bottom: 4px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 4px;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -269,7 +284,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.16</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.17</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -482,11 +497,15 @@ with tabs[0]:
             )
             engine: QuantumEngine = st.session_state.engine
             logs = engine.scanner.get_logs(30) if engine.scanner else ["[SYS] 엔진 미연결"]
-            log_text = "\n".join(reversed(logs))
-            st.markdown(
-                f'<div class="log-box">{log_text}</div>',
-                unsafe_allow_html=True,
-            )
+            
+            if logs:
+                latest_log = logs[-1]
+                other_logs = "\n".join(reversed(logs[:-1]))
+                log_html = f'<div class="log-box"><span class="latest-log-line">NEW 👉 {latest_log}</span>{other_logs}</div>'
+            else:
+                log_html = '<div class="log-box">로그 데이터 없음</div>'
+                
+            st.markdown(log_html, unsafe_allow_html=True)
 
         st.markdown("---")
 
