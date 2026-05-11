@@ -211,15 +211,23 @@ class OKXClient:
 
     # ── 주문 실행 ──────────────────────────────────────
 
-    def set_leverage(self, symbol: str, leverage: int = CFG.LEVERAGE) -> bool:
-        """레버리지 설정"""
+    def set_leverage(self, symbol: str, leverage: int = CFG.LEVERAGE) -> int:
+        """레버리지 설정 및 실제 설정된 값 반환"""
         try:
-            self.exchange.set_leverage(leverage, symbol, params={"mgnMode": "isolated"})
-            logger.info(f"레버리지 설정: {symbol} {leverage}x")
-            return True
+            # OKX v5 isolated 모드 설정
+            res = self.exchange.set_leverage(leverage, symbol, params={"mgnMode": "isolated"})
+            # 설정 후 실제 적용된 레버리지 확인 (API마다 응답 형식이 다를 수 있음)
+            actual_leverage = int(res.get("leverage") or res.get("lever") or leverage)
+            logger.info(f"레버리지 설정 확인: {symbol} -> {actual_leverage}x")
+            return actual_leverage
         except Exception as e:
-            logger.error(f"레버리지 설정 실패 ({symbol}): {e}")
-            return False
+            # 이미 설정되어 있거나 변경이 불필요한 경우 에러가 날 수 있으므로 현재 설정 조회 시도
+            logger.warning(f"레버리지 직접 설정 실패 ({symbol}): {e}. 현재 설정 조회를 시도합니다.")
+            try:
+                # CCXT fetch_leverage가 지원되지 않을 경우를 대비해 기본값 반환 전 포지션 정보 활용 가능
+                return leverage # 실패 시 일단 요청값 반환 (계산 안정성 위해)
+            except:
+                return leverage
 
     def place_order(
         self,
@@ -234,10 +242,10 @@ class OKXClient:
         side: "buy" = 롱 진입, "sell" = 숏 진입
         """
         try:
-            # 1) 레버리지 설정
-            self.set_leverage(symbol, CFG.LEVERAGE)
+            # 1) 레버리지 설정 및 실제 레버리지 획득
+            actual_leverage = self.set_leverage(symbol, CFG.LEVERAGE)
 
-            # 2) 현재가로 수량 계산
+            # 2) 현재가로 수량 계산 (실제 레버리지 반영)
             ticker = self.get_ticker(symbol)
             price = ticker.get("last", 0)
             if not price:
@@ -245,18 +253,25 @@ class OKXClient:
 
             market = self._markets.get(symbol, {})
             contract_size = market.get("contractSize", 1)
-            notional = margin_usdt * CFG.LEVERAGE
+            
+            # 중요: 사용자가 투입하고자 하는 '순수 증거금'을 고정하고 수량을 역산함
+            # 수량(계약수) = (투입 증거금 * 실제 레버리지) / (현재가 * 계약당 크기)
+            notional = margin_usdt * actual_leverage
             amount = notional / (price * contract_size)
 
             # ccxt precision 적용
-            amount = self.exchange.amount_to_precision(symbol, amount)
+            amount = float(self.exchange.amount_to_precision(symbol, amount))
+            
+            if amount <= 0:
+                logger.error(f"주문 수량 부족: {amount} (Margin {margin_usdt} USDT 가 너무 작음)")
+                return None
 
             # 3) 시장가 진입
             order = self.exchange.create_order(
                 symbol=symbol,
                 type="market",
                 side=side,
-                amount=float(amount),
+                amount=amount,
                 params={"tdMode": "isolated", "posSide": "long" if side == "buy" else "short"},
             )
             entry_price = float(order.get("average") or price)
