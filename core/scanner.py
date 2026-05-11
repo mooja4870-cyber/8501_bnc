@@ -117,8 +117,8 @@ class Scanner:
                     if self.on_signal:
                         self.on_signal(sig)
 
-                # Rate limit 보호
-                time.sleep(0.15)
+                # Rate limit 보호 (0.15s -> 0.3s 상향)
+                time.sleep(0.3)
 
             except Exception as e:
                 logger.warning(f"종목 스캔 오류 ({sym}): {e}")
