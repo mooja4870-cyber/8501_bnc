@@ -18,12 +18,12 @@ from core.scanner import Scanner
 from core.trader import AutoTrader
 from core.engine import QuantumEngine
 from core.backtest import BacktestEngine
-from core.config import CFG, Config
+from core.config import CFG, TradingConfig
 import core.stats as stats_store
 
 # ── 환경 설정 로드 ─────────────────────────────────
 load_dotenv(override=True)
-CFG = Config()
+CFG = TradingConfig()
 
 # ── 페이지 설정 ───────────────────────────────────────
 st.set_page_config(
