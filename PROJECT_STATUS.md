@@ -62,3 +62,6 @@
 
 ## v1.1.24 (2026-05-11)
 - [UI] Changed ¡Ü LIVE badge to red color with blinking animation.
+
+## v1.1.25 (2026-05-11)
+- [UI] Applied attached design style to header status area: cyan outlined REFRESH button and LIVE STATUS badge with glowing green dot.

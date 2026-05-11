@@ -77,6 +77,18 @@ st.markdown(
         letter-spacing: 0.05em !important;
     }
     .stButton > button:hover { opacity: 0.85 !important; }
+    .refresh-btn button {
+        background: rgba(9, 18, 28, 0.9) !important;
+        color: #5de1ff !important;
+        border: 1px solid rgba(93, 225, 255, 0.6) !important;
+        border-radius: 12px !important;
+        box-shadow: inset 0 0 0 1px rgba(93, 225, 255, 0.15), 0 0 10px rgba(93, 225, 255, 0.15) !important;
+        letter-spacing: 0.08em !important;
+    }
+    .refresh-btn button:hover {
+        opacity: 1 !important;
+        box-shadow: inset 0 0 0 1px rgba(93, 225, 255, 0.35), 0 0 16px rgba(93, 225, 255, 0.35) !important;
+    }
 
     /* 구분선 */
     hr { border-color: rgba(255,255,255,0.07) !important; }
@@ -111,16 +123,25 @@ st.markdown(
 
     /* 상태 배지 */
     .badge-live {
-        display: inline-flex; align-items: center; gap: 6px;
-        background: rgba(239,68,68,0.1);
-        border: 1px solid rgba(239,68,68,0.3);
+        display: inline-flex; align-items: center; gap: 10px;
+        background: rgba(17, 24, 39, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.2);
         border-radius: 20px;
-        padding: 3px 12px;
+        padding: 8px 16px;
         font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.7rem;
-        color: #ef4444;
-        letter-spacing: 0.05em;
-        animation: pink-fade 1.5s infinite ease-in-out;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #7ef45a;
+        letter-spacing: 0.08em;
+        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+    }
+    .badge-live .dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #7ef45a;
+        box-shadow: 0 0 8px rgba(126, 244, 90, 0.8);
+        animation: green-pulse 1.2s infinite ease-in-out;
     }
     .badge-stopped {
         display: inline-flex; align-items: center; gap: 6px;
@@ -370,11 +391,13 @@ with col_time:
 
 with col_status:
     if st.session_state.auto_trading:
-        st.markdown('<div class="badge-live" style="margin-bottom:8px;">● LIVE</div>', unsafe_allow_html=True)
+        st.markdown('<div class="badge-live" style="margin-bottom:8px;"><span class="dot"></span><span>LIVE STATUS</span></div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="badge-stopped" style="margin-bottom:8px;">● STOPPED</div>', unsafe_allow_html=True)
-    if st.button("🔄 새로고침", key="global_refresh", use_container_width=True):
+    st.markdown('<div class="refresh-btn">', unsafe_allow_html=True)
+    if st.button("⟳ REFRESH", key="global_refresh", use_container_width=True):
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown('<hr style="margin: 8px 0 16px;">', unsafe_allow_html=True)
 
