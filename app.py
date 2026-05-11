@@ -279,7 +279,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.21</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.22</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -551,77 +551,83 @@ with tabs[1]:
     if not st.session_state.api_connected or not engine.is_ready:
         st.info("사이드바에서 OKX API를 연결하세요.")
     else:
-        sc1, sc2, sc3 = st.columns([2, 1, 1])
+        # ── 스캐너 제어 및 결과 프래그먼트 (10초 주기) ────────────────
+        @st.fragment(run_every=10)
+        def render_scanner_tab():
+            sc1, sc2, sc3 = st.columns([2, 1, 1])
 
-        with sc1:
-            if st.button("▶  스캔 시작", use_container_width=True):
-                engine.start_scanner()
-        
-        with sc2:
-            if st.button("⏹  스캔 중지", use_container_width=True):
-                engine.stop_scanner()
+            with sc1:
+                if st.button("▶  스캔 시작", use_container_width=True, key="btn_scan_start"):
+                    engine.start_scanner()
+            
+            with sc2:
+                if st.button("⏹  스캔 중지", use_container_width=True, key="btn_scan_stop"):
+                    engine.stop_scanner()
 
-        with sc3:
-            last = engine.scanner.last_scan_time if engine.scanner else None
-            if last:
+            with sc3:
+                last = engine.scanner.last_scan_time if engine.scanner else None
+                if last:
+                    st.markdown(
+                        f'<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;">마지막 스캔: {last.strftime("%H:%M:%S")}</p>',
+                        unsafe_allow_html=True,
+                    )
+
+            # 상태 표시 배지
+            if engine.scanner and engine.scanner.is_running:
+                preset = st.session_state.active_preset
+                badge_class = "badge-green-blink"
+                if "1차" in preset:
+                    badge_class = "badge-pink-blink"
+                elif "2차" in preset:
+                    badge_class = "badge-red-blink"
+                    
                 st.markdown(
-                    f'<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;">마지막 스캔: {last.strftime("%H:%M:%S")}</p>',
-                    unsafe_allow_html=True,
+                    f'<div style="text-align:center; margin-bottom: 20px;">'
+                    f'<div class="{badge_class}">📡 {preset} 스캐너 가동 중</div>'
+                    f'</div>',
+                    unsafe_allow_html=True
                 )
 
-        # 상태 표시 배지 (상황별 색상 연동)
-        if engine.scanner and engine.scanner.is_running:
-            preset = st.session_state.active_preset
-            badge_class = "badge-green-blink"
-            if "1차" in preset:
-                badge_class = "badge-pink-blink"
-            elif "2차" in preset:
-                badge_class = "badge-red-blink"
-                
-            st.markdown(
-                f'<div style="text-align:center; margin-bottom: 20px;">'
-                f'<div class="{badge_class}">📡 {preset} 스캐너 가동 중</div>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
+            results = engine.get_scan_results()
 
-        results = engine.get_scan_results()
+            if results:
+                df_scan = pd.DataFrame(results)
 
-        if results:
-            df_scan = pd.DataFrame(results)
+                # 신호 필터
+                signal_filter = st.selectbox(
+                    "신호 필터",
+                    ["전체", "LONG 신호", "SHORT 신호", "신호 없음"],
+                    label_visibility="collapsed",
+                    key="scanner_signal_filter"
+                )
+                if signal_filter == "LONG 신호":
+                    df_scan = df_scan[df_scan["signal"] == "long"]
+                elif signal_filter == "SHORT 신호":
+                    df_scan = df_scan[df_scan["signal"] == "short"]
+                elif signal_filter == "신호 없음":
+                    df_scan = df_scan[df_scan["signal"] == "none"]
 
-            # 신호 필터
-            signal_filter = st.selectbox(
-                "신호 필터",
-                ["전체", "LONG 신호", "SHORT 신호", "신호 없음"],
-                label_visibility="collapsed",
-            )
-            if signal_filter == "LONG 신호":
-                df_scan = df_scan[df_scan["signal"] == "long"]
-            elif signal_filter == "SHORT 신호":
-                df_scan = df_scan[df_scan["signal"] == "short"]
-            elif signal_filter == "신호 없음":
-                df_scan = df_scan[df_scan["signal"] == "none"]
+                # 표시용 포맷
+                display = df_scan[["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok"]].copy()
+                display.columns = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","EMA200","MACD","BB"]
+                display["신호"] = display["신호"].map({"long":"🟢 LONG","short":"🔴 SHORT","none":"— "})
+                display["EMA200"] = display["EMA200"].map({True:"✅",False:"❌"})
+                display["MACD"] = display["MACD"].map({True:"✅",False:"❌"})
+                display["BB"] = display["BB"].map({True:"✅",False:"❌"})
 
-            # 표시용 포맷
-            display = df_scan[["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok"]].copy()
-            display.columns = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","EMA200","MACD","BB"]
-            display["신호"] = display["신호"].map({"long":"🟢 LONG","short":"🔴 SHORT","none":"— "})
-            display["EMA200"] = display["EMA200"].map({True:"✅",False:"❌"})
-            display["MACD"] = display["MACD"].map({True:"✅",False:"❌"})
-            display["BB"] = display["BB"].map({True:"✅",False:"❌"})
-
-            st.dataframe(
-                display,
-                use_container_width=True,
-                height=500,
-                hide_index=True,
-            )
-        else:
-            st.markdown(
-                '<p style="color:#555;font-family:\'IBM Plex Mono\',monospace;">스캔 결과 없음 — 스캔 시작 버튼을 누르세요.</p>',
-                unsafe_allow_html=True,
-            )
+                st.dataframe(
+                    display,
+                    use_container_width=True,
+                    height=500,
+                    hide_index=True,
+                )
+            else:
+                st.markdown(
+                    '<p style="color:#555;font-family:\'IBM Plex Mono\',monospace;">스캔 결과 없음 — 스캔 시작 버튼을 누르세요.</p>',
+                    unsafe_allow_html=True,
+                )
+        
+        render_scanner_tab()
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

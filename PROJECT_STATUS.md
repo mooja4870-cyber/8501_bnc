@@ -27,6 +27,7 @@
 - [Logic] **청산 대기 시간 보정:** 즉시청산 버튼 클릭 후 API 반영 시차를 고려하여 대기 시간을 1초에서 2초로 상향 조정.
 - [Fix] `core/trader.py` 내 `timedelta` 임포트 누락으로 인한 로그 기록 오류 수정.
 - [UI] **상단 바 레이아웃 최적화:** 새로고침 버튼(🔄)을 LIVE/STOPPED 배지의 왼쪽으로 이동시켜 공간 효율성 및 가시성 개선 (v1.1.21).
+- [Fix] **스캐너 안정성 및 실시간성 강화:** 50011(Too Many Requests) 방지를 위해 스캔 딜레이를 0.4초로 조정하고, 스캐너 탭에도 10초 주기 자동 새로고침(st.fragment) 적용 (v1.1.22).
 
 ## Next Steps
 - Implement advanced risk management features (e.g., dynamic TP/SL).

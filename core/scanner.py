@@ -76,28 +76,38 @@ class Scanner:
         symbols = self.client.get_all_usdt_swap_symbols()
         self._log(f"[SCAN] 전종목 스캔 시작: {len(symbols)}개 페어")
 
-        # 기존 결과를 참조하되 업데이트할 수 있도록 딕셔너리 형태로 관리 (심볼 키)
-        current_results = {r["symbol"]: r for r in self.scan_results}
+        # 락을 잡고 현재 결과 스냅샷 복사 (스레드 안전)
+        with self._lock:
+            current_results = {r["symbol"]: r for r in self.scan_results}
+        
         signal_count = 0
+        updated_count = 0
 
         for sym in symbols:
             if not self._running:
                 break
             try:
-                # 최소 거래대금 필터
+                # 1. 티커 조회 (가격 및 거래대금)
                 ticker = self.client.get_ticker(sym)
+                if not ticker:
+                    continue
+                
                 vol = ticker.get("volume", 0)
+                # 최소 거래대금 필터
                 if vol < self.cfg.MIN_VOLUME_USDT:
-                    # 거래대금 미달 종목은 결과에서 제거
                     if sym in current_results:
                         del current_results[sym]
                     continue
 
+                # 2. OHLCV 조회 및 신호 생성
                 df = self.client.get_ohlcv(sym, limit=250)
                 if df.empty:
+                    # 50011 등 일시적 오류 시 기존 데이터 유지 (제거하지 않음)
                     continue
 
                 sig = self.strategy.generate_signal(df, sym)
+                
+                # 결과 데이터 구성
                 item = {
                     "symbol": sym,
                     "price": ticker.get("last", 0),
@@ -112,30 +122,31 @@ class Scanner:
                     "timestamp": datetime.now(),
                 }
                 current_results[sym] = item
+                updated_count += 1
 
                 if sig.direction in ("long", "short"):
                     signal_count += 1
-                    self._log(
-                        f"[SIG] {sym} {sig.direction.upper()} 신호 포착 "
-                        f"(강도 {sig.strength}%)"
-                    )
+                    self._log(f"[SIG] {sym} {sig.direction.upper()} 신호 포착 (강도 {sig.strength}%)")
                     if self.on_signal:
                         self.on_signal(sig)
 
-                # 점진적 업데이트: UI 반응성 향상을 위해 5개 종목마다 락 잡고 업데이트
-                if len(current_results) % 5 == 0:
+                # 점진적 업데이트 (10개 종목마다 UI용 리스트 갱신)
+                if updated_count % 10 == 0:
                     with self._lock:
-                        # 강도 내림차순 정렬하여 저장
                         self.scan_results = sorted(current_results.values(), key=lambda x: x["strength"], reverse=True)
 
-                # Rate limit 보호
-                time.sleep(0.3)
+                # Rate limit 보호 (0.3s -> 0.4s 상향 조정)
+                time.sleep(0.4)
 
             except Exception as e:
-                logger.warning(f"종목 스캔 오류 ({sym}): {e}")
+                if "50011" in str(e):
+                    logger.warning(f"Rate Limit(50011) 발생 ({sym}) - 1초 대기")
+                    time.sleep(1.0)
+                else:
+                    logger.warning(f"종목 스캔 오류 ({sym}): {e}")
                 continue
 
-        # 최종 정렬 및 업데이트
+        # 최종 결과 저장 및 정렬
         with self._lock:
             self.scan_results = sorted(current_results.values(), key=lambda x: x["strength"], reverse=True)
             self.last_scan_time = datetime.now()
@@ -147,7 +158,6 @@ class Scanner:
             f"{datetime.now().strftime('%H:%M:%S')}"
         )
 
-        # 스캔 완료 콜백 (청산 감지 등)
         if self.on_scan_complete:
             try:
                 self.on_scan_complete()
