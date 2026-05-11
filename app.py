@@ -349,6 +349,50 @@ st.markdown(
     .log-latest {
         color: #7ef45a !important;
     }
+    .tabline-time {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.68rem !important;
+        color: #5f6878 !important;
+        letter-spacing: 0.02em !important;
+        margin: 8px 0 0 !important;
+        text-align: right !important;
+        white-space: nowrap !important;
+    }
+    .tabline-status {
+        display: flex !important;
+        justify-content: flex-end !important;
+        margin-top: 0 !important;
+    }
+    .tabline-status .badge-live,
+    .tabline-status .badge-stopped {
+        margin-bottom: 0 !important;
+        white-space: nowrap !important;
+    }
+    .tabline-refresh button {
+        height: 38px !important;
+        min-height: 38px !important;
+        margin-top: 0 !important;
+        white-space: nowrap !important;
+    }
+    .stTabs {
+        margin-top: -48px !important;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        padding-right: 600px !important;
+        min-height: 42px !important;
+        align-items: center !important;
+    }
+    @media (max-width: 1200px) {
+        .stTabs {
+            margin-top: 8px !important;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            padding-right: 4px !important;
+        }
+        .tabline-time {
+            text-align: left !important;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -418,7 +462,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.27</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.28</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -490,33 +534,27 @@ with st.sidebar:
 # 메인 헤더
 # ══════════════════════════════════════════════════════
 
-col_logo, col_time, col_status = st.columns([3, 2, 1])
+now_kst = datetime.utcnow() + timedelta(hours=9)
+tabline_spacer, tabline_time, tabline_status, tabline_refresh = st.columns([4.8, 1.8, 1.35, 1.45])
 
-with col_logo:
+with tabline_time:
     st.markdown(
-        '',
+        f'<p class="tabline-time">{now_kst.strftime("%Y-%m-%d %H:%M:%S")} KST</p>',
         unsafe_allow_html=True,
     )
 
-with col_time:
-    now_kst = datetime.utcnow() + timedelta(hours=9)
-    st.markdown(
-        f'<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#555;margin-top:6px;">'
-        f'{now_kst.strftime("%Y-%m-%d %H:%M:%S")} KST</p>',
-        unsafe_allow_html=True,
-    )
-
-with col_status:
+with tabline_status:
     if st.session_state.auto_trading:
-        st.markdown('<div class="badge-live" style="margin-bottom:8px;"><span class="dot"></span><span>LIVE CONNECTION</span></div>', unsafe_allow_html=True)
+        status_html = '<div class="badge-live"><span class="dot"></span><span>LIVE CONNECTION</span></div>'
     else:
-        st.markdown('<div class="badge-stopped" style="margin-bottom:8px;">● STOPPED</div>', unsafe_allow_html=True)
-    st.markdown('<div class="refresh-btn">', unsafe_allow_html=True)
+        status_html = '<div class="badge-stopped">● STOPPED</div>'
+    st.markdown(f'<div class="tabline-status">{status_html}</div>', unsafe_allow_html=True)
+
+with tabline_refresh:
+    st.markdown('<div class="refresh-btn tabline-refresh">', unsafe_allow_html=True)
     if st.button("⟳ REFRESH", key="global_refresh", use_container_width=True):
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown('<hr style="margin: 8px 0 16px;">', unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════

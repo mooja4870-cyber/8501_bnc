@@ -73,3 +73,7 @@
 ## v1.1.27 (2026-05-11)
 - [UI] Applied stitch_trading_bot_ui_design.zip style system as app-wide override (Space Grotesk/Inter/JetBrains Mono, cyber dark palette, glass cards, neon green primary + cyan refresh accents).
 - [UI] Updated header live badge label to 'LIVE CONNECTION' and sidebar version label to v1.1.27.
+
+## v1.1.28 (2026-05-11)
+- [UI] Moved KST timestamp, LIVE CONNECTION badge, and REFRESH control onto the same visual row as the main dashboard tabs.
+- [UI] Updated sidebar version label to v1.1.28.
