@@ -11,7 +11,7 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import time
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 
 from core.exchange import OKXClient
 from core.scanner import Scanner
@@ -1171,7 +1171,12 @@ with tabs[5]:
 
     s1, s2 = st.columns(2)
     with s1:
-        CFG.INITIAL_CAPITAL = st.number_input("초기 자본금 (USDT)", 1.0, 1000000.0, float(CFG.INITIAL_CAPITAL), step=100.0)
+        new_init_cap = st.number_input("초기 자본금 (USDT)", 1.0, 1000000.0, float(CFG.INITIAL_CAPITAL), step=100.0)
+        if new_init_cap != CFG.INITIAL_CAPITAL:
+            CFG.INITIAL_CAPITAL = new_init_cap
+            set_key(".env", "INITIAL_CAPITAL", str(new_init_cap))
+            st.toast("💾 초기 자본금 저장됨")
+            
         CFG.LEVERAGE = st.slider("레버리지 (x)", 1, 20, CFG.LEVERAGE)
         CFG.MARGIN_USDT = st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0)
         CFG.MAX_POSITIONS = st.slider("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS)
