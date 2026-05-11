@@ -832,12 +832,39 @@ with tabs[0]:
             unsafe_allow_html=True,
         )
         
-        _st = stats_store.load_stats()
-        orders_today = _st.get("orders_today", 0)
-        win_rate = stats_store.get_win_rate()
-        total_wins = _st.get("total_wins", 0)
-        total_losses = _st.get("total_losses", 0)
+        # ── 거래소 이력 기반 실시간 집계 (stats.json 의존 제거) ──
+        all_trades = engine.get_trade_history(limit=200)
+        from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+        _kst = _tz(_td(hours=9))
+        _today_str = _dt.now(_kst).strftime("%Y-%m-%d")
+        
+        # 금일 거래만 필터
+        today_trades = [
+            t for t in all_trades
+            if str(t['timestamp'])[:10] == _today_str
+        ]
+        
+        # 금일 진입 주문 (고유 order_id 기준)
+        entry_ids = set()
+        for t in today_trades:
+            if t['type'] == '진입' and t.get('order_id'):
+                entry_ids.add(t['order_id'])
+        orders_today = len(entry_ids)
+        
+        # 금일 청산 건 기준 승/패 (고유 order_id 기준)
+        close_results = {}
+        for t in today_trades:
+            if t['type'] == '청산' and t.get('order_id'):
+                oid = t['order_id']
+                if oid not in close_results:
+                    close_results[oid] = t['pnl_usdt']
+                else:
+                    close_results[oid] += t['pnl_usdt']
+        
+        total_wins = sum(1 for pnl in close_results.values() if pnl >= 0)
+        total_losses = sum(1 for pnl in close_results.values() if pnl < 0)
         total_trades = total_wins + total_losses
+        win_rate = (total_wins / total_trades * 100) if total_trades > 0 else 0.0
         win_label = f"{win_rate:.1f}%" if total_trades > 0 else "-"
         win_delta = f"{total_wins}W / {total_losses}L" if total_trades > 0 else "N/A"
 
@@ -848,18 +875,17 @@ with tabs[0]:
         accu_profit_pct = ((total_equity - initial_cap) / initial_cap) * 100 if initial_cap > 0 else 0.0
         
         # 24시간 수익률 계산
-        hist_24h = engine.get_trade_history(limit=100)
         now = pd.Timestamp.now()
-        pnl_24h_usdt = sum(t['pnl_usdt'] for t in hist_24h if (now - t['timestamp']).total_seconds() < 86400)
+        pnl_24h_usdt = sum(t['pnl_usdt'] for t in all_trades if (now - t['timestamp']).total_seconds() < 86400)
         equity_24h_ago = total_equity - pnl_24h_usdt
         pnl_24h_pct = (pnl_24h_usdt / equity_24h_ago) * 100 if equity_24h_ago > 0 else 0.0
 
-        # 4컬럼 레이아웃으로 변경
+        # 4컬럼 레이아웃
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             st.metric("Profit Accu.", f"{accu_profit_pct:+.2f} %", f"({pnl_24h_pct:+.2f}% 24h)")
         with c2:
-            st.metric("승률 (Win Rate)", win_label, win_delta)
+            st.metric("금일 승률", win_label, win_delta)
         with c3:
             st.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "Max Risk")
         with c4:
