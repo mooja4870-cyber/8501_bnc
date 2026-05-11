@@ -18,10 +18,12 @@ from core.scanner import Scanner
 from core.trader import AutoTrader
 from core.engine import QuantumEngine
 from core.backtest import BacktestEngine
-from core.config import CFG
+from core.config import CFG, Config
 import core.stats as stats_store
 
+# ── 환경 설정 로드 ─────────────────────────────────
 load_dotenv(override=True)
+CFG = Config()
 
 # ── 페이지 설정 ───────────────────────────────────────
 st.set_page_config(
@@ -1174,8 +1176,10 @@ with tabs[5]:
         new_init_cap = st.number_input("초기 자본금 (USDT)", 1.0, 1000000.0, float(CFG.INITIAL_CAPITAL), step=100.0)
         if new_init_cap != CFG.INITIAL_CAPITAL:
             CFG.INITIAL_CAPITAL = new_init_cap
-            set_key(".env", "INITIAL_CAPITAL", str(new_init_cap))
-            st.toast("💾 초기 자본금 저장됨")
+            # .env 파일에 강제 기록
+            with open(".env", "a", encoding="utf-8") as f:
+                f.write(f"\nINITIAL_CAPITAL={new_init_cap}")
+            st.toast("💾 초기 자본금 저장됨 (새로고침 시 반영)")
             
         CFG.LEVERAGE = st.slider("레버리지 (x)", 1, 20, CFG.LEVERAGE)
         CFG.MARGIN_USDT = st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0)
