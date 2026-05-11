@@ -1,9 +1,13 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
-- Initialized Streamlit dashboard with OKX API integration.
-- Added QuantumEngine Orchestration layer.
-- Fixed Margin & PnL display logic (v1.1.34).
+- **Rollback to v1.1.54** (v1.1.66): 모든 소스 코드를 v1.1.54 지점으로 원상복구함.
+- **Stable Operation**: `http://localhost:8502`에서 정상 구동 확인 완료.
+- **Core Engine**: 스캔 속도 최적화 및 증거금 고정 로직이 적용된 버전.
+
+## v1.1.66 (2026-05-12)
+- [Rollback] v1.1.54 상태로 전체 소스 코드 원상복귀.
+- [Verify] 스캔 속도 향상 및 증거금 우선 매매 로직 정상 작동 확인.
 
 ## v1.1.52 (2026-05-11)
 - [Performance] **스캔 속도 300% 향상**: 종목당 스캔 대기 시간을 0.3초에서 0.1초로 단축하여 신호 포착 지연 대폭 감소.
