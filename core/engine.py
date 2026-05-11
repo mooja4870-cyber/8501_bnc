@@ -28,6 +28,8 @@ class QuantumEngine:
         self._lock = threading.Lock()
         self._initialized = False
         self._prev_position_symbols: set = set()  # 청산 감지용 스냅샷
+        self._prev_initialized: bool = False       # 첫 스캔 시 초기화 여부
+        self._recorded_closes: set = set()          # 이미 기록한 청산 ID (중복 방지)
 
     def initialize(self, api_key: str, secret_key: str, passphrase: str) -> tuple[bool, str]:
         """API 연결 및 모듈 초기화 (기본 스레드 정리 포함)"""
@@ -120,6 +122,15 @@ class QuantumEngine:
             return
         try:
             current = {p["symbol"] for p in self.client.get_positions()}
+
+            # 첫 스캔: 현재 포지션을 스냅샷으로 저장만 하고 비교하지 않음
+            # (앱 시작 시 빈 세트와 비교하면 "모든 포지션이 청산됨"으로 오판)
+            if not self._prev_initialized:
+                self._prev_position_symbols = current
+                self._prev_initialized = True
+                logger.info(f"[ENGINE] 포지션 스냅샷 초기화: {current}")
+                return
+
             closed = self._prev_position_symbols - current  # 사라진 심볼 = 청산됨
 
             if closed:
@@ -131,8 +142,18 @@ class QuantumEngine:
                          or r["symbol"] == sym.replace("/USDT:USDT", "-USDT-SWAP")),
                         None
                     )
-                    pnl = matched["pnl_usdt"] if matched else 0.0
+                    if not matched:
+                        continue
+
+                    # 중복 방지: 고유 키(심볼 + 청산시간)로 이미 기록했는지 확인
+                    close_key = f"{sym}_{matched.get('close_time', '')}"
+                    if close_key in self._recorded_closes:
+                        logger.info(f"[SKIP] 이미 기록된 청산: {close_key}")
+                        continue
+
+                    pnl = matched["pnl_usdt"]
                     stats_store.record_result(pnl)
+                    self._recorded_closes.add(close_key)
                     logger.info(
                         f"[CLOSED] {sym} PnL={pnl:+.4f} USDT"
                         f" -> {'WIN' if pnl >= 0 else 'LOSS'} 기록"
