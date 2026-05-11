@@ -1173,13 +1173,13 @@ with tabs[5]:
 
     s1, s2 = st.columns(2)
     with s1:
-        new_init_cap = st.number_input("초기 자본금 (USDT)", 1.0, 1000000.0, float(CFG.INITIAL_CAPITAL), step=100.0)
+        new_init_cap = st.number_input("초기 자본금 (USDT)", 1.0, 1000000.0, float(CFG.INITIAL_CAPITAL), step=1.0)
         if new_init_cap != CFG.INITIAL_CAPITAL:
             CFG.INITIAL_CAPITAL = new_init_cap
-            # .env 파일에 강제 기록
-            with open(".env", "a", encoding="utf-8") as f:
-                f.write(f"\nINITIAL_CAPITAL={new_init_cap}")
-            st.toast("💾 초기 자본금 저장됨 (새로고침 시 반영)")
+            # .env 파일의 값을 안전하게 교체
+            set_key(".env", "INITIAL_CAPITAL", str(new_init_cap))
+            st.toast("💾 초기 자본금 저장됨")
+            st.rerun() # 즉시 반영을 위해 재실행
             
         CFG.LEVERAGE = st.slider("레버리지 (x)", 1, 20, CFG.LEVERAGE)
         CFG.MARGIN_USDT = st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0)
