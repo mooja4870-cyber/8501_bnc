@@ -1,3 +1,4 @@
+import os
 """
 AI QUANTUM — OKX Auto-Trading System
 핵심 설정 파라미터 (슬라이드 설계안 기준)
