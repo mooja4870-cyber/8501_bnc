@@ -767,7 +767,8 @@ with tabs[0]:
                 )
             else:
                 for p in positions:
-                    pnl_color = "#22c55e" if p["pnl_usdt"] >= 0 else "#ef4444"
+                    pnl_val = p.get("pnl_usdt", 0.0)
+                    pnl_color = "#22c55e" if pnl_val >= 0 else "#ef4444"
                     side_badge = (
                         "🟢 LONG" if p["side"] == "long" else "🔴 SHORT"
                     )
@@ -780,7 +781,7 @@ with tabs[0]:
                               <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
                                 <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;">{p['symbol']}</span>
                                 <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;color:{pnl_color};">
-                                  {p['pnl_usdt']:+.4f} USDT ({p['pnl_pct']:+.1f}%)
+                                  {p.get('pnl_usdt', 0.0):+.4f} USDT ({p.get('pnl_pct', 0.0):+.1f}%)
                                 </span>
                               </div>
                               <div style="font-family:'IBM Plex Mono';font-size:0.7rem;color:#555;display:flex;gap:16px;">
@@ -857,9 +858,9 @@ with tabs[0]:
             if t['type'] == '청산' and t.get('order_id'):
                 oid = t['order_id']
                 if oid not in close_results:
-                    close_results[oid] = t['pnl_usdt']
+                    close_results[oid] = t.get('pnl_usdt', 0.0)
                 else:
-                    close_results[oid] += t['pnl_usdt']
+                    close_results[oid] += t.get('pnl_usdt', 0.0)
         
         total_wins = sum(1 for pnl in close_results.values() if pnl >= 0)
         total_losses = sum(1 for pnl in close_results.values() if pnl < 0)
@@ -876,7 +877,7 @@ with tabs[0]:
         
         # 24시간 수익률 계산
         now = pd.Timestamp.now()
-        pnl_24h_usdt = sum(t['pnl_usdt'] for t in all_trades if (now - t['timestamp']).total_seconds() < 86400)
+        pnl_24h_usdt = sum(t.get('pnl_usdt', 0.0) for t in all_trades if 'timestamp' in t and (now - t['timestamp']).total_seconds() < 86400)
         equity_24h_ago = total_equity - pnl_24h_usdt
         pnl_24h_pct = (pnl_24h_usdt / equity_24h_ago) * 100 if equity_24h_ago > 0 else 0.0
 
@@ -1113,7 +1114,8 @@ with tabs[3]:
             df_hist = pd.DataFrame(history[::-1])
             df_hist["timestamp"] = df_hist["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
             # 컬럼 순서 및 이름 정의
-            df_hist = df_hist[["timestamp", "symbol", "type", "side", "amount", "cost", "leverage", "price", "pnl_usdt", "pnl_pct", "fee"]]
+            expected_cols = ["timestamp", "symbol", "type", "side", "amount", "cost", "leverage", "price", "pnl_usdt", "pnl_pct", "fee"]
+            df_hist = df_hist.reindex(columns=expected_cols)
             df_hist.columns = ["시각", "종목", "구분", "방향", "수량", "거래금액", "레버리지", "체결가", "손익(USDT)", "수익률(%)", "수수료"]
             
             # 포맷팅 및 스타일링
