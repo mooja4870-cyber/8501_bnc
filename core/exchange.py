@@ -278,7 +278,10 @@ class OKXClient:
             except Exception as e:
                 logger.warning(f"실제 레버리지 조회 실패, 설정값 사용: {e}")
 
-            # 2) 현재가로 수량 계산
+            # 2) 수량 계산 (고정 증거금 방식)
+            # 사용자가 설정한 '증거금($5)'을 고정하고, 레버리지는 가능한 범위 내에서 적용
+            target_margin = margin_usdt
+            
             ticker = self.get_ticker(symbol)
             price = ticker.get("last", 0)
             if not price:
@@ -286,24 +289,28 @@ class OKXClient:
 
             market = self._markets.get(symbol, {})
             contract_size = market.get("contractSize", 1)
-            target_margin = margin_usdt
+            
+            # 최종 노셔널 계산: 고정 증거금 * 실제 적용 레버리지
+            # 예: 증거금 $5 고정, 레버리지가 3배로 제한되면 $15치 진입
             target_notional = target_margin * actual_leverage
-            amount = target_notional / (price * contract_size)
+            
+            # 잔고 체크 (고정 증거금 기준)
+            bal = self.get_balance()
+            if bal['free'] < target_margin:
+                raise ValueError(f"가용 잔고 부족: 필요 {target_margin:.2f} > 보유 {bal['free']:.2f}")
 
+            amount = target_notional / (price * contract_size)
+            
             # ccxt precision 적용
             amount = self.exchange.amount_to_precision(symbol, amount)
             amount_float = float(amount)
+            
             if amount_float <= 0:
                 raise ValueError(f"주문 수량 계산 실패: {symbol} amount={amount}")
 
+            # 최종 수치 확정
             estimated_notional = amount_float * price * contract_size
             estimated_margin = estimated_notional / actual_leverage
-            max_margin = target_margin + max(0.01, target_margin * 0.01)
-            if estimated_margin > max_margin:
-                raise ValueError(
-                    f"예상 증거금 초과: {estimated_margin:.4f} USDT "
-                    f"> 설정 {target_margin:.4f} USDT"
-                )
 
             # 3) 시장가 진입
             order = self.exchange.create_order(

@@ -5,6 +5,11 @@
 - Added QuantumEngine Orchestration layer.
 - Fixed Margin & PnL display logic (v1.1.34).
 
+## v1.1.52 (2026-05-11)
+- [Performance] **스캔 속도 300% 향상**: 종목당 스캔 대기 시간을 0.3초에서 0.1초로 단축하여 신호 포착 지연 대폭 감소.
+- [UI] **시간 표시 스타일 최적화**: KST 시간 표시 폰트 색상을 흰색으로 변경 및 가독성 개선.
+- [Logic] **증거금 우선 매매 로직**: 설정된 증거금(Margin)을 고정하고 레버리지를 가변적으로 적용하는 실전형 로직으로 전환.
+
 ## v1.1.45 (2026-05-11)
 - [Critical] **중복 진입(Duplicate Entry) 버그 해결**: 기존 스캐너 스레드가 중첩되어 실행되던 문제 해결 (엔진 초기화 시 기존 스레드 강제 종료 로직 추가).
 - [Stability] **AutoTrader 보호막 강화**: 펜딩 상태 관리 및 락(Lock) 로직 고도화로 이중 주문 원천 차단.

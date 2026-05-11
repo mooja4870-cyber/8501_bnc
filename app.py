@@ -374,8 +374,8 @@ st.markdown(
     }
     .tabline-time {
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 0.68rem !important;
-        color: #5f6878 !important;
+        font-size: 1.0em !important;
+        color: #ffffff !important;
         letter-spacing: 0.02em !important;
         margin: 8px 0 0 !important;
         text-align: right !important;
@@ -572,7 +572,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.45</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.52</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1184,31 +1184,96 @@ with tabs[5]:
             CFG.INITIAL_CAPITAL = new_init_cap
             set_key(".env", "INITIAL_CAPITAL", str(new_init_cap))
             os.environ["INITIAL_CAPITAL"] = str(new_init_cap)
-            st.toast("✅ 초기 자본금 수정 입력완료! (v1.1.45)")
-            time.sleep(0.5)
+            time.sleep(1.5)
+            st.toast(f"✅ 초기 자본금 변경 완료: ${new_init_cap}")
             st.rerun()
             
-        CFG.LEVERAGE = st.slider("레버리지 (x)", 1, 20, int(CFG.LEVERAGE))
-        CFG.MARGIN_USDT = st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0)
-        CFG.MAX_POSITIONS = st.slider("최대 동시 포지션 수", 1, 10, int(CFG.MAX_POSITIONS))
-        sl_val = st.slider("손절 (%)", 1.0, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.5)
-        CFG.STOP_LOSS_PCT = sl_val / 100.0
+        prev_lev = int(CFG.LEVERAGE)
+        new_lev = st.slider("레버리지 (x)", 1, 20, prev_lev)
+        if new_lev != prev_lev:
+            CFG.LEVERAGE = new_lev
+            os.environ["LEVERAGE"] = str(new_lev)
+            time.sleep(1.5)
+            st.toast(f"✅ 레버리지 변경 완료: {new_lev}x")
+            st.rerun()
+
+        prev_margin = float(CFG.MARGIN_USDT)
+        new_margin = st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, prev_margin, step=1.0)
+        if new_margin != prev_margin:
+            CFG.MARGIN_USDT = new_margin
+            os.environ["MARGIN_USDT"] = str(new_margin)
+            time.sleep(1.5)
+            st.toast(f"✅ 진입 증거금 변경 완료: ${new_margin}")
+            st.rerun()
+
+        prev_max_pos = int(CFG.MAX_POSITIONS)
+        new_max_pos = st.slider("최대 동시 포지션 수", 1, 10, prev_max_pos)
+        if new_max_pos != prev_max_pos:
+            CFG.MAX_POSITIONS = new_max_pos
+            os.environ["MAX_POSITIONS"] = str(new_max_pos)
+            time.sleep(1.5)
+            st.toast(f"✅ 최대 포지션 변경 완료: {new_max_pos}개")
+            st.rerun()
+
+        prev_sl = float(CFG.STOP_LOSS_PCT)
+        new_sl_val = st.slider("손절 (%)", 1.0, 10.0, float(prev_sl * 100), step=0.5)
+        new_sl = new_sl_val / 100.0
+        if abs(new_sl - prev_sl) > 0.0001:
+            CFG.STOP_LOSS_PCT = new_sl
+            os.environ["STOP_LOSS_PCT"] = str(new_sl)
+            time.sleep(1.5)
+            st.toast(f"✅ 손절 라인 변경 완료: {new_sl_val}%")
+            st.rerun()
+
     with s2:
-        tp_val = st.slider("익절 (%)", 1.0, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.5)
-        CFG.TAKE_PROFIT_PCT = tp_val / 100.0
-        CFG.MIN_VOLUME_USDT = st.number_input("최소 거래대금 (USDT)", 1_000_000.0, 50_000_000.0, float(CFG.MIN_VOLUME_USDT), step=1_000_000.0)
-        CFG.SCAN_INTERVAL_SEC = st.slider("스캔 주기 (초)", 10, 300, int(CFG.SCAN_INTERVAL_SEC), step=10)
-        mdd_val = st.slider("MDD 한도 (%)", 5.0, 50.0, float(CFG.MAX_DRAWDOWN_PCT * 100), step=1.0)
-        CFG.MAX_DRAWDOWN_PCT = mdd_val / 100.0
+        prev_tp = float(CFG.TAKE_PROFIT_PCT)
+        new_tp_val = st.slider("익절 (%)", 1.0, 20.0, float(prev_tp * 100), step=0.5)
+        new_tp = new_tp_val / 100.0
+        if abs(new_tp - prev_tp) > 0.0001:
+            CFG.TAKE_PROFIT_PCT = new_tp
+            os.environ["TAKE_PROFIT_PCT"] = str(new_tp)
+            time.sleep(1.5)
+            st.toast(f"✅ 익절 라인 변경 완료: {new_tp_val}%")
+            st.rerun()
+
+        prev_vol = float(CFG.MIN_VOLUME_USDT)
+        new_vol = st.number_input("최소 거래대금 (USDT)", 1_000_000.0, 50_000_000.0, prev_vol, step=1_000_000.0)
+        if new_vol != prev_vol:
+            CFG.MIN_VOLUME_USDT = new_vol
+            os.environ["MIN_VOLUME_USDT"] = str(new_vol)
+            time.sleep(1.5)
+            st.toast(f"✅ 최소 거래대금 변경 완료: ${new_vol:,.0f}")
+            st.rerun()
+
+        prev_scan = int(CFG.SCAN_INTERVAL_SEC)
+        new_scan = st.slider("스캔 주기 (초)", 10, 300, prev_scan, step=10)
+        if new_scan != prev_scan:
+            CFG.SCAN_INTERVAL_SEC = new_scan
+            os.environ["SCAN_INTERVAL_SEC"] = str(new_scan)
+            time.sleep(1.5)
+            st.toast(f"✅ 스캔 주기 변경 완료: {new_scan}초")
+            st.rerun()
+
+        prev_mdd = float(CFG.MAX_DRAWDOWN_PCT)
+        new_mdd_val = st.slider("MDD 한도 (%)", 5.0, 50.0, float(prev_mdd * 100), step=1.0)
+        new_mdd = new_mdd_val / 100.0
+        if abs(new_mdd - prev_mdd) > 0.0001:
+            CFG.MAX_DRAWDOWN_PCT = new_mdd
+            os.environ["MAX_DRAWDOWN_PCT"] = str(new_mdd)
+            time.sleep(1.5)
+            st.toast(f"✅ MDD 한도 변경 완료: {new_mdd_val}%")
+            st.rerun()
         
-        if st.button("💾 모든 설정 영구 저장", use_container_width=True):
+        if st.button("💾 모든 설정 영구 저장 (.env)", use_container_width=True):
             set_key(".env", "LEVERAGE", str(CFG.LEVERAGE))
             set_key(".env", "MARGIN_USDT", str(CFG.MARGIN_USDT))
             set_key(".env", "MAX_POSITIONS", str(CFG.MAX_POSITIONS))
             set_key(".env", "STOP_LOSS_PCT", str(CFG.STOP_LOSS_PCT))
             set_key(".env", "TAKE_PROFIT_PCT", str(CFG.TAKE_PROFIT_PCT))
             set_key(".env", "SCAN_INTERVAL_SEC", str(CFG.SCAN_INTERVAL_SEC))
-            st.toast("✅ 모든 설정이 .env에 영구 저장되었습니다.")
+            set_key(".env", "MIN_VOLUME_USDT", str(CFG.MIN_VOLUME_USDT))
+            set_key(".env", "MAX_DRAWDOWN_PCT", str(CFG.MAX_DRAWDOWN_PCT))
+            st.toast("✅ 모든 설정이 .env 파일에 영구 저장되었습니다.")
             time.sleep(0.5)
             st.rerun()
 
