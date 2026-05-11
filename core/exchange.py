@@ -58,24 +58,29 @@ class OKXClient:
             return {"total": 0, "free": 0, "used": 0}
 
     def get_positions(self) -> List[Dict]:
-        """현재 보유 포지션 목록 조회"""
+        """현재 보유 포지션 목록 조회 (수량 0 또는 먼지 수량 필터링)"""
         try:
             positions = self.exchange.fetch_positions()
             active = []
             for p in positions:
-                contracts = p.get("contracts", 0) or 0
-                if float(contracts) > 0:
+                # OKX v5에서 수량은 'contracts' 또는 'pos' 필드에 들어옴 (ccxt는 이를 contracts로 매핑)
+                # 절대값이 아주 작은 먼지 수량(dust)이 남아있는 경우를 대비해 threshold 적용
+                contracts = float(p.get("contracts", 0) or 0)
+                if abs(contracts) > 0.00000001:
                     entry = p.get("entryPrice") or 0
                     current = p.get("markPrice") or p.get("lastPrice") or 0
                     side = p.get("side", "long")
+                    
+                    # PnL 계산
                     pct = 0.0
                     if entry and current:
                         raw = (float(current) - float(entry)) / float(entry)
                         pct = raw * CFG.LEVERAGE if side == "long" else -raw * CFG.LEVERAGE
+                    
                     active.append({
                         "symbol": p.get("symbol", ""),
                         "side": side,
-                        "size": float(contracts),
+                        "size": contracts,
                         "entry_price": float(entry),
                         "mark_price": float(current),
                         "pnl_pct": round(pct * 100, 2),

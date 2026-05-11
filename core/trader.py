@@ -5,7 +5,7 @@
 import threading
 import logging
 from typing import Optional, List, Dict
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 from core.exchange import OKXClient
 from core.strategy import Signal

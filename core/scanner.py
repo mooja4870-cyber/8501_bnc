@@ -76,7 +76,8 @@ class Scanner:
         symbols = self.client.get_all_usdt_swap_symbols()
         self._log(f"[SCAN] 전종목 스캔 시작: {len(symbols)}개 페어")
 
-        results = []
+        # 기존 결과를 참조하되 업데이트할 수 있도록 딕셔너리 형태로 관리 (심볼 키)
+        current_results = {r["symbol"]: r for r in self.scan_results}
         signal_count = 0
 
         for sym in symbols:
@@ -87,6 +88,9 @@ class Scanner:
                 ticker = self.client.get_ticker(sym)
                 vol = ticker.get("volume", 0)
                 if vol < self.cfg.MIN_VOLUME_USDT:
+                    # 거래대금 미달 종목은 결과에서 제거
+                    if sym in current_results:
+                        del current_results[sym]
                     continue
 
                 df = self.client.get_ohlcv(sym, limit=250)
@@ -94,7 +98,7 @@ class Scanner:
                     continue
 
                 sig = self.strategy.generate_signal(df, sym)
-                results.append({
+                item = {
                     "symbol": sym,
                     "price": ticker.get("last", 0),
                     "change_pct": ticker.get("change_pct", 0),
@@ -106,7 +110,8 @@ class Scanner:
                     "bb_ok": sig.bb_ok,
                     "reason": sig.reason,
                     "timestamp": datetime.now(),
-                })
+                }
+                current_results[sym] = item
 
                 if sig.direction in ("long", "short"):
                     signal_count += 1
@@ -117,28 +122,32 @@ class Scanner:
                     if self.on_signal:
                         self.on_signal(sig)
 
-                # Rate limit 보호 (0.15s -> 0.3s 상향)
+                # 점진적 업데이트: UI 반응성 향상을 위해 5개 종목마다 락 잡고 업데이트
+                if len(current_results) % 5 == 0:
+                    with self._lock:
+                        # 강도 내림차순 정렬하여 저장
+                        self.scan_results = sorted(current_results.values(), key=lambda x: x["strength"], reverse=True)
+
+                # Rate limit 보호
                 time.sleep(0.3)
 
             except Exception as e:
                 logger.warning(f"종목 스캔 오류 ({sym}): {e}")
                 continue
 
-        # 강도 내림차순 정렬
-        results.sort(key=lambda x: x["strength"], reverse=True)
-
+        # 최종 정렬 및 업데이트
         with self._lock:
-            self.scan_results = results
+            self.scan_results = sorted(current_results.values(), key=lambda x: x["strength"], reverse=True)
             self.last_scan_time = datetime.now()
             self.scan_count += 1
 
         self._log(
-            f"[SCAN] 완료: {len(results)}개 종목 · "
+            f"[SCAN] 완료: {len(current_results)}개 종목 · "
             f"신호 {signal_count}개 · "
             f"{datetime.now().strftime('%H:%M:%S')}"
         )
 
-        # 스캔 완료 콜백 (첨산 감지 등)
+        # 스캔 완료 콜백 (청산 감지 등)
         if self.on_scan_complete:
             try:
                 self.on_scan_complete()

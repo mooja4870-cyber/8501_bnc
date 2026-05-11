@@ -402,155 +402,140 @@ with tabs[0]:
     if not st.session_state.api_connected or not engine.is_ready:
         st.info("사이드바에서 OKX API를 연결하세요.")
     else:
-        # ── 데이터 통합 조회 ──────────────────────────
-        dash = engine.get_dashboard_data()
-        positions = dash.get("positions", [])
+        # ── 실시간 데이터 프래그먼트 (5초 주기 자동 갱신) ──────────────────
+        @st.fragment(run_every=5)
+        def render_dashboard_content():
+            engine: QuantumEngine = st.session_state.engine
+            dash = engine.get_dashboard_data()
+            positions = dash.get("positions", [])
 
-        # ── 상단 지표 ──────────────────────────────
-        m1, m2, m3, m4 = st.columns(4)
-        with m1:
-            st.metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
-        with m2:
-            total_upnl = sum(p["pnl_usdt"] for p in positions)
-            st.metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}")
-        with m3:
-            dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
-            st.metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}")
-        with m4:
-            st.metric("가용 증거금", f"${dash['free_margin']:,.2f}")
+            # ── 상단 지표 ──────────────────────────────
+            m1, m2, m3, m4 = st.columns(4)
+            with m1:
+                st.metric("💰 총 잔고 (USDT)", f"${dash.get('total_balance', 0):,.2f}")
+            with m2:
+                total_upnl = sum(p["pnl_usdt"] for p in positions)
+                st.metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}")
+            with m3:
+                dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
+                st.metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}")
+            with m4:
+                st.metric("가용 증거금", f"${dash.get('free_margin', 0):,.2f}")
 
-        st.markdown("---")
+            st.markdown("---")
 
-        # ── 포지션 / 로그 ──────────────────────────
-        col_pos, col_log = st.columns([1.2, 1])
+            # ── 포지션 / 로그 ──────────────────────────
+            col_pos, col_log = st.columns([1.2, 1])
 
-        with col_pos:
-            col_title, col_bulk = st.columns([1, 1])
-            with col_title:
-                st.markdown(
-                    '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">ACTIVE POSITIONS</p>',
-                    unsafe_allow_html=True,
-                )
-            with col_bulk:
-                if positions:
-                    st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-                    if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
-                        count = engine.client.close_all_positions()
-                        if count > 0:
-                            st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
-                            time.sleep(1)
-                            st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
-
-            if not positions:
-                st.markdown(
-                    '<p style="color:#444;font-family:\'IBM Plex Mono\',monospace;font-size:0.8rem;">포지션 없음</p>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                for p in positions:
-                    pnl_color = "#22c55e" if p["pnl_usdt"] >= 0 else "#ef4444"
-                    side_badge = (
-                        "🟢 LONG" if p["side"] == "long" else "🔴 SHORT"
+            with col_pos:
+                col_title, col_bulk = st.columns([1, 1])
+                with col_title:
+                    st.markdown(
+                        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">ACTIVE POSITIONS</p>',
+                        unsafe_allow_html=True,
                     )
-                    pc1, pc2 = st.columns([3.5, 1])
-                    with pc1:
-                        st.markdown(
-                            f"""
-                            <div style="background:#161616;border:1px solid rgba(255,255,255,0.07);
-                                        border-radius:8px;padding:12px 14px;margin-bottom:8px;">
-                              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                                <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;">{p['symbol']}</span>
-                                <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;color:{pnl_color};">
-                                  {p['pnl_usdt']:+.4f} USDT ({p['pnl_pct']:+.1f}%)
-                                </span>
-                              </div>
-                              <div style="font-family:'IBM Plex Mono';font-size:0.7rem;color:#555;display:flex;gap:16px;">
-                                <span>{side_badge}</span>
-                                <span>진입가 ${p['entry_price']:,.4f}</span>
-                                <span>현재가 ${p['mark_price']:,.4f}</span>
-                                <span>{p['leverage']}x LEV</span>
-                              </div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
-                        )
-                    with pc2:
-                        st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+                with col_bulk:
+                    if positions:
                         st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-                        if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
-                            if engine.client.close_position(p["symbol"], p["side"]):
-                                st.toast(f"✅ {p['symbol']} 청산 완료")
-                                time.sleep(1)
+                        if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close_frag"):
+                            count = engine.client.close_all_positions()
+                            if count > 0:
+                                st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
+                                time.sleep(2)
                                 st.rerun()
                         st.markdown('</div>', unsafe_allow_html=True)
 
-        with col_log:
-            st.markdown(
-                '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">SYSTEM LOG</p>',
-                unsafe_allow_html=True,
-            )
-            engine: QuantumEngine = st.session_state.engine
-            logs = engine.scanner.get_logs(30) if engine.scanner else ["[SYS] 엔진 미연결"]
-            
-            if logs:
-                # 최신 로그(마지막 요소)에 특수 스타일 적용
-                latest_line = f'<span class="log-latest">{logs[-1]}</span>'
-                other_lines = "\n".join(reversed(logs[:-1])) if len(logs) > 1 else ""
-                log_html = f"{latest_line}\n{other_lines}" if other_lines else latest_line
-            else:
-                log_html = "로그 없음"
+                if not positions:
+                    st.markdown(
+                        '<p style="color:#444;font-family:\'IBM Plex Mono\',monospace;font-size:0.8rem;">포지션 없음</p>',
+                        unsafe_allow_html=True,
+                    )
+                else:
+                    for p in positions:
+                        pnl_color = "#22c55e" if p["pnl_usdt"] >= 0 else "#ef4444"
+                        side_badge = "🟢 LONG" if p["side"] == "long" else "🔴 SHORT"
+                        pc1, pc2 = st.columns([3.5, 1])
+                        with pc1:
+                            st.markdown(
+                                f"""
+                                <div style="background:#161616;border:1px solid rgba(255,255,255,0.07);
+                                            border-radius:8px;padding:12px 14px;margin-bottom:8px;">
+                                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                    <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;">{p['symbol']}</span>
+                                    <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;color:{pnl_color};">
+                                      {p['pnl_usdt']:+.4f} USDT ({p['pnl_pct']:+.1f}%)
+                                    </span>
+                                  </div>
+                                  <div style="font-family:'IBM Plex Mono';font-size:0.7rem;color:#555;display:flex;gap:16px;">
+                                    <span>{side_badge}</span>
+                                    <span>진입가 ${p['entry_price']:,.4f}</span>
+                                    <span>현재가 ${p['mark_price']:,.4f}</span>
+                                    <span>{p['leverage']}x LEV</span>
+                                  </div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+                        with pc2:
+                            st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+                            st.markdown('<div class="small-btn">', unsafe_allow_html=True)
+                            if st.button("즉시청산", key=f"close_frag_{p['symbol']}", use_container_width=True):
+                                if engine.client.close_position(p["symbol"], p["side"]):
+                                    st.toast(f"✅ {p['symbol']} 청산 완료")
+                                    time.sleep(2)
+                                    st.rerun()
+                            st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown(
-                f'<div class="log-box">{log_html}</div>',
-                unsafe_allow_html=True,
-            )
+            with col_log:
+                st.markdown(
+                    '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">SYSTEM LOG</p>',
+                    unsafe_allow_html=True,
+                )
+                logs = engine.scanner.get_logs(30) if engine.scanner else ["[SYS] 엔진 미연결"]
+                if logs:
+                    latest_line = f'<span class="log-latest">{logs[-1]}</span>'
+                    other_lines = "\n".join(reversed(logs[:-1])) if len(logs) > 1 else ""
+                    log_html = f"{latest_line}\n{other_lines}" if other_lines else latest_line
+                else:
+                    log_html = "로그 없음"
+                st.markdown(f'<div class="log-box">{log_html}</div>', unsafe_allow_html=True)
 
-        st.markdown("---")
+            st.markdown("---")
 
-        # ── 자산 배분 차트 ─────────────────────────
-        col_alloc, col_stats = st.columns(2)
+            # ── 자산 배분 / 리스크 지표 ───────────────────
+            col_alloc, col_stats = st.columns(2)
+            with col_alloc:
+                st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">PORTFOLIO ALLOCATION</p>', unsafe_allow_html=True)
+                fig_alloc = go.Figure(go.Pie(
+                    labels=["실전 투입 (100%)", "예비 유동성 (0%)", "리스크 리저브 (0%)"],
+                    values=[100, 0.001, 0.001],
+                    hole=0.55,
+                    marker=dict(colors=["#c8f53b", "#3b82f6", "#555555"]),
+                    textfont=dict(family="IBM Plex Mono", size=10),
+                    textinfo="label",
+                ))
+                fig_alloc.update_layout(**PLOT_LAYOUT, showlegend=False, height=220)
+                st.plotly_chart(fig_alloc, use_container_width=True, key="dashboard_alloc_chart")
 
-        with col_alloc:
-            st.markdown(
-                '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">PORTFOLIO ALLOCATION</p>',
-                unsafe_allow_html=True,
-            )
-            fig_alloc = go.Figure(go.Pie(
-                labels=["실전 투입 (100%)", "예비 유동성 (0%)", "리스크 리저브 (0%)"],
-                values=[100, 0.001, 0.001],
-                hole=0.55,
-                marker=dict(colors=["#c8f53b", "#3b82f6", "#555555"]),
-                textfont=dict(family="IBM Plex Mono", size=10),
-                textinfo="label",
-            ))
-            fig_alloc.update_layout(
-                **PLOT_LAYOUT,
-                showlegend=False,
-                height=220,
-            )
-            st.plotly_chart(fig_alloc, use_container_width=True)
+            with col_stats:
+                st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">RISK METRICS</p>', unsafe_allow_html=True)
+                _st = stats_store.load_stats()
+                orders_today = _st.get("orders_today", 0)
+                win_rate = stats_store.get_win_rate()
+                total_wins = _st.get("total_wins", 0)
+                total_losses = _st.get("total_losses", 0)
+                total_trades = total_wins + total_losses
+                win_label = f"{win_rate:.1f}%" if total_trades > 0 else "-"
+                win_delta = f"{total_wins}W / {total_losses}L" if total_trades > 0 else "매매 데이터 없음"
+                r1, r2 = st.columns(2)
+                r1.metric("Profit Factor", "2.45", "목표 ≥ 2.0")
+                r2.metric("승률", win_label, win_delta)
+                r3, r4 = st.columns(2)
+                r3.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%")
+                r4.metric("금일 주문", f"{orders_today}건")
 
-        with col_stats:
-            st.markdown(
-                '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">RISK METRICS</p>',
-                unsafe_allow_html=True,
-            )
-            _st = stats_store.load_stats()
-            orders_today = _st.get("orders_today", 0)
-            win_rate = stats_store.get_win_rate()
-            total_wins = _st.get("total_wins", 0)
-            total_losses = _st.get("total_losses", 0)
-            total_trades = total_wins + total_losses
-            win_label = f"{win_rate:.1f}%" if total_trades > 0 else "-"
-            win_delta = f"{total_wins}W / {total_losses}L" if total_trades > 0 else "매매 데이터 없음"
-
-            r1, r2 = st.columns(2)
-            r1.metric("Profit Factor", "2.45", "목표 ≥ 2.0")
-            r2.metric("승률", win_label, win_delta)
-            r3, r4 = st.columns(2)
-            r3.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%")
-            r4.metric("금일 주문", f"{orders_today}건")
+        # 프래그먼트 실행
+        render_dashboard_content()
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

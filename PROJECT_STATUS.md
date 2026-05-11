@@ -21,8 +21,11 @@
 - **Implemented Test Harness (`harness.py`):** Independent verification environment for core trading logic without UI dependency.
 - **Refactored `app.py`:** Integrated the orchestration layer for improved stability and code cleanliness.
 
-## Active Issues
-- None.
+- [Fix] **청산 후 잔상 제거 (Ghosting Fix):** 대시보드 탭에 `st.fragment` 및 5초 자동 새로고침 기능을 도입하여 페이지 전체 블러링 없이 실시간으로 포지션을 업데이트하도록 수정.
+- [Fix] **포지션 필터링 강화:** `exchange.py`에서 절대값 1e-8 미만의 먼지 수량(dust)을 무시하도록 하여 청산된 포지션이 목록에 남지 않도록 보정.
+- [Feature] **스캐너 응답성 개선:** 전 종목 스캔 완료를 기다리지 않고 5개 종목마다 결과를 즉시 업데이트하여 UI 데이터 지연 현상 해결.
+- [Logic] **청산 대기 시간 보정:** 즉시청산 버튼 클릭 후 API 반영 시차를 고려하여 대기 시간을 1초에서 2초로 상향 조정.
+- [Fix] `core/trader.py` 내 `timedelta` 임포트 누락으로 인한 로그 기록 오류 수정.
 
 ## Next Steps
 - Implement advanced risk management features (e.g., dynamic TP/SL).
