@@ -263,24 +263,21 @@ class OKXClient:
         side: "buy" = 롱 진입, "sell" = 숏 진입
         """
         try:
-            # 1) 레버리지 설정 및 실제 최대 한도 확인
-            # OKX는 종목마다, 계정 상태마다 최대 레버리지가 다름.
-            self.set_leverage(symbol, CFG.LEVERAGE)
-            
-            # 실제 가능한 최대 레버리지 조회
-            actual_leverage = CFG.LEVERAGE
+            # 1) 실제 가능한 최대 레버리지를 먼저 조회한 뒤, 그 값으로 설정
+            actual_leverage = float(CFG.LEVERAGE)
             try:
-                # 계정별/종목별 최대 레버리지 정보 조회
-                lev_info = self.exchange.privateGetAccountMaxLeverage({
+                lev_info = self.exchange.privateGetAccountLeverageInfo({
                     'instId': symbol.replace('/', '-').replace(':USDT', ''),
                     'mgnMode': 'isolated'
                 })
-                # 거래소가 허용하는 최대값과 사용자가 설정한 값 중 최소값 선택
-                max_allowed = float(lev_info.get('data', [{}])[0].get('maxLvr', CFG.LEVERAGE))
+                max_allowed = float(lev_info.get('data', [{}])[0].get('lever', CFG.LEVERAGE))
                 actual_leverage = min(float(CFG.LEVERAGE), max_allowed)
-                logger.info(f"레버리지 확정 ({symbol}): 설정 {CFG.LEVERAGE}x / 실제 한도 {max_allowed}x -> 적용 {actual_leverage}x")
+                logger.info(f"레버리지 확정 ({symbol}): 설정 {CFG.LEVERAGE}x / 거래소 한도 {max_allowed}x -> 적용 {actual_leverage}x")
             except Exception as e:
-                logger.warning(f"최대 레버리지 조회 실패, 설정값 사용: {e}")
+                logger.warning(f"레버리지 한도 조회 실패, 설정값 사용: {e}")
+
+            # 확정된 레버리지로 거래소에 설정 (10x가 아닌, 실제 가능한 값)
+            self.set_leverage(symbol, int(actual_leverage))
 
             # 2) 수량 계산 (고정 증거금 방식 - 절대 초과 금지)
             # 사용자가 설정한 '증거금($5)'을 기준으로, 실제 가능한 레버리지를 곱해 노셔널 산출

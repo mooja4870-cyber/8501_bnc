@@ -826,65 +826,44 @@ with tabs[0]:
 
         st.markdown("---")
 
-        # ── 자산 배분 차트 ─────────────────────────
-        col_alloc, col_stats = st.columns(2)
+        # ── 하단 리스크 및 통계 ───────────────────────
+        st.markdown(
+            '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#666;letter-spacing:0.1em;margin-bottom:10px;">RISK & PERFORMANCE METRICS</p>',
+            unsafe_allow_html=True,
+        )
+        
+        _st = stats_store.load_stats()
+        orders_today = _st.get("orders_today", 0)
+        win_rate = stats_store.get_win_rate()
+        total_wins = _st.get("total_wins", 0)
+        total_losses = _st.get("total_losses", 0)
+        total_trades = total_wins + total_losses
+        win_label = f"{win_rate:.1f}%" if total_trades > 0 else "-"
+        win_delta = f"{total_wins}W / {total_losses}L" if total_trades > 0 else "N/A"
 
-        with col_alloc:
-            st.markdown(
-                '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">PORTFOLIO ALLOCATION</p>',
-                unsafe_allow_html=True,
-            )
-            fig_alloc = go.Figure(go.Pie(
-                labels=["실전 투입 (100%)", "예비 유동성 (0%)", "리스크 리저브 (0%)"],
-                values=[100, 0.001, 0.001],
-                hole=0.55,
-                marker=dict(colors=["#c8f53b", "#3b82f6", "#555555"]),
-                textfont=dict(family="IBM Plex Mono", size=10),
-                textinfo="label",
-            ))
-            fig_alloc.update_layout(
-                **PLOT_LAYOUT,
-                showlegend=False,
-                height=220,
-            )
-            st.plotly_chart(fig_alloc, use_container_width=True)
+        # ── 수익률 계산 (실시간 잔고 반영) ──
+        live_bal = engine.client.get_balance()
+        total_equity = live_bal.get("total", 0.0)
+        initial_cap = CFG.INITIAL_CAPITAL
+        accu_profit_pct = ((total_equity - initial_cap) / initial_cap) * 100 if initial_cap > 0 else 0.0
+        
+        # 24시간 수익률 계산
+        hist_24h = engine.get_trade_history(limit=100)
+        now = pd.Timestamp.now()
+        pnl_24h_usdt = sum(t['pnl_usdt'] for t in hist_24h if (now - t['timestamp']).total_seconds() < 86400)
+        equity_24h_ago = total_equity - pnl_24h_usdt
+        pnl_24h_pct = (pnl_24h_usdt / equity_24h_ago) * 100 if equity_24h_ago > 0 else 0.0
 
-        with col_stats:
-            st.markdown(
-                '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">RISK METRICS</p>',
-                unsafe_allow_html=True,
-            )
-            _st = stats_store.load_stats()
-            orders_today = _st.get("orders_today", 0)
-            win_rate = stats_store.get_win_rate()
-            total_wins = _st.get("total_wins", 0)
-            total_losses = _st.get("total_losses", 0)
-            total_trades = total_wins + total_losses
-            win_label = f"{win_rate:.1f}%" if total_trades > 0 else "-"
-            win_delta = f"{total_wins}W / {total_losses}L" if total_trades > 0 else "매매 데이터 없음"
-
-            # ── 수익률 계산 (실시간 잔고 반영) ──
-            live_bal = engine.client.get_balance()
-            total_equity = live_bal.get("total", 0.0)
-            initial_cap = CFG.INITIAL_CAPITAL
-            accu_profit_pct = ((total_equity - initial_cap) / initial_cap) * 100 if initial_cap > 0 else 0.0
-            
-            # 24시간 수익률 계산
-            hist_24h = engine.get_trade_history(limit=100)
-            now = pd.Timestamp.now()
-            pnl_24h_usdt = sum(t['pnl_usdt'] for t in hist_24h if (now - t['timestamp']).total_seconds() < 86400)
-            # 24시간 전 잔고 추정 (현재 잔고 - 24시간 수익)
-            equity_24h_ago = total_equity - pnl_24h_usdt
-            pnl_24h_pct = (pnl_24h_usdt / equity_24h_ago) * 100 if equity_24h_ago > 0 else 0.0
-
-            r1, r2 = st.columns(2)
-            accu_label = f"{accu_profit_pct:+.2f} %"
-            accu_delta = f"({pnl_24h_pct:+.2f}% 24Hrs)"
-            r1.metric("Profit Accu.", accu_label, accu_delta)
-            r2.metric("승률", win_label, win_delta)
-            r3, r4 = st.columns(2)
-            r3.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%")
-            r4.metric("금일 주문", f"{orders_today}건")
+        # 4컬럼 레이아웃으로 변경
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.metric("Profit Accu.", f"{accu_profit_pct:+.2f} %", f"({pnl_24h_pct:+.2f}% 24h)")
+        with c2:
+            st.metric("승률 (Win Rate)", win_label, win_delta)
+        with c3:
+            st.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "Max Risk")
+        with c4:
+            st.metric("금일 주문", f"{orders_today}건", "Today")
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1224,6 +1203,7 @@ with tabs[5]:
         if new_lev != prev_lev:
             CFG.LEVERAGE = new_lev
             os.environ["LEVERAGE"] = str(new_lev)
+            set_key(".env", "LEVERAGE", str(new_lev))
             time.sleep(1.5)
             st.toast(f"✅ 레버리지 변경 완료: {new_lev}x")
             st.rerun()
@@ -1233,6 +1213,7 @@ with tabs[5]:
         if new_margin != prev_margin:
             CFG.MARGIN_USDT = new_margin
             os.environ["MARGIN_USDT"] = str(new_margin)
+            set_key(".env", "MARGIN_USDT", str(new_margin))
             time.sleep(1.5)
             st.toast(f"✅ 진입 증거금 변경 완료: ${new_margin}")
             st.rerun()
@@ -1242,6 +1223,7 @@ with tabs[5]:
         if new_max_pos != prev_max_pos:
             CFG.MAX_POSITIONS = new_max_pos
             os.environ["MAX_POSITIONS"] = str(new_max_pos)
+            set_key(".env", "MAX_POSITIONS", str(new_max_pos))
             time.sleep(1.5)
             st.toast(f"✅ 최대 포지션 변경 완료: {new_max_pos}개")
             st.rerun()
@@ -1252,6 +1234,7 @@ with tabs[5]:
         if abs(new_sl - prev_sl) > 0.0001:
             CFG.STOP_LOSS_PCT = new_sl
             os.environ["STOP_LOSS_PCT"] = str(new_sl)
+            set_key(".env", "STOP_LOSS_PCT", str(new_sl))
             time.sleep(1.5)
             st.toast(f"✅ 손절 라인 변경 완료: {new_sl_val}%")
             st.rerun()
@@ -1263,6 +1246,7 @@ with tabs[5]:
         if abs(new_tp - prev_tp) > 0.0001:
             CFG.TAKE_PROFIT_PCT = new_tp
             os.environ["TAKE_PROFIT_PCT"] = str(new_tp)
+            set_key(".env", "TAKE_PROFIT_PCT", str(new_tp))
             time.sleep(1.5)
             st.toast(f"✅ 익절 라인 변경 완료: {new_tp_val}%")
             st.rerun()
@@ -1272,6 +1256,7 @@ with tabs[5]:
         if new_vol != prev_vol:
             CFG.MIN_VOLUME_USDT = new_vol
             os.environ["MIN_VOLUME_USDT"] = str(new_vol)
+            set_key(".env", "MIN_VOLUME_USDT", str(new_vol))
             time.sleep(1.5)
             st.toast(f"✅ 최소 거래대금 변경 완료: ${new_vol:,.0f}")
             st.rerun()
@@ -1281,6 +1266,7 @@ with tabs[5]:
         if new_scan != prev_scan:
             CFG.SCAN_INTERVAL_SEC = new_scan
             os.environ["SCAN_INTERVAL_SEC"] = str(new_scan)
+            set_key(".env", "SCAN_INTERVAL_SEC", str(new_scan))
             time.sleep(1.5)
             st.toast(f"✅ 스캔 주기 변경 완료: {new_scan}초")
             st.rerun()
@@ -1291,6 +1277,7 @@ with tabs[5]:
         if abs(new_mdd - prev_mdd) > 0.0001:
             CFG.MAX_DRAWDOWN_PCT = new_mdd
             os.environ["MAX_DRAWDOWN_PCT"] = str(new_mdd)
+            set_key(".env", "MAX_DRAWDOWN_PCT", str(new_mdd))
             time.sleep(1.5)
             st.toast(f"✅ MDD 한도 변경 완료: {new_mdd_val}%")
             st.rerun()
