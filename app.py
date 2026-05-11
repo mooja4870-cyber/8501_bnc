@@ -237,6 +237,123 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# ── 첨부 디자인 오버라이드 (stitch_trading_bot_ui_design.zip) ──
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+        --cyber-bg: #0a0c10;
+        --cyber-surface: #161b22;
+        --cyber-text: #e2e2e8;
+        --cyber-dim: #8f9bb3;
+        --cyber-green: #00ff41;
+        --cyber-cyan: #00e5ff;
+        --cyber-red: #ff3b30;
+    }
+
+    html, body, [data-testid="stAppViewContainer"] {
+        background: var(--cyber-bg) !important;
+        color: var(--cyber-text) !important;
+        font-family: 'Inter', 'Noto Sans KR', sans-serif !important;
+    }
+    [data-testid="stSidebar"] {
+        background: rgba(22, 27, 34, 0.82) !important;
+        border-right: 1px solid rgba(132, 150, 126, 0.2) !important;
+        backdrop-filter: blur(12px) !important;
+    }
+
+    [data-testid="metric-container"] {
+        background: rgba(22, 27, 34, 0.78) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        border-radius: 12px !important;
+        backdrop-filter: blur(12px) !important;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+    }
+    [data-testid="stMetricValue"] {
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-family: 'JetBrains Mono', monospace !important;
+        color: #7f8aa3 !important;
+    }
+
+    .stButton > button {
+        background: var(--cyber-green) !important;
+        color: #0c110d !important;
+        border: 1px solid rgba(0,255,65,0.32) !important;
+        border-radius: 8px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-weight: 700 !important;
+        box-shadow: 0 0 10px rgba(0,255,65,0.16) !important;
+    }
+    .stButton > button:hover {
+        opacity: 1 !important;
+        box-shadow: 0 0 16px rgba(0,255,65,0.35) !important;
+    }
+    .refresh-btn button {
+        background: rgba(9, 18, 28, 0.9) !important;
+        color: var(--cyber-cyan) !important;
+        border: 1px solid rgba(0,229,255,0.62) !important;
+        border-radius: 12px !important;
+        box-shadow: inset 0 0 0 1px rgba(0,229,255,0.18), 0 0 11px rgba(0,229,255,0.2) !important;
+        letter-spacing: 0.08em !important;
+    }
+    .refresh-btn button:hover {
+        box-shadow: inset 0 0 0 1px rgba(0,229,255,0.42), 0 0 18px rgba(0,229,255,0.34) !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        background: rgba(22, 27, 34, 0.82);
+        border: 1px solid rgba(132, 150, 126, 0.2);
+        border-radius: 10px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        color: #94a3b8 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+    .stTabs [aria-selected="true"] {
+        background: var(--cyber-green) !important;
+        color: #0a0c10 !important;
+    }
+
+    .quantum-logo {
+        font-family: 'Space Grotesk', sans-serif !important;
+        font-weight: 700 !important;
+        color: var(--cyber-text) !important;
+    }
+    .quantum-logo span {
+        color: var(--cyber-green) !important;
+        letter-spacing: 0.08em !important;
+    }
+
+    .badge-live {
+        background: rgba(18, 26, 34, 0.82) !important;
+        border: 1px solid rgba(126, 244, 90, 0.26) !important;
+        border-radius: 999px !important;
+        color: #7ef45a !important;
+        box-shadow: inset 0 0 0 1px rgba(126, 244, 90, 0.08), 0 0 10px rgba(126, 244, 90, 0.1) !important;
+    }
+    .badge-live .dot {
+        box-shadow: 0 0 9px rgba(126, 244, 90, 0.85) !important;
+    }
+
+    .log-box {
+        background: rgba(10, 12, 16, 0.86) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        border-radius: 10px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        color: #7f8aa3 !important;
+    }
+    .log-latest {
+        color: #7ef45a !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 # ── 세션 상태 초기화 ──────────────────────────────────
 
@@ -301,7 +418,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.18</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.27</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -391,7 +508,7 @@ with col_time:
 
 with col_status:
     if st.session_state.auto_trading:
-        st.markdown('<div class="badge-live" style="margin-bottom:8px;"><span class="dot"></span><span>LIVE STATUS</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="badge-live" style="margin-bottom:8px;"><span class="dot"></span><span>LIVE CONNECTION</span></div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="badge-stopped" style="margin-bottom:8px;">● STOPPED</div>', unsafe_allow_html=True)
     st.markdown('<div class="refresh-btn">', unsafe_allow_html=True)

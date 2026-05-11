@@ -69,3 +69,7 @@
 ## v1.1.26 (2026-05-11)
 - [Risk] Changed entry risk gate from 1.5x margin check to 1.0x (ree >= MARGIN_USDT).
 - [Order] Changed TP order from reduce-only limit to stop(trigger) to reduce available-margin over-reservation risk when opening positions.
+
+## v1.1.27 (2026-05-11)
+- [UI] Applied stitch_trading_bot_ui_design.zip style system as app-wide override (Space Grotesk/Inter/JetBrains Mono, cyber dark palette, glass cards, neon green primary + cyan refresh accents).
+- [UI] Updated header live badge label to 'LIVE CONNECTION' and sidebar version label to v1.1.27.
