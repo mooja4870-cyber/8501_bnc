@@ -81,3 +81,7 @@
 ## v1.1.29 (2026-05-11)
 - [UI] Enlarged the MACD-BB-EMA sidebar logo to 222% of its prior size and added an animated rainbow gradient text effect.
 - [UI] Updated sidebar version label to v1.1.29.
+
+## v1.1.30 (2026-05-11)
+- [UI] Fixed REFRESH control overlap with the tab bar by raising tabline controls above the tab background and reducing the refresh button height.
+- [UI] Updated sidebar version label to v1.1.30.

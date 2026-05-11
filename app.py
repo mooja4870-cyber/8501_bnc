@@ -379,30 +379,76 @@ st.markdown(
         margin: 8px 0 0 !important;
         text-align: right !important;
         white-space: nowrap !important;
+        position: relative !important;
+        z-index: 30 !important;
     }
     .tabline-status {
         display: flex !important;
         justify-content: flex-end !important;
         margin-top: 0 !important;
+        position: relative !important;
+        z-index: 30 !important;
     }
     .tabline-status .badge-live,
     .tabline-status .badge-stopped {
         margin-bottom: 0 !important;
         white-space: nowrap !important;
     }
+    .tabline-refresh {
+        position: relative !important;
+        z-index: 30 !important;
+        display: block !important;
+    }
+    .tabline-refresh-link {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        height: 30px !important;
+        min-height: 30px !important;
+        padding: 0 16px !important;
+        border-radius: 8px !important;
+        background: var(--cyber-green) !important;
+        border: 1px solid rgba(0,255,65,0.32) !important;
+        color: #0c110d !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.75rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.08em !important;
+        text-decoration: none !important;
+        box-shadow: 0 0 10px rgba(0,255,65,0.16) !important;
+        position: relative !important;
+        z-index: 31 !important;
+        transform: translateY(-1px) !important;
+        white-space: nowrap !important;
+        box-sizing: border-box !important;
+    }
+    .tabline-refresh-link:hover {
+        color: #0c110d !important;
+        text-decoration: none !important;
+        box-shadow: 0 0 16px rgba(0,255,65,0.35) !important;
+    }
     .tabline-refresh button {
-        height: 38px !important;
-        min-height: 38px !important;
+        height: 30px !important;
+        min-height: 30px !important;
         margin-top: 0 !important;
+        padding: 0 16px !important;
+        position: relative !important;
+        z-index: 31 !important;
+        transform: translateY(-1px) !important;
         white-space: nowrap !important;
     }
     .stTabs {
-        margin-top: -48px !important;
+        margin-top: -42px !important;
+        position: relative !important;
+        z-index: 1 !important;
     }
     .stTabs [data-baseweb="tab-list"] {
         padding-right: 600px !important;
         min-height: 42px !important;
         align-items: center !important;
+        position: relative !important;
+        z-index: 1 !important;
     }
     @media (max-width: 1200px) {
         .stTabs {
@@ -484,7 +530,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.29</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.30</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -573,10 +619,10 @@ with tabline_status:
     st.markdown(f'<div class="tabline-status">{status_html}</div>', unsafe_allow_html=True)
 
 with tabline_refresh:
-    st.markdown('<div class="refresh-btn tabline-refresh">', unsafe_allow_html=True)
-    if st.button("⟳ REFRESH", key="global_refresh", use_container_width=True):
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="tabline-refresh"><a class="tabline-refresh-link" href="?refresh={int(time.time())}" target="_self">⟳ REFRESH</a></div>',
+        unsafe_allow_html=True,
+    )
 
 
 # ══════════════════════════════════════════════════════
