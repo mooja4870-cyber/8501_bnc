@@ -263,21 +263,37 @@ class OKXClient:
         side: "buy" = 롱 진입, "sell" = 숏 진입
         """
         try:
-            # 1) 실제 가능한 최대 레버리지를 먼저 조회한 뒤, 그 값으로 설정
+            # 1) 레버리지 설정 후 실제 적용된 값 확인
+            #    OKX는 종목마다 허용 레버리지가 다름.
+            #    set_leverage 응답에서 실제 적용된 값을 읽어 수량 계산에 사용.
             actual_leverage = float(CFG.LEVERAGE)
             try:
-                lev_info = self.exchange.privateGetAccountLeverageInfo({
-                    'instId': symbol.replace('/', '-').replace(':USDT', ''),
-                    'mgnMode': 'isolated'
-                })
-                max_allowed = float(lev_info.get('data', [{}])[0].get('lever', CFG.LEVERAGE))
-                actual_leverage = min(float(CFG.LEVERAGE), max_allowed)
-                logger.info(f"레버리지 확정 ({symbol}): 설정 {CFG.LEVERAGE}x / 거래소 한도 {max_allowed}x -> 적용 {actual_leverage}x")
+                resp = self.exchange.set_leverage(
+                    int(CFG.LEVERAGE), symbol,
+                    params={"mgnMode": "isolated"}
+                )
+                # ccxt OKX 응답: {'lever': '3', ...} 또는 resp 자체에 lever 포함
+                if isinstance(resp, dict):
+                    lever_val = resp.get('lever') or resp.get('data', [{}])[0].get('lever')
+                    if lever_val:
+                        actual_leverage = float(lever_val)
+                logger.info(
+                    f"레버리지 설정 완료 ({symbol}): "
+                    f"요청 {CFG.LEVERAGE}x → 실제 적용 {actual_leverage}x"
+                )
             except Exception as e:
-                logger.warning(f"레버리지 한도 조회 실패, 설정값 사용: {e}")
-
-            # 확정된 레버리지로 거래소에 설정 (10x가 아닌, 실제 가능한 값)
-            self.set_leverage(symbol, int(actual_leverage))
+                # 설정 실패 시에도 현재 설정된 레버리지 조회 시도
+                logger.warning(f"레버리지 설정 실패 ({symbol}): {e}")
+                try:
+                    positions = self.exchange.fetch_positions([symbol])
+                    for pos in positions:
+                        if pos.get('symbol') == symbol:
+                            actual_leverage = float(pos.get('leverage', CFG.LEVERAGE))
+                            break
+                    logger.info(f"포지션에서 레버리지 조회: {symbol} {actual_leverage}x")
+                except Exception:
+                    logger.warning(f"레버리지 조회도 실패, 안전하게 1x 적용: {symbol}")
+                    actual_leverage = 1.0  # 최악의 경우 1x (증거금 = 노셔널)
 
             # 2) 수량 계산 (고정 증거금 방식 - 절대 초과 금지)
             # 사용자가 설정한 '증거금($5)'을 기준으로, 실제 가능한 레버리지를 곱해 노셔널 산출
@@ -310,6 +326,20 @@ class OKXClient:
             # 최종 수치 확정
             estimated_notional = amount_float * price * contract_size
             estimated_margin = estimated_notional / actual_leverage
+
+            logger.info(
+                f"[ORDER CALC] {symbol} | "
+                f"증거금설정=${margin_usdt} | 실제레버리지={actual_leverage}x | "
+                f"노셔널=${estimated_notional:.2f} | 예상증거금=${estimated_margin:.2f} | "
+                f"수량={amount_float} | 가격=${price:.4f} | 계약크기={contract_size}"
+            )
+
+            # 증거금 초과 방지 안전장치: 예상 증거금이 설정의 1.5배 초과 시 중단
+            if estimated_margin > margin_usdt * 1.5:
+                raise ValueError(
+                    f"증거금 초과 감지! 예상=${estimated_margin:.2f} > 한도=${margin_usdt * 1.5:.2f} "
+                    f"(설정=${margin_usdt}, 레버리지={actual_leverage}x)"
+                )
 
             # 3) 시장가 진입
             order = self.exchange.create_order(
