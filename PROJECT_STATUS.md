@@ -26,6 +26,7 @@
 - [Feature] **스캐너 응답성 개선:** 전 종목 스캔 완료를 기다리지 않고 5개 종목마다 결과를 즉시 업데이트하여 UI 데이터 지연 현상 해결.
 - [Logic] **청산 대기 시간 보정:** 즉시청산 버튼 클릭 후 API 반영 시차를 고려하여 대기 시간을 1초에서 2초로 상향 조정.
 - [Fix] `core/trader.py` 내 `timedelta` 임포트 누락으로 인한 로그 기록 오류 수정.
+- [UI] **상단 바 레이아웃 최적화:** 새로고침 버튼(🔄)을 LIVE/STOPPED 배지의 왼쪽으로 이동시켜 공간 효율성 및 가시성 개선 (v1.1.21).
 
 ## Next Steps
 - Implement advanced risk management features (e.g., dynamic TP/SL).

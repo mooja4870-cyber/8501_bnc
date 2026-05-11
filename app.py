@@ -279,7 +279,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.19</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.21</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -368,12 +368,15 @@ with col_time:
     )
 
 with col_status:
-    if st.session_state.auto_trading:
-        st.markdown('<div class="badge-live" style="margin-bottom:8px;">● LIVE</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="badge-stopped" style="margin-bottom:8px;">● STOPPED</div>', unsafe_allow_html=True)
-    if st.button("🔄 새로고침", key="global_refresh", use_container_width=True):
-        st.rerun()
+    c_ref, c_sta = st.columns([1, 1])
+    with c_ref:
+        if st.button("🔄", key="global_refresh", help="새로고침", use_container_width=True):
+            st.rerun()
+    with c_sta:
+        if st.session_state.auto_trading:
+            st.markdown('<div class="badge-live" style="width:100%; text-align:center;">● LIVE</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="badge-stopped" style="width:100%; text-align:center;">● STOPPED</div>', unsafe_allow_html=True)
 
 st.markdown('<hr style="margin: 8px 0 16px;">', unsafe_allow_html=True)
 
