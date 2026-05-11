@@ -837,8 +837,9 @@ with tabs[0]:
             win_label = f"{win_rate:.1f}%" if total_trades > 0 else "-"
             win_delta = f"{total_wins}W / {total_losses}L" if total_trades > 0 else "매매 데이터 없음"
 
-            # ── 수익률 계산 ──
-            total_equity = _st.get("total_balance", CFG.INITIAL_CAPITAL)
+            # ── 수익률 계산 (실시간 잔고 반영) ──
+            live_bal = engine.client.get_balance()
+            total_equity = live_bal.get("total", CFG.INITIAL_CAPITAL)
             initial_cap = CFG.INITIAL_CAPITAL if CFG.INITIAL_CAPITAL > 0 else 1.0
             accu_profit_pct = ((total_equity - initial_cap) / initial_cap) * 100
             
@@ -846,7 +847,9 @@ with tabs[0]:
             hist_24h = engine.get_trade_history(limit=100)
             now = pd.Timestamp.now()
             pnl_24h_usdt = sum(t['pnl_usdt'] for t in hist_24h if (now - t['timestamp']).total_seconds() < 86400)
-            pnl_24h_pct = (pnl_24h_usdt / total_equity) * 100 if total_equity > 0 else 0.0
+            # 24시간 전 잔고 추정 (현재 잔고 - 24시간 수익)
+            equity_24h_ago = total_equity - pnl_24h_usdt
+            pnl_24h_pct = (pnl_24h_usdt / equity_24h_ago) * 100 if equity_24h_ago > 0 else 0.0
 
             r1, r2 = st.columns(2)
             accu_label = f"{accu_profit_pct:+.2f} %"
