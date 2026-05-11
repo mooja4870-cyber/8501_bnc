@@ -89,3 +89,8 @@
 ## v1.1.31 (2026-05-11)
 - [UI] Split the sidebar logo title into its own element so MACD-BB-EMA receives a dedicated animated rainbow gradient.
 - [UI] Updated sidebar version label to v1.1.31.
+
+## v1.1.32 (2026-05-11)
+- [Flow] OKX connect now forces auto trading on, applies the default Stable preset, and starts the scanner automatically.
+- [Flow] OKX connect now queues the default BTC/USDT 1-year backtest to run automatically.
+- [UI] Removed the manual auto-trading ON/OFF toggle from the sidebar and updated the sidebar version label to v1.1.32.

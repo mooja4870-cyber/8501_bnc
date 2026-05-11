@@ -475,6 +475,44 @@ st.markdown(
 
 # ── 세션 상태 초기화 ──────────────────────────────────
 
+DEFAULT_PRESET_NAME = "기본 (Stable)"
+STRATEGY_PRESETS = {
+    "기본 (Stable)": {
+        "ema": 200, "bb_p": 20, "bb_s": 2.0, "macd_f": 12, "macd_sl": 26, "macd_si": 9
+    },
+    "1차 공격적 (Trend)": {
+        "ema": 100, "bb_p": 20, "bb_s": 1.8, "macd_f": 10, "macd_sl": 22, "macd_si": 7
+    },
+    "2차 공격적 (Scalping)": {
+        "ema": 50, "bb_p": 14, "bb_s": 1.5, "macd_f": 8, "macd_sl": 18, "macd_si": 5
+    },
+}
+DEFAULT_BACKTEST_SYMBOL = "BTC/USDT:USDT"
+DEFAULT_BACKTEST_PERIOD = "1년"
+BACKTEST_PERIOD_DAYS = {"1년": 365, "2년": 730, "3년": 1095}
+
+
+def apply_strategy_preset(preset_name=DEFAULT_PRESET_NAME):
+    p = STRATEGY_PRESETS[preset_name]
+    st.session_state.active_preset = preset_name
+    CFG.EMA_PERIOD = p["ema"]
+    CFG.BB_PERIOD = p["bb_p"]
+    CFG.BB_STD = p["bb_s"]
+    CFG.MACD_FAST = p["macd_f"]
+    CFG.MACD_SLOW = p["macd_sl"]
+    CFG.MACD_SIGNAL = p["macd_si"]
+
+
+def activate_okx_auto_flow(engine: QuantumEngine):
+    apply_strategy_preset(DEFAULT_PRESET_NAME)
+    st.session_state.auto_trading = True
+    st.session_state.auto_backtest_pending = True
+
+    if engine.is_ready:
+        engine.enable_trading()
+        engine.start_scanner()
+
+
 def init_session():
     defaults = {
         "engine": QuantumEngine(),
@@ -482,7 +520,8 @@ def init_session():
         "auto_trading": False,
         "allow_long": True,
         "allow_short": True,
-        "active_preset": "기본 (Stable)",
+        "active_preset": DEFAULT_PRESET_NAME,
+        "auto_backtest_pending": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -496,7 +535,7 @@ def init_session():
         if env_val and (state_key not in st.session_state or not st.session_state[state_key]):
             st.session_state[state_key] = env_val
 
-def connect_api(api_key, secret_key, passphrase):
+def connect_api(api_key, secret_key, passphrase, activate_automation=False):
     if not api_key or not secret_key or not passphrase:
         return False, "❌ API 키를 모두 입력해주세요."
     
@@ -505,6 +544,8 @@ def connect_api(api_key, secret_key, passphrase):
     
     if success:
         st.session_state.api_connected = True
+        if activate_automation:
+            activate_okx_auto_flow(engine)
         return True, msg
     return False, msg
 
@@ -536,7 +577,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.31</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.32</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -560,7 +601,7 @@ with st.sidebar:
             ak = api_key if api_key else os.getenv("OKX_API_KEY", "")
             sk = secret_key if secret_key else os.getenv("OKX_SECRET_KEY", "")
             pw = passphrase if passphrase else os.getenv("OKX_PASSPHRASE", "")
-            success, msg = connect_api(ak, sk, pw)
+            success, msg = connect_api(ak, sk, pw, activate_automation=True)
             if success:
                 st.success(msg)
             else:
@@ -572,21 +613,19 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    auto = st.toggle("자동매매 ON/OFF", value=st.session_state.auto_trading)
+    st.markdown(
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.72rem;color:#00ff41;letter-spacing:0.08em;">AUTO TRADING: ON AFTER OKX CONNECT</div>',
+        unsafe_allow_html=True,
+    )
     longs = st.toggle("롱 포지션 허용", value=st.session_state.allow_long)
     shorts = st.toggle("숏 포지션 허용", value=st.session_state.allow_short)
 
     engine: QuantumEngine = st.session_state.engine
-    
-    if auto != st.session_state.auto_trading:
-        st.session_state.auto_trading = auto
-        if engine.is_ready:
-            if auto:
-                engine.enable_trading()
-                engine.start_scanner()
-            else:
-                engine.disable_trading()
-                engine.stop_scanner()
+
+    if st.session_state.auto_trading and engine.is_ready:
+        engine.enable_trading()
+        if not (engine.scanner and engine.scanner.is_running):
+            engine.start_scanner()
 
     if engine.is_ready and engine.trader:
         engine.trader.allow_long = longs
@@ -911,8 +950,15 @@ with tabs[2]:
         with bt3:
             run_bt = st.button("📊  백테스트 실행", use_container_width=True)
 
-        if run_bt:
-            period_days = {"1년": 365, "2년": 730, "3년": 1095}[bt_period]
+        auto_run_bt = st.session_state.get("auto_backtest_pending", False)
+        if auto_run_bt:
+            bt_symbol = DEFAULT_BACKTEST_SYMBOL
+            bt_period = DEFAULT_BACKTEST_PERIOD
+            st.info(f"OKX 연결 완료: {bt_symbol} {bt_period} 기본 백테스트를 자동 실행합니다.")
+
+        if run_bt or auto_run_bt:
+            st.session_state.auto_backtest_pending = False
+            period_days = BACKTEST_PERIOD_DAYS[bt_period]
             limit = period_days * 24  # 1h 캔들 수
 
             with st.spinner(f"{bt_symbol} {bt_period} 백테스트 실행 중..."):
@@ -1068,30 +1114,10 @@ with tabs[4]:
         unsafe_allow_html=True,
     )
 
-    # 프리셋 정의
-    PRESETS = {
-        "기본 (Stable)": {
-            "ema": 200, "bb_p": 20, "bb_s": 2.0, "macd_f": 12, "macd_sl": 26, "macd_si": 9
-        },
-        "1차 공격적 (Trend)": {
-            "ema": 100, "bb_p": 20, "bb_s": 1.8, "macd_f": 10, "macd_sl": 22, "macd_si": 7
-        },
-        "2차 공격적 (Scalping)": {
-            "ema": 50, "bb_p": 14, "bb_s": 1.5, "macd_f": 8, "macd_sl": 18, "macd_si": 5
-        }
-    }
-
-    preset_name = st.selectbox("전략 프리셋 선택", list(PRESETS.keys()), index=0)
+    preset_name = st.selectbox("전략 프리셋 선택", list(STRATEGY_PRESETS.keys()), index=0)
     
     if st.button("🪄 프리셋 적용"):
-        p = PRESETS[preset_name]
-        st.session_state.active_preset = preset_name
-        CFG.EMA_PERIOD = p["ema"]
-        CFG.BB_PERIOD = p["bb_p"]
-        CFG.BB_STD = p["bb_s"]
-        CFG.MACD_FAST = p["macd_f"]
-        CFG.MACD_SLOW = p["macd_sl"]
-        CFG.MACD_SIGNAL = p["macd_si"]
+        apply_strategy_preset(preset_name)
         st.toast(f"✅ {preset_name} 파라미터 적용됨")
         time.sleep(0.5)
         st.rerun()
