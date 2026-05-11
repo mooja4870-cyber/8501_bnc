@@ -200,20 +200,15 @@ st.markdown(
         animation: pink-fade 1.5s infinite ease-in-out;
         box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
     }
-    /* 최신 로그 강조 스타일 */
-    @keyframes latest-blink {
-        0% { opacity: 1; color: #ffffff; }
-        50% { opacity: 0.7; color: #c8f53b; }
-        100% { opacity: 1; color: #ffffff; }
+    @keyframes green-pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
     }
-    .latest-log-line {
-        color: #ffffff !important;
+    .log-latest {
+        color: #c8f53b !important;
         font-weight: 700 !important;
-        animation: latest-blink 2s infinite ease-in-out;
-        display: block;
-        margin-bottom: 4px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        padding-bottom: 4px;
+        animation: green-pulse 1.2s infinite ease-in-out;
     }
     </style>
     """,
@@ -499,13 +494,17 @@ with tabs[0]:
             logs = engine.scanner.get_logs(30) if engine.scanner else ["[SYS] 엔진 미연결"]
             
             if logs:
-                latest_log = logs[-1]
-                other_logs = "\n".join(reversed(logs[:-1]))
-                log_html = f'<div class="log-box"><span class="latest-log-line">NEW 👉 {latest_log}</span>{other_logs}</div>'
+                # 최신 로그(마지막 요소)에 특수 스타일 적용
+                latest_line = f'<span class="log-latest">{logs[-1]}</span>'
+                other_lines = "\n".join(reversed(logs[:-1])) if len(logs) > 1 else ""
+                log_html = f"{latest_line}\n{other_lines}" if other_lines else latest_line
             else:
-                log_html = '<div class="log-box">로그 데이터 없음</div>'
-                
-            st.markdown(log_html, unsafe_allow_html=True)
+                log_html = "로그 없음"
+
+            st.markdown(
+                f'<div class="log-box">{log_html}</div>',
+                unsafe_allow_html=True,
+            )
 
         st.markdown("---")
 
