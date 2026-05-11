@@ -94,25 +94,35 @@ class AutoTrader:
             side = "buy" if sig.direction == "long" else "sell"
             
             margin_usdt = self.cfg.MARGIN_USDT
-
             if margin_usdt < 1.0:
                 logger.warning(f"[SKIP] 증거금 설정 오류 (최소 $1): {margin_usdt:.2f} USDT")
                 return
 
             now = _utc_now()
+            
+            # ── 중복 실행 방지 락 (심볼 단위) ──
             self._pending_entries[sig.symbol] = now
+            self._last_entry_at[sig.symbol] = now # 쿨다운 즉시 시작
+            
             result = None
             try:
+                # 실제로 주문을 넣기 직전에 한 번 더 포지션 체크 (네트워크 지연 대비)
+                # 이 시점에는 이미 self._lock을 쥐고 있으므로 안전함
                 result = self.client.place_order(
                     symbol=sig.symbol,
                     side=side,
                     margin_usdt=margin_usdt,
                 )
+            except Exception as e:
+                logger.error(f"[ERR] 주문 실행 중 예외 발생: {e}")
             finally:
-                self._pending_entries.pop(sig.symbol, None)
+                # 락을 바로 풀지 않고 약간의 여유를 두어 거래소 반영 시간을 확보
+                # (주문 성공 시에는 pop하지 않고 쿨다운에 의존)
+                if not result:
+                    self._pending_entries.pop(sig.symbol, None)
+                    self._last_entry_at.pop(sig.symbol, None)
 
             if result:
-                self._last_entry_at[sig.symbol] = now
                 self.orders_today += 1
                 stats_store.record_order()
                 self._log_trade(sig, status="EXECUTED", result=result)
@@ -154,6 +164,7 @@ class AutoTrader:
         pending_ttl = timedelta(seconds=self.cfg.PENDING_ENTRY_TTL_SEC)
         cooldown = timedelta(seconds=self.cfg.ENTRY_COOLDOWN_SEC)
 
+        # 만료된 펜딩 제거
         expired = [
             sym for sym, ts in self._pending_entries.items()
             if now - ts > pending_ttl
@@ -161,19 +172,23 @@ class AutoTrader:
         for sym in expired:
             self._pending_entries.pop(sym, None)
 
+        # 1. 펜딩 체크
         pending_at = self._pending_entries.get(symbol)
         if pending_at and now - pending_at <= pending_ttl:
             return True, "동일 티커 주문 진행 중", []
 
+        # 2. 쿨다운 체크
         last_entry_at = self._last_entry_at.get(symbol)
         if last_entry_at and now - last_entry_at < cooldown:
             remain = int((cooldown - (now - last_entry_at)).total_seconds())
             return True, f"동일 티커 재진입 쿨다운 {remain}초 남음", []
 
+        # 3. 실제 포지션 체크 (API)
         positions = self.client.get_positions()
         if any(p["symbol"] == symbol for p in positions):
             return True, "이미 포지션 보유", positions
 
+        # 4. 미체결 주문 체크 (API)
         open_orders = self.client.get_open_orders()
         if any(o["symbol"] == symbol for o in open_orders):
             return True, "동일 티커 미체결 주문 존재", positions

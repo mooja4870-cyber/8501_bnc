@@ -30,9 +30,15 @@ class QuantumEngine:
         self._prev_position_symbols: set = set()  # 청산 감지용 스냅샷
 
     def initialize(self, api_key: str, secret_key: str, passphrase: str) -> tuple[bool, str]:
-        """API 연결 및 모듈 초기화"""
+        """API 연결 및 모듈 초기화 (기본 스레드 정리 포함)"""
         with self._lock:
             try:
+                # 기존 엔진 구성 요소 정리 (중복 스레드 방지)
+                if self.scanner:
+                    self.scanner.stop()
+                if self.trader:
+                    self.trader.disable()
+                
                 self.client = OKXClient(api_key, secret_key, passphrase)
                 if self.client.load_markets():
                     self.scanner = Scanner(self.client)

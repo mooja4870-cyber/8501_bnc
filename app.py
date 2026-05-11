@@ -23,7 +23,7 @@ import core.stats as stats_store
 
 # ── 환경 설정 로드 ─────────────────────────────────
 load_dotenv(override=True)
-CFG = TradingConfig()
+CFG.refresh()
 
 # ── 페이지 설정 ───────────────────────────────────────
 st.set_page_config(
@@ -330,21 +330,14 @@ st.markdown(
         font-size: 2.44rem !important;
         color: transparent !important;
         background: linear-gradient(
-            90deg,
-            #ff3b30,
-            #ffb000,
-            #fff44f,
-            #00ff41,
-            #00e5ff,
-            #5b7cfa,
-            #ff4fd8,
-            #ff3b30
+            to right,
+            #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3, #ff0000
         ) !important;
-        background-size: 320% 100% !important;
+        background-size: 200% auto !important;
         -webkit-background-clip: text !important;
         background-clip: text !important;
-        animation: rainbow-flow 4.5s linear infinite !important;
-        text-shadow: 0 0 18px rgba(0, 255, 65, 0.18) !important;
+        -webkit-text-fill-color: transparent !important;
+        animation: rainbow 6s linear infinite !important;
         letter-spacing: -0.5px !important;
     }
     .quantum-version {
@@ -353,9 +346,9 @@ st.markdown(
         color: var(--cyber-green) !important;
         letter-spacing: 0.08em !important;
     }
-    @keyframes rainbow-flow {
+    @keyframes rainbow {
         0% { background-position: 0% 50%; }
-        100% { background-position: 320% 50%; }
+        100% { background-position: 200% 50%; }
     }
 
     .badge-live {
@@ -579,7 +572,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.34</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.45</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1084,8 +1077,8 @@ with tabs[3]:
             df_hist = pd.DataFrame(history[::-1])
             df_hist["timestamp"] = df_hist["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
             # 컬럼 순서 및 이름 정의
-            df_hist = df_hist[["timestamp", "symbol", "type", "side", "leverage", "price", "pnl_usdt", "pnl_pct", "fee"]]
-            df_hist.columns = ["시각", "종목", "구분", "방향", "레버리지", "체결가", "손익(USDT)", "수익률(%)", "수수료"]
+            df_hist = df_hist[["timestamp", "symbol", "type", "side", "amount", "cost", "leverage", "price", "pnl_usdt", "pnl_pct", "fee"]]
+            df_hist.columns = ["시각", "종목", "구분", "방향", "수량", "거래금액", "레버리지", "체결가", "손익(USDT)", "수익률(%)", "수수료"]
             
             # 포맷팅 및 스타일링
             df_hist["방향"] = df_hist["방향"].map({"buy":"🟢 BUY","sell":"🔴 SELL"}).fillna(df_hist["방향"])
@@ -1173,26 +1166,51 @@ with tabs[5]:
 
     s1, s2 = st.columns(2)
     with s1:
-        new_init_cap = st.number_input("초기 자본금 (USDT)", 1.0, 1000000.0, float(CFG.INITIAL_CAPITAL), step=1.0)
-        if new_init_cap != CFG.INITIAL_CAPITAL:
+        # ── 초기 자본금 설정 (엔터 입력 시 저장) ──
+        prev_cap = float(CFG.INITIAL_CAPITAL)
+        
+        # 실시간 수익률 미리보기 계산
+        live_bal = engine.client.get_balance() if engine.is_ready else {}
+        total_equity = live_bal.get("total", prev_cap)
+        current_accu = ((total_equity - prev_cap) / prev_cap) * 100 if prev_cap > 0 else 0.0
+        
+        c_cap, c_preview = st.columns([2, 1])
+        with c_cap:
+            new_init_cap = st.number_input("초기 자본금 (USDT)", 1.0, 1000000.0, prev_cap, step=1.0, key="cfg_init_cap")
+        with c_preview:
+            st.metric("실시간 누적 수익률", f"{current_accu:+.2f}%")
+
+        if new_init_cap != prev_cap:
             CFG.INITIAL_CAPITAL = new_init_cap
-            # .env 파일의 값을 안전하게 교체
             set_key(".env", "INITIAL_CAPITAL", str(new_init_cap))
-            st.toast("💾 초기 자본금 저장됨")
-            st.rerun() # 즉시 반영을 위해 재실행
+            os.environ["INITIAL_CAPITAL"] = str(new_init_cap)
+            st.toast("✅ 초기 자본금 수정 입력완료! (v1.1.45)")
+            time.sleep(0.5)
+            st.rerun()
             
-        CFG.LEVERAGE = st.slider("레버리지 (x)", 1, 20, CFG.LEVERAGE)
+        CFG.LEVERAGE = st.slider("레버리지 (x)", 1, 20, int(CFG.LEVERAGE))
         CFG.MARGIN_USDT = st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0)
-        CFG.MAX_POSITIONS = st.slider("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS)
+        CFG.MAX_POSITIONS = st.slider("최대 동시 포지션 수", 1, 10, int(CFG.MAX_POSITIONS))
         sl_val = st.slider("손절 (%)", 1.0, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.5)
         CFG.STOP_LOSS_PCT = sl_val / 100.0
     with s2:
         tp_val = st.slider("익절 (%)", 1.0, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.5)
         CFG.TAKE_PROFIT_PCT = tp_val / 100.0
         CFG.MIN_VOLUME_USDT = st.number_input("최소 거래대금 (USDT)", 1_000_000.0, 50_000_000.0, float(CFG.MIN_VOLUME_USDT), step=1_000_000.0)
-        CFG.SCAN_INTERVAL_SEC = st.slider("스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10)
+        CFG.SCAN_INTERVAL_SEC = st.slider("스캔 주기 (초)", 10, 300, int(CFG.SCAN_INTERVAL_SEC), step=10)
         mdd_val = st.slider("MDD 한도 (%)", 5.0, 50.0, float(CFG.MAX_DRAWDOWN_PCT * 100), step=1.0)
         CFG.MAX_DRAWDOWN_PCT = mdd_val / 100.0
+        
+        if st.button("💾 모든 설정 영구 저장", use_container_width=True):
+            set_key(".env", "LEVERAGE", str(CFG.LEVERAGE))
+            set_key(".env", "MARGIN_USDT", str(CFG.MARGIN_USDT))
+            set_key(".env", "MAX_POSITIONS", str(CFG.MAX_POSITIONS))
+            set_key(".env", "STOP_LOSS_PCT", str(CFG.STOP_LOSS_PCT))
+            set_key(".env", "TAKE_PROFIT_PCT", str(CFG.TAKE_PROFIT_PCT))
+            set_key(".env", "SCAN_INTERVAL_SEC", str(CFG.SCAN_INTERVAL_SEC))
+            st.toast("✅ 모든 설정이 .env에 영구 저장되었습니다.")
+            time.sleep(0.5)
+            st.rerun()
 
     st.markdown("---")
     st.markdown(

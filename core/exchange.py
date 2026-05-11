@@ -146,6 +146,7 @@ class OKXClient:
                     "side": side,
                     "price": round(t.get("price", 0), 6),
                     "amount": t.get("amount", 0),
+                    "cost": round(float(t.get("cost", 0)), 2),
                     "leverage": f"{raw.get('lever', CFG.LEVERAGE)}x",
                     "pnl_usdt": round(pnl_usdt, 4),
                     "pnl_pct": round(pnl_pct, 2),

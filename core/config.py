@@ -55,5 +55,15 @@ class TradingConfig:
     BT_SLIPPAGE: float = 0.0003          # 슬리피지 0.03%
 
 
+    def refresh(self):
+        """환경 변수로부터 설정을 최신화합니다."""
+        self.INITIAL_CAPITAL = float(os.getenv("INITIAL_CAPITAL", 1.0))
+        self.MARGIN_USDT = float(os.getenv("MARGIN_USDT", 5.0))
+        self.LEVERAGE = int(os.getenv("LEVERAGE", 10))
+        self.MAX_POSITIONS = int(os.getenv("MAX_POSITIONS", 5))
+        self.STOP_LOSS_PCT = float(os.getenv("STOP_LOSS_PCT", 0.015))
+        self.TAKE_PROFIT_PCT = float(os.getenv("TAKE_PROFIT_PCT", 0.02))
+
 # ── 전역 설정 인스턴스 ────────────────────────────────
 CFG = TradingConfig()
+CFG.refresh()
