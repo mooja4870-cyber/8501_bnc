@@ -837,8 +837,21 @@ with tabs[0]:
             win_label = f"{win_rate:.1f}%" if total_trades > 0 else "-"
             win_delta = f"{total_wins}W / {total_losses}L" if total_trades > 0 else "매매 데이터 없음"
 
+            # ── 수익률 계산 ──
+            total_equity = stats.get("total_balance", CFG.INITIAL_CAPITAL)
+            initial_cap = CFG.INITIAL_CAPITAL if CFG.INITIAL_CAPITAL > 0 else 1.0
+            accu_profit_pct = ((total_equity - initial_cap) / initial_cap) * 100
+            
+            # 24시간 수익률 계산
+            hist_24h = engine.get_trade_history(limit=100)
+            now = pd.Timestamp.now()
+            pnl_24h_usdt = sum(t['pnl_usdt'] for t in hist_24h if (now - t['timestamp']).total_seconds() < 86400)
+            pnl_24h_pct = (pnl_24h_usdt / total_equity) * 100 if total_equity > 0 else 0.0
+
             r1, r2 = st.columns(2)
-            r1.metric("Profit Factor", "2.45", "목표 ≥ 2.0")
+            accu_label = f"{accu_profit_pct:+.2f} %"
+            accu_delta = f"({pnl_24h_pct:+.2f}% 24Hrs)"
+            r1.metric("Profit Accu.", accu_label, accu_delta)
             r2.metric("승률", win_label, win_delta)
             r3, r4 = st.columns(2)
             r3.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%")
@@ -1155,6 +1168,7 @@ with tabs[5]:
 
     s1, s2 = st.columns(2)
     with s1:
+        CFG.INITIAL_CAPITAL = st.number_input("초기 자본금 (USDT)", 1.0, 1000000.0, float(CFG.INITIAL_CAPITAL), step=100.0)
         CFG.LEVERAGE = st.slider("레버리지 (x)", 1, 20, CFG.LEVERAGE)
         CFG.MARGIN_USDT = st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0)
         CFG.MAX_POSITIONS = st.slider("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS)

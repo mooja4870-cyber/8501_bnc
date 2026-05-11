@@ -12,6 +12,9 @@ class TradingConfig:
     EXCHANGE_ID: str = "okx"
     BASE_URL: str = "https://www.okx.com"
 
+    # ── 자산 관리 ──────────────────────────────────
+    INITIAL_CAPITAL: float = 1000.0        # 초기 자본금 (수익률 계산 기준)
+
     # ── 포지션 설정 ──────────────────────────────────────
     LEVERAGE: int = 10                     # 10배 고정
     MARGIN_MODE: str = "isolated"          # 격리 마진
