@@ -17,6 +17,8 @@ class TradingConfig:
     MARGIN_MODE: str = "isolated"          # 격리 마진
     MARGIN_USDT: float = 5.0               # 1회 진입 증거금 (USDT)
     MAX_POSITIONS: int = 5                # 최대 동시 보유 종목 수
+    ENTRY_COOLDOWN_SEC: int = 180          # 동일 티커 재진입 최소 대기 시간
+    PENDING_ENTRY_TTL_SEC: int = 120       # 주문 진행 상태 중복 방지 유지 시간
     ALLOW_LONG: bool = True
     ALLOW_SHORT: bool = True
 

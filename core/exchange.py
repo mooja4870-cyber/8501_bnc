@@ -245,18 +245,31 @@ class OKXClient:
 
             market = self._markets.get(symbol, {})
             contract_size = market.get("contractSize", 1)
-            notional = margin_usdt * CFG.LEVERAGE
-            amount = notional / (price * contract_size)
+            target_margin = margin_usdt
+            target_notional = target_margin * CFG.LEVERAGE
+            amount = target_notional / (price * contract_size)
 
             # ccxt precision 적용
             amount = self.exchange.amount_to_precision(symbol, amount)
+            amount_float = float(amount)
+            if amount_float <= 0:
+                raise ValueError(f"주문 수량 계산 실패: {symbol} amount={amount}")
+
+            estimated_notional = amount_float * price * contract_size
+            estimated_margin = estimated_notional / CFG.LEVERAGE
+            max_margin = target_margin + max(0.01, target_margin * 0.01)
+            if estimated_margin > max_margin:
+                raise ValueError(
+                    f"예상 증거금 초과: {estimated_margin:.4f} USDT "
+                    f"> 설정 {target_margin:.4f} USDT"
+                )
 
             # 3) 시장가 진입
             order = self.exchange.create_order(
                 symbol=symbol,
                 type="market",
                 side=side,
-                amount=float(amount),
+                amount=amount_float,
                 params={"tdMode": "isolated", "posSide": "long" if side == "buy" else "short"},
             )
             entry_price = float(order.get("average") or price)
@@ -280,7 +293,7 @@ class OKXClient:
                 symbol=symbol,
                 type="stop",
                 side="sell" if side == "buy" else "buy",
-                amount=float(amount),
+                amount=amount_float,
                 price=sl_price,
                 params={
                     "stopPrice": sl_price,
@@ -295,7 +308,7 @@ class OKXClient:
                 symbol=symbol,
                 type="stop",
                 side="sell" if side == "buy" else "buy",
-                amount=float(amount),
+                amount=amount_float,
                 price=tp_price,
                 params={
                     "stopPrice": tp_price,
@@ -310,10 +323,13 @@ class OKXClient:
                 "symbol": symbol,
                 "side": "long" if side == "buy" else "short",
                 "entry_price": entry_price,
-                "amount": float(amount),
+                "amount": amount_float,
                 "sl_price": sl_price,
                 "tp_price": tp_price,
-                "usdt_margin": margin_usdt,
+                "usdt_margin": target_margin,
+                "estimated_margin_usdt": round(estimated_margin, 6),
+                "target_notional_usdt": target_notional,
+                "estimated_notional_usdt": round(estimated_notional, 6),
             }
             logger.info(f"주문 완료: {result}")
             return result

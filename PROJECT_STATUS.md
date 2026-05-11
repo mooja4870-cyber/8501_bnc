@@ -94,3 +94,9 @@
 - [Flow] OKX connect now forces auto trading on, applies the default Stable preset, and starts the scanner automatically.
 - [Flow] OKX connect now queues the default BTC/USDT 1-year backtest to run automatically.
 - [UI] Removed the manual auto-trading ON/OFF toggle from the sidebar and updated the sidebar version label to v1.1.32.
+
+## v1.1.33 (2026-05-11)
+- [Safety] Enforced 1x configured margin entry by rejecting orders whose precision-adjusted estimated margin exceeds the configured margin.
+- [Safety] Added duplicate-entry guards for pending orders, recent same-symbol entries, held positions, and open orders.
+- [Test] Added trade safety regression tests for margin cap enforcement and same-symbol cooldown blocking.
+- [UI] Updated sidebar version label to v1.1.33.

@@ -5,7 +5,7 @@
 import threading
 import logging
 from typing import Optional, List, Dict
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, timezone
 
 from core.exchange import OKXClient
 from core.strategy import Signal
@@ -13,6 +13,11 @@ from core.config import CFG
 import core.stats as stats_store
 
 logger = logging.getLogger(__name__)
+
+
+def _utc_now() -> datetime:
+    """timezone-aware UTC를 쓰되 기존 내부 비교 로직과 맞게 naive로 반환한다."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class AutoTrader:
@@ -36,6 +41,8 @@ class AutoTrader:
         self.daily_pnl_usdt: float = _s.get("daily_pnl_usdt", 0.0)
         self.trade_log: List[Dict] = []
         self._today: date = date.today()
+        self._pending_entries: Dict[str, datetime] = {}
+        self._last_entry_at: Dict[str, datetime] = {}
 
     # ── 제어 ───────────────────────────────────────────
 
@@ -59,29 +66,28 @@ class AutoTrader:
         with self._lock:
             self._reset_daily_if_needed()
 
-            # ── 리스크 게이트 ─────────────────────────
-            passed, reason = self._risk_check(sig)
-            if not passed:
-                logger.warning(f"[RISK BLOCK] {sig.symbol} — {reason}")
-                self._log_trade(sig, status="BLOCKED", reason=reason)
-                return
-
             # ── 방향 허용 체크 ────────────────────────
             if sig.direction == "long" and not self.allow_long:
                 return
             if sig.direction == "short" and not self.allow_short:
                 return
 
-            # ── 중복 포지션 체크 ──────────────────────
-            positions = self.client.get_positions()
-            symbols_held = [p["symbol"] for p in positions]
-            if sig.symbol in symbols_held:
-                logger.info(f"[SKIP] {sig.symbol} — 이미 포지션 보유")
+            duplicate, reason, positions = self._duplicate_entry_check(sig.symbol)
+            if duplicate:
+                logger.info(f"[SKIP] {sig.symbol} — {reason}")
+                self._log_trade(sig, status="SKIPPED", reason=reason)
                 return
 
             # ── 최대 포지션 수 체크 ───────────────────
             if len(positions) >= self.cfg.MAX_POSITIONS:
                 logger.info(f"[SKIP] 최대 포지션 수 도달: {len(positions)}/{self.cfg.MAX_POSITIONS}")
+                return
+
+            # ── 리스크 게이트 ─────────────────────────
+            passed, reason = self._risk_check(sig)
+            if not passed:
+                logger.warning(f"[RISK BLOCK] {sig.symbol} — {reason}")
+                self._log_trade(sig, status="BLOCKED", reason=reason)
                 return
 
             # ── 주문 실행 ─────────────────────────────
@@ -93,13 +99,20 @@ class AutoTrader:
                 logger.warning(f"[SKIP] 증거금 설정 오류 (최소 $1): {margin_usdt:.2f} USDT")
                 return
 
-            result = self.client.place_order(
-                symbol=sig.symbol,
-                side=side,
-                margin_usdt=margin_usdt,
-            )
+            now = _utc_now()
+            self._pending_entries[sig.symbol] = now
+            result = None
+            try:
+                result = self.client.place_order(
+                    symbol=sig.symbol,
+                    side=side,
+                    margin_usdt=margin_usdt,
+                )
+            finally:
+                self._pending_entries.pop(sig.symbol, None)
 
             if result:
+                self._last_entry_at[sig.symbol] = now
                 self.orders_today += 1
                 stats_store.record_order()
                 self._log_trade(sig, status="EXECUTED", result=result)
@@ -135,6 +148,38 @@ class AutoTrader:
 
         return True, "OK"
 
+    def _duplicate_entry_check(self, symbol: str) -> tuple[bool, str, List[Dict]]:
+        """동일 티커 중복 진입을 주문 전 단계에서 차단한다."""
+        now = _utc_now()
+        pending_ttl = timedelta(seconds=self.cfg.PENDING_ENTRY_TTL_SEC)
+        cooldown = timedelta(seconds=self.cfg.ENTRY_COOLDOWN_SEC)
+
+        expired = [
+            sym for sym, ts in self._pending_entries.items()
+            if now - ts > pending_ttl
+        ]
+        for sym in expired:
+            self._pending_entries.pop(sym, None)
+
+        pending_at = self._pending_entries.get(symbol)
+        if pending_at and now - pending_at <= pending_ttl:
+            return True, "동일 티커 주문 진행 중", []
+
+        last_entry_at = self._last_entry_at.get(symbol)
+        if last_entry_at and now - last_entry_at < cooldown:
+            remain = int((cooldown - (now - last_entry_at)).total_seconds())
+            return True, f"동일 티커 재진입 쿨다운 {remain}초 남음", []
+
+        positions = self.client.get_positions()
+        if any(p["symbol"] == symbol for p in positions):
+            return True, "이미 포지션 보유", positions
+
+        open_orders = self.client.get_open_orders()
+        if any(o["symbol"] == symbol for o in open_orders):
+            return True, "동일 티커 미체결 주문 존재", positions
+
+        return False, "OK", positions
+
     def _reset_daily_if_needed(self):
         today = date.today()
         if today != self._today:
@@ -157,7 +202,7 @@ class AutoTrader:
         result: Optional[Dict] = None,
     ):
         entry = {
-            "timestamp": datetime.utcnow() + timedelta(hours=9),
+            "timestamp": _utc_now() + timedelta(hours=9),
             "symbol": sig.symbol,
             "direction": sig.direction,
             "strength": sig.strength,
