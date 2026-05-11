@@ -838,7 +838,7 @@ with tabs[0]:
             win_delta = f"{total_wins}W / {total_losses}L" if total_trades > 0 else "매매 데이터 없음"
 
             # ── 수익률 계산 ──
-            total_equity = stats.get("total_balance", CFG.INITIAL_CAPITAL)
+            total_equity = _st.get("total_balance", CFG.INITIAL_CAPITAL)
             initial_cap = CFG.INITIAL_CAPITAL if CFG.INITIAL_CAPITAL > 0 else 1.0
             accu_profit_pct = ((total_equity - initial_cap) / initial_cap) * 100
             
