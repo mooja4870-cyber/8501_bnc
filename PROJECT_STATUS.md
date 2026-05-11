@@ -65,3 +65,7 @@
 
 ## v1.1.25 (2026-05-11)
 - [UI] Applied attached design style to header status area: cyan outlined REFRESH button and LIVE STATUS badge with glowing green dot.
+
+## v1.1.26 (2026-05-11)
+- [Risk] Changed entry risk gate from 1.5x margin check to 1.0x (ree >= MARGIN_USDT).
+- [Order] Changed TP order from reduce-only limit to stop(trigger) to reduce available-margin over-reservation risk when opening positions.

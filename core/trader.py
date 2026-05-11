@@ -130,8 +130,8 @@ class AutoTrader:
         # 4. 가용 증거금 확인
         free = balance.get("free", 0)
         required_margin = self.cfg.MARGIN_USDT
-        if free < required_margin * 1.5:
-            return False, f"가용 증거금 부족: {free:.2f} < {required_margin * 1.5:.2f}"
+        if free < required_margin:
+            return False, f"가용 증거금 부족: {free:.2f} < {required_margin:.2f}"
 
         return True, "OK"
 

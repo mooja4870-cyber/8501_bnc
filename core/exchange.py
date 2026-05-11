@@ -293,11 +293,12 @@ class OKXClient:
             # TP 주문
             self.exchange.create_order(
                 symbol=symbol,
-                type="limit",
+                type="stop",
                 side="sell" if side == "buy" else "buy",
                 amount=float(amount),
                 price=tp_price,
                 params={
+                    "stopPrice": tp_price,
                     "tdMode": "isolated",
                     "posSide": "long" if side == "buy" else "short",
                     "reduceOnly": True,
