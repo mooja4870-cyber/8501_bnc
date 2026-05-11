@@ -77,3 +77,7 @@
 ## v1.1.28 (2026-05-11)
 - [UI] Moved KST timestamp, LIVE CONNECTION badge, and REFRESH control onto the same visual row as the main dashboard tabs.
 - [UI] Updated sidebar version label to v1.1.28.
+
+## v1.1.29 (2026-05-11)
+- [UI] Enlarged the MACD-BB-EMA sidebar logo to 222% of its prior size and added an animated rainbow gradient text effect.
+- [UI] Updated sidebar version label to v1.1.29.
