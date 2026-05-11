@@ -1,6 +1,14 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **Rollback to v1.1.17** (v1.1.65): 모든 소스 코드를 v1.1.17 지점으로 원상복구함.
+- **Stable Operation**: `http://localhost:8502`에서 정상 구동 확인 완료.
+- **Core Engine**: Orchestration Engine 및 Test Harness가 포함된 안정화 버전.
+
+## v1.1.65 (2026-05-12)
+- [Rollback] v1.1.17 상태로 전체 소스 코드 원상복귀.
+- [Verify] Python 3.14 환경에서 Streamlit 대시보드 정상 실행 확인.
+
 - Initialized Streamlit dashboard with OKX API integration.
 - Added auto-connect feature via `.env`.
 - Fixed SL/TP sliders display logic.
