@@ -112,14 +112,15 @@ st.markdown(
     /* 상태 배지 */
     .badge-live {
         display: inline-flex; align-items: center; gap: 6px;
-        background: rgba(200,245,59,0.1);
-        border: 1px solid rgba(200,245,59,0.3);
+        background: rgba(239,68,68,0.1);
+        border: 1px solid rgba(239,68,68,0.3);
         border-radius: 20px;
         padding: 3px 12px;
         font-family: 'IBM Plex Mono', monospace;
         font-size: 0.7rem;
-        color: #c8f53b;
+        color: #ef4444;
         letter-spacing: 0.05em;
+        animation: pink-fade 1.5s infinite ease-in-out;
     }
     .badge-stopped {
         display: inline-flex; align-items: center; gap: 6px;
