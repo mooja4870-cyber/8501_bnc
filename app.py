@@ -327,7 +327,7 @@ st.markdown(
     }
     .quantum-logo-title {
         display: inline-block !important;
-        font-size: 2.44rem !important;
+        font-size: 0.8rem !important;
         color: transparent !important;
         background: linear-gradient(
             to right,

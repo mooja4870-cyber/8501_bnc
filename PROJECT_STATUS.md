@@ -1,8 +1,12 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v1.1.69 UI Optimized**: 로고 타이틀 크기 33% 축소 적용 완료.
 - **v1.1.68 Stable**: v1.1.64 지점으로 원상복구 완료. (실시간 거래소 데이터 연동 버전)
 - **Stable Operation**: `http://localhost:8502`에서 정상 구동 확인 완료.
+
+## v1.1.69 (2026-05-12)
+- [UI] **로고 타이틀 크기 조정**: "MACD-BB-EMA" 로고 텍스트 크기를 기존 대비 33% 수준(2.44rem -> 0.8rem)으로 축소하여 레이아웃 최적화.
 
 ## v1.1.68 (2026-05-12)
 - [Rollback] v1.1.64 상태로 전체 소스 코드 원상복귀.
