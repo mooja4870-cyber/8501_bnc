@@ -1,9 +1,13 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v1.1.67 Stable**: KeyError 방어 로직이 적용된 안정화 버전.
 - **Rollback to v1.1.54** (v1.1.66): 모든 소스 코드를 v1.1.54 지점으로 원상복구함.
 - **Stable Operation**: `http://localhost:8502`에서 정상 구동 확인 완료.
-- **Core Engine**: 스캔 속도 최적화 및 증거금 고정 로직이 적용된 버전.
+
+## v1.1.67 (2026-05-12)
+- [Stability] **KeyError 방어 로직 적용**: 대시보드 및 매매 이력 조회 시 `pnl_usdt`, `pnl_pct` 등 특정 키가 누락되어 앱이 크래시되는 현상 원천 차단 (`.get()` 및 `reindex` 적용).
+- [Fix] 포지션 UI 레이아웃 안정화.
 
 ## v1.1.66 (2026-05-12)
 - [Rollback] v1.1.54 상태로 전체 소스 코드 원상복귀.
