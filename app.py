@@ -70,7 +70,7 @@ st.markdown(
 
     /* 버튼 */
     .stButton > button {
-        background: #c8f53b !important;
+        background: #e0e0e0 !important;
         color: #0a0a0a !important;
         border: none !important;
         border-radius: 6px !important;
@@ -98,7 +98,7 @@ st.markdown(
     /* 탭 */
     .stTabs [data-baseweb="tab-list"] { background: #111111; border-radius: 8px; padding: 4px; }
     .stTabs [data-baseweb="tab"] { color: #888 !important; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; letter-spacing: 0.05em; }
-    .stTabs [aria-selected="true"] { background: #c8f53b !important; color: #0a0a0a !important; border-radius: 6px !important; }
+    .stTabs [aria-selected="true"] { background: #e0e0e0 !important; color: #0a0a0a !important; border-radius: 6px !important; }
 
     /* 인풋 */
     .stTextInput input, .stSelectbox select, .stNumberInput input {
@@ -250,7 +250,7 @@ st.markdown(
         --cyber-surface: #161b22;
         --cyber-text: #e2e2e8;
         --cyber-dim: #8f9bb3;
-        --cyber-green: #00ff41;
+        --cyber-green: #e0e0e0;
         --cyber-cyan: #00e5ff;
         --cyber-red: #ff3b30;
     }
@@ -282,17 +282,17 @@ st.markdown(
     }
 
     .stButton > button {
-        background: var(--cyber-green) !important;
+        background: #e0e0e0 !important;
         color: #0c110d !important;
         border: 1px solid rgba(0,255,65,0.32) !important;
         border-radius: 8px !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-weight: 700 !important;
-        box-shadow: 0 0 10px rgba(0,255,65,0.16) !important;
+        box-shadow: 0 0 10px rgba(255,255,255,0.1) !important;
     }
     .stButton > button:hover {
         opacity: 1 !important;
-        box-shadow: 0 0 16px rgba(0,255,65,0.35) !important;
+        box-shadow: 0 0 16px rgba(255,255,255,0.2) !important;
     }
     .refresh-btn button {
         background: rgba(9, 18, 28, 0.9) !important;
@@ -316,7 +316,7 @@ st.markdown(
         font-family: 'JetBrains Mono', monospace !important;
     }
     .stTabs [aria-selected="true"] {
-        background: var(--cyber-green) !important;
+        background: #e0e0e0 !important;
         color: #0a0c10 !important;
     }
 
@@ -409,7 +409,7 @@ st.markdown(
         min-height: 30px !important;
         padding: 0 16px !important;
         border-radius: 8px !important;
-        background: var(--cyber-green) !important;
+        background: #e0e0e0 !important;
         border: 1px solid rgba(0,255,65,0.32) !important;
         color: #0c110d !important;
         font-family: 'JetBrains Mono', monospace !important;
@@ -417,7 +417,7 @@ st.markdown(
         font-weight: 700 !important;
         letter-spacing: 0.08em !important;
         text-decoration: none !important;
-        box-shadow: 0 0 10px rgba(0,255,65,0.16) !important;
+        box-shadow: 0 0 10px rgba(255,255,255,0.1) !important;
         position: relative !important;
         z-index: 31 !important;
         transform: translateY(-1px) !important;
