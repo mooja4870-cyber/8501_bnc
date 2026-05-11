@@ -841,9 +841,9 @@ with tabs[0]:
 
             # ── 수익률 계산 (실시간 잔고 반영) ──
             live_bal = engine.client.get_balance()
-            total_equity = live_bal.get("total", CFG.INITIAL_CAPITAL)
-            initial_cap = CFG.INITIAL_CAPITAL if CFG.INITIAL_CAPITAL > 0 else 1.0
-            accu_profit_pct = ((total_equity - initial_cap) / initial_cap) * 100
+            total_equity = live_bal.get("total", 0.0)
+            initial_cap = CFG.INITIAL_CAPITAL
+            accu_profit_pct = ((total_equity - initial_cap) / initial_cap) * 100 if initial_cap > 0 else 0.0
             
             # 24시간 수익률 계산
             hist_24h = engine.get_trade_history(limit=100)

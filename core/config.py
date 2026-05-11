@@ -14,7 +14,7 @@ class TradingConfig:
     BASE_URL: str = "https://www.okx.com"
 
     # ── 자산 관리 ──────────────────────────────────
-    INITIAL_CAPITAL: float = float(os.getenv("INITIAL_CAPITAL", 1000.0)) # 초기 자본금
+    INITIAL_CAPITAL: float = float(os.getenv("INITIAL_CAPITAL", 1.0)) # 초기 자본금 (기본값 제거)
 
     # ── 포지션 설정 ──────────────────────────────────────
     LEVERAGE: int = 10                     # 10배 고정
