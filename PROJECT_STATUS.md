@@ -85,3 +85,7 @@
 ## v1.1.30 (2026-05-11)
 - [UI] Fixed REFRESH control overlap with the tab bar by raising tabline controls above the tab background and reducing the refresh button height.
 - [UI] Updated sidebar version label to v1.1.30.
+
+## v1.1.31 (2026-05-11)
+- [UI] Split the sidebar logo title into its own element so MACD-BB-EMA receives a dedicated animated rainbow gradient.
+- [UI] Updated sidebar version label to v1.1.31.

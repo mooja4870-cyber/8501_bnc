@@ -320,9 +320,12 @@ st.markdown(
 
     .quantum-logo {
         font-family: 'Space Grotesk', sans-serif !important;
-        font-size: 2.44rem !important;
         line-height: 0.95 !important;
         font-weight: 700 !important;
+    }
+    .quantum-logo-title {
+        display: inline-block !important;
+        font-size: 2.44rem !important;
         color: transparent !important;
         background: linear-gradient(
             90deg,
@@ -340,8 +343,11 @@ st.markdown(
         background-clip: text !important;
         animation: rainbow-flow 4.5s linear infinite !important;
         text-shadow: 0 0 18px rgba(0, 255, 65, 0.18) !important;
+        letter-spacing: -0.5px !important;
     }
-    .quantum-logo span {
+    .quantum-version {
+        display: inline-block !important;
+        font-size: 0.75rem !important;
         color: var(--cyber-green) !important;
         letter-spacing: 0.08em !important;
     }
@@ -530,7 +536,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.30</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.31</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
