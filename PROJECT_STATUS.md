@@ -28,6 +28,7 @@
 - [Fix] `core/trader.py` 내 `timedelta` 임포트 누락으로 인한 로그 기록 오류 수정.
 - [UI] **상단 바 레이아웃 최적화:** 새로고침 버튼(🔄)을 LIVE/STOPPED 배지의 왼쪽으로 이동시켜 공간 효율성 및 가시성 개선 (v1.1.21).
 - [Fix] **스캐너 안정성 및 실시간성 강화:** 50011(Too Many Requests) 방지를 위해 스캔 딜레이를 0.4초로 조정하고, 스캐너 탭에도 10초 주기 자동 새로고침(st.fragment) 적용 (v1.1.22).
+- [UI] **프리미엄 버튼 디자인 적용:** 상단 새로고침 버튼과 LIVE 배지의 크기를 통일하고 'Stitch' 스타일의 세련된 디자인으로 고도화 (v1.1.23).
 
 ## Next Steps
 - Implement advanced risk management features (e.g., dynamic TP/SL).

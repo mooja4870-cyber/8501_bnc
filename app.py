@@ -109,28 +109,54 @@ st.markdown(
     }
     .quantum-logo span { color: #555; font-weight: 400; }
 
-    /* 상태 배지 */
-    .badge-live {
-        display: inline-flex; align-items: center; gap: 6px;
-        background: rgba(200,245,59,0.1);
-        border: 1px solid rgba(200,245,59,0.3);
-        border-radius: 20px;
-        padding: 3px 12px;
+    /* ── 프리미엄 버튼 & 배지 (Stitch Style) ── */
+    .premium-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 32px;
+        min-width: 90px;
+        border-radius: 16px;
         font-family: 'IBM Plex Mono', monospace;
         font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        transition: all 0.2s ease;
+    }
+    .badge-live {
+        background: rgba(200, 245, 59, 0.08);
+        border: 1px solid rgba(200, 245, 59, 0.4);
         color: #c8f53b;
-        letter-spacing: 0.05em;
+        box-shadow: 0 0 12px rgba(200, 245, 59, 0.1);
     }
     .badge-stopped {
-        display: inline-flex; align-items: center; gap: 6px;
-        background: rgba(239,68,68,0.1);
-        border: 1px solid rgba(239,68,68,0.3);
-        border-radius: 20px;
-        padding: 3px 12px;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.7rem;
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.4);
         color: #ef4444;
+        box-shadow: 0 0 12px rgba(239, 68, 68, 0.1);
     }
+    /* 새로고침 버튼 전용 스타일 */
+    .refresh-btn-wrapper .stButton > button {
+        height: 32px !important;
+        min-width: 90px !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 16px !important;
+        color: #888 !important;
+        font-size: 0.8rem !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .refresh-btn-wrapper .stButton > button:hover {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border-color: rgba(255, 255, 255, 0.4) !important;
+        color: #fff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .refresh-btn-wrapper .stButton > button:active {
+        transform: translateY(0px);
+    }
+
     .log-box {
         background: #0a0a0a;
         border: 1px solid rgba(255,255,255,0.07);
@@ -155,61 +181,58 @@ st.markdown(
         padding-top: 0px !important;
         padding-bottom: 0px !important;
     }
-    /* 분홍색 깜빡임 애니메이션 */
-    @keyframes pink-fade {
-        0% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.5; transform: scale(0.98); }
-        100% { opacity: 1; transform: scale(1); }
+    /* 깜빡임 애니메이션 (Stitch 최적화) */
+    @keyframes premium-pulse {
+        0% { opacity: 1; filter: brightness(1); }
+        50% { opacity: 0.7; filter: brightness(1.2); }
+        100% { opacity: 1; filter: brightness(1); }
     }
     .badge-pink-blink {
         display: inline-flex; align-items: center; gap: 8px;
-        background: rgba(255, 20, 147, 0.15);
-        border: 1px solid rgba(255, 20, 147, 0.5);
+        background: rgba(255, 20, 147, 0.1);
+        border: 1px solid rgba(255, 20, 147, 0.4);
         border-radius: 6px;
         padding: 6px 16px;
         font-family: 'IBM Plex Mono', monospace;
         font-size: 0.85rem;
         font-weight: 600;
         color: #ff69b4;
-        animation: pink-fade 1.5s infinite ease-in-out;
-        box-shadow: 0 0 10px rgba(255, 20, 147, 0.2);
+        animation: premium-pulse 2s infinite ease-in-out;
     }
     .badge-green-blink {
         display: inline-flex; align-items: center; gap: 8px;
-        background: rgba(200, 245, 59, 0.15);
-        border: 1px solid rgba(200, 245, 59, 0.5);
+        background: rgba(200, 245, 59, 0.1);
+        border: 1px solid rgba(200, 245, 59, 0.4);
         border-radius: 6px;
         padding: 6px 16px;
         font-family: 'IBM Plex Mono', monospace;
         font-size: 0.85rem;
         font-weight: 600;
         color: #c8f53b;
-        animation: pink-fade 1.5s infinite ease-in-out;
-        box-shadow: 0 0 10px rgba(200, 245, 59, 0.2);
+        animation: premium-pulse 2s infinite ease-in-out;
     }
     .badge-red-blink {
         display: inline-flex; align-items: center; gap: 8px;
-        background: rgba(239, 68, 68, 0.15);
-        border: 1px solid rgba(239, 68, 68, 0.5);
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.4);
         border-radius: 6px;
         padding: 6px 16px;
         font-family: 'IBM Plex Mono', monospace;
         font-size: 0.85rem;
         font-weight: 600;
         color: #ef4444;
-        animation: pink-fade 1.5s infinite ease-in-out;
-        box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+        animation: premium-pulse 2s infinite ease-in-out;
     }
-    @keyframes green-pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
+    @keyframes log-glow {
+        0% { color: #c8f53b; text-shadow: 0 0 5px rgba(200,245,59,0.2); }
+        50% { color: #fff; text-shadow: 0 0 10px rgba(200,245,59,0.5); }
+        100% { color: #c8f53b; text-shadow: 0 0 5px rgba(200,245,59,0.2); }
     }
     .log-latest {
-        color: #c8f53b !important;
         font-weight: 700 !important;
-        animation: green-pulse 1.2s infinite ease-in-out;
+        animation: log-glow 1.5s infinite ease-in-out;
     }
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -279,7 +302,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.22</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.23</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -368,15 +391,17 @@ with col_time:
     )
 
 with col_status:
-    c_ref, c_sta = st.columns([1, 1])
+    c_ref, c_sta = st.columns([1, 1.2])
     with c_ref:
-        if st.button("🔄", key="global_refresh", help="새로고침", use_container_width=True):
+        st.markdown('<div class="refresh-btn-wrapper">', unsafe_allow_html=True)
+        if st.button("🔄", key="global_refresh", help="전체 새로고침", use_container_width=True):
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
     with c_sta:
         if st.session_state.auto_trading:
-            st.markdown('<div class="badge-live" style="width:100%; text-align:center;">● LIVE</div>', unsafe_allow_html=True)
+            st.markdown('<div class="premium-box badge-live">● LIVE</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="badge-stopped" style="width:100%; text-align:center;">● STOPPED</div>', unsafe_allow_html=True)
+            st.markdown('<div class="premium-box badge-stopped">● STOPPED</div>', unsafe_allow_html=True)
 
 st.markdown('<hr style="margin: 8px 0 16px;">', unsafe_allow_html=True)
 
