@@ -1,9 +1,12 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v1.1.93 Width Override**: `use_container_width` 해제 및 CSS 강제 적용으로 버튼 가로 길이 축소 성공.
 - **v1.1.92 Slim Buttons**: 청산 버튼 가로 길이를 현재 대비 66% 추가 축소(45%).
 - **v1.1.91 Ultra-Compact Buttons**: 청산 관련 버튼 크기를 현재 대비 추가 88% 축소.
-- **v1.1.90 Close Button Scale**: 청산 관련 버튼 및 폰트 크기를 현재 대비 77% 수준으로 축소.
+
+## v1.1.93 (2026-05-12)
+- [Fix] **버튼 가로 길이 강제 적용**: 스트림릿의 `use_container_width=True` 설정이 CSS의 가로 폭 조정을 무시하던 문제를 해결하기 위해, 해당 설정을 끄고 CSS에서 직접 가로 길이를 `45%`로 고정하여 실제 시각적 축소를 완료함.
 
 ## v1.1.92 (2026-05-12)
 - [UI] **청산 버튼 가로 폭 최적화**: 버튼이 여전히 가로로 길다는 피드백을 반영하여, 직전 버전 대비 가로 길이를 66% 수준인 `45%`로 대폭 축소하여 매우 슬림한 디자인을 적용함.

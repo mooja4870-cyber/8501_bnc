@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.92)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.93)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -189,6 +189,8 @@ st.markdown(
         min-height: 19px !important;
         width: 45% !important;
         padding: 0 !important;
+        margin: 0 auto !important;
+        display: block !important;
     }
     /* 분홍색 깜빡임 애니메이션 */
     @keyframes pink-fade {
@@ -607,7 +609,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.92</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.93</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -786,7 +788,7 @@ with tabs[0]:
             with col_bulk:
                 if positions:
                     st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-                    if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
+                    if st.button("🔴 모든 종목 일괄청산", use_container_width=False, key="bulk_close"):
                         count = engine.client.close_all_positions()
                         if count > 0:
                             st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
@@ -831,7 +833,7 @@ with tabs[0]:
                     with pc2:
                         st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
                         st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-                        if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
+                        if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=False):
                             if engine.client.close_position(p["symbol"], p["side"]):
                                 # 수동 청산 결과도 누적 통계에 즉시 반영
                                 pnl = p.get("pnl_usdt", 0.0)
