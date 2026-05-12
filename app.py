@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v2.0.2)
+AI QUANT — OKX Auto-Trading Dashboard (v2.0.3)
 시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.2</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.3</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1285,7 +1285,7 @@ with tabs[5]:
         unsafe_allow_html=True,
     )
 
-    s1, s2 = st.columns(2)
+    s1, s2, s3 = st.columns(3)
     with s1:
         # ── 초기 자본금 설정 (엔터 입력 시 저장) ──
         prev_cap = float(CFG.INITIAL_CAPITAL)
@@ -1379,7 +1379,7 @@ with tabs[5]:
             st.toast(f"✅ 익절 라인 변경 완료: {new_tp_val}%")
             st.rerun()
 
-    with col3:
+    with s3:
         st.markdown("##### 🚀 트레일링 스톱 (v2.0.0)")
         prev_ta = float(CFG.TRAILING_ACTIVATE_PCT)
         new_ta_val = st.number_input("활성화 지점 (%)", 0.1, 10.0, float(prev_ta * 100), step=0.1)

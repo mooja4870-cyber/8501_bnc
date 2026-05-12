@@ -2,8 +2,7 @@
 
 | 버전 (Version) | 수정 및 구현 내용 (Modifications & Implementations) |
 | :--- | :--- |
-| 버전 (Version) | 수정 및 구현 내용 (Modifications & Implementations) |
-| :--- | :--- |
+| **v2.0.3** | [Hotfix] 설정 탭 3분할 레이아웃 변수 정의 오류(NameError) 수정 |
 | **v2.0.2** | 사이드바 시스템 점검 안내 섹션에 비상 복구용 RollBack 명령어 가이드 추가 |
 | **v2.0.1** | [Hotfix] 스캐너 필드 누락으로 인한 KeyError 방어 로직 추가 |
 | **v1.2.10** | 손익 설정 듀얼 입력 UI 구현 및 설정 로드 신뢰성 강화 (load_dotenv 보강) |
