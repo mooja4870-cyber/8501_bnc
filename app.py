@@ -890,9 +890,9 @@ with tabs[0]:
 
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.metric("누적 승률", f"{total_win_rate:.1f}%", win_summary)
+            st.metric("누적 수익률", f"{accu_profit_pct:+.2f}%", f"{pnl_24h_pct:+.2f}% (24h)")
         with c2:
-            st.metric("금일 승률", win_label, win_delta)
+            st.metric("누적 승률", f"{total_win_rate:.1f}%", win_summary)
         with c3:
             st.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "Max Risk")
         with c4:
