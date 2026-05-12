@@ -134,7 +134,7 @@ class QuantumEngine:
             closed = self._prev_position_symbols - current  # 사라진 심볼 = 청산됨
 
             if closed:
-                closed_records = self.client.get_closed_positions_pnl(limit=10)
+                closed_records = self.client.get_closed_positions_pnl(limit=40)
                 for sym in closed:
                     matched = next(
                         (r for r in closed_records

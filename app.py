@@ -799,7 +799,10 @@ with tabs[0]:
                         st.markdown('<div class="small-btn">', unsafe_allow_html=True)
                         if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
                             if engine.client.close_position(p["symbol"], p["side"]):
-                                st.toast(f"✅ {p['symbol']} 청산 완료")
+                                # 수동 청산 결과도 누적 통계에 즉시 반영
+                                pnl = p.get("pnl_usdt", 0.0)
+                                stats_store.record_result(pnl)
+                                st.toast(f"✅ {p['symbol']} 청산 완료 (PnL: {pnl:+.4f})")
                                 time.sleep(1)
                                 st.rerun()
                         st.markdown('</div>', unsafe_allow_html=True)
