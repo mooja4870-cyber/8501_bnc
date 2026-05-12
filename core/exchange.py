@@ -466,27 +466,56 @@ class OKXClient:
         except Exception as e:
             logger.error(f"SL/TP 주문 일괄 취소 실패 ({symbol}): {e}")
 
-    def place_sl_tp_orders(self, symbol: str, side: str, amount: float, entry_price: float, sl_pct: float, tp_pct: float):
-        """포지션에 대한 새로운 SL/TP 주문 전송"""
+    def place_sl_tp_orders(
+        self, symbol: str, side: str, amount: float, entry_price: float, 
+        sl_pct: float, tp_pct: float,
+        use_trailing: bool = False,
+        callback_pct: float = 0.005,
+        activate_pct: float = 0.015
+    ):
+        """포지션에 대한 새로운 SL/TP 주문 전송 (v2.0.0: 트레일링 스톱 지원)"""
         try:
             sl_price = entry_price * (1 - sl_pct) if side == "long" else entry_price * (1 + sl_pct)
-            tp_price = entry_price * (1 + tp_pct) if side == "long" else entry_price * (1 - tp_pct)
-            
             sl_price = float(self.exchange.price_to_precision(symbol, sl_price))
-            tp_price = float(self.exchange.price_to_precision(symbol, tp_price))
             
-            # SL
+            # 1. 손절 주문 (SL)
             self.exchange.create_order(
                 symbol=symbol, type="stop", side="sell" if side == "long" else "buy",
                 amount=amount, price=sl_price,
                 params={"stopPrice": sl_price, "tdMode": "isolated", "posSide": side, "reduceOnly": True}
             )
-            # TP
-            self.exchange.create_order(
-                symbol=symbol, type="stop", side="sell" if side == "long" else "buy",
-                amount=amount, price=tp_price,
-                params={"stopPrice": tp_price, "tdMode": "isolated", "posSide": side, "reduceOnly": True}
-            )
-            logger.info(f"[SYNC] {symbol} SL/TP 갱신 완료 (SL:{sl_price}, TP:{tp_price})")
+
+            # 2. 익절 (TP) 또는 트레일링 스톱
+            if use_trailing:
+                # 트레일링 스톱 (추세장용)
+                activate_price = entry_price * (1 + activate_pct) if side == "long" else entry_price * (1 - activate_pct)
+                activate_price = float(self.exchange.price_to_precision(symbol, activate_price))
+                
+                # OKX v5 Trailing Stop params
+                params = {
+                    "ordType": "trailing_stop",
+                    "callbackRatio": str(callback_pct),
+                    "activePx": str(activate_price),
+                    "tdMode": "isolated",
+                    "posSide": side,
+                    "reduceOnly": True
+                }
+                self.exchange.create_order(
+                    symbol=symbol, type="algo", side="sell" if side == "long" else "buy",
+                    amount=amount, params=params
+                )
+                logger.info(f"[TRAILING] {symbol} 추적 익절 설정 완료 (활성화:{activate_price}, 콜백:{callback_pct*100}%)")
+            else:
+                # 일반 익절 (횡보장용)
+                tp_price = entry_price * (1 + tp_pct) if side == "long" else entry_price * (1 - tp_pct)
+                tp_price = float(self.exchange.price_to_precision(symbol, tp_price))
+                
+                self.exchange.create_order(
+                    symbol=symbol, type="stop", side="sell" if side == "long" else "buy",
+                    amount=amount, price=tp_price,
+                    params={"stopPrice": tp_price, "tdMode": "isolated", "posSide": side, "reduceOnly": True}
+                )
+                logger.info(f"[TP] {symbol} 고정 익절 설정 완료 (가격:{tp_price})")
+                
         except Exception as e:
-            logger.error(f"SL/TP 갱신 주문 실패 ({symbol}): {e}")
+            logger.error(f"SL/TP/Trailing 주문 실패 ({symbol}): {e}")

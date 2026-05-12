@@ -26,6 +26,7 @@ class Signal:
     bb_upper: float
     bb_lower: float
     macd_hist: float
+    regime: str             # "Trend" | "Range" | "Neutral"
     reason: str
 
 
@@ -77,10 +78,45 @@ class StrategyEngine:
         df["macd_signal"] = macd.macd_signal()
         df["macd_hist"] = macd.macd_diff()
 
+        # ADX (추세 강도)
+        df["adx"] = ta.trend.adx(df["high"], df["low"], df["close"], window=14)
+        
+        # EMA 20, 50 (추세 정배열 확인용)
+        df["ema20"] = ta.trend.ema_indicator(df["close"], window=20)
+        df["ema50"] = ta.trend.ema_indicator(df["close"], window=50)
+
         # RSI (보조)
         df["rsi"] = ta.momentum.RSIIndicator(df["close"], window=14).rsi()
 
         return df.dropna()
+
+    def get_market_regime(self, df: pd.DataFrame) -> str:
+        """현재 시장이 추세장인지 횡보장인지 판별"""
+        if df.empty or len(df) < 5: return "Neutral"
+        
+        cur = df.iloc[-1]
+        prev = df.iloc[-2]
+        
+        adx = cur["adx"]
+        ema20 = cur["ema20"]
+        ema50 = cur["ema50"]
+        ema200 = cur["ema200"]
+        bb_width = cur["bb_width"]
+        prev_bb_width = prev["bb_width"]
+        
+        # 1. 추세장 판별 (ADX > 25 AND EMA 정배열 AND BB폭 증가)
+        is_trending_long = (adx > 25) and (ema20 > ema50 > ema200) and (bb_width > prev_bb_width)
+        is_trending_short = (adx > 25) and (ema20 < ema50 < ema200) and (bb_width > prev_bb_width)
+        
+        if is_trending_long or is_trending_short:
+            return "Trend"
+            
+        # 2. 횡보장 판별 (ADX < 20 OR EMA 밀집)
+        is_ranging = (adx < 20) or (abs(ema20 - ema50) / ema20 < 0.005)
+        if is_ranging:
+            return "Range"
+            
+        return "Neutral"
 
     def generate_signal(self, df: pd.DataFrame, symbol: str) -> Signal:
         """최신 캔들 기준 매매 신호 생성"""
@@ -90,7 +126,7 @@ class StrategyEngine:
             symbol=symbol, direction="none", strength=0,
             ema_ok=False, bb_ok=False, macd_ok=False,
             close=0, ema200=0, bb_upper=0, bb_lower=0,
-            macd_hist=0, reason="데이터 부족"
+            macd_hist=0, regime="Neutral", reason="데이터 부족"
         )
 
         if df.empty or len(df) < 3:
@@ -99,6 +135,8 @@ class StrategyEngine:
         cur = df.iloc[-1]
         prev = df.iloc[-2]
         prev2 = df.iloc[-3]
+        
+        regime = self.get_market_regime(df)
 
         close = cur["close"]
         ema200 = cur["ema200"]
@@ -142,8 +180,8 @@ class StrategyEngine:
                 ema_ok=long_ema, bb_ok=long_bb, macd_ok=long_macd,
                 close=close, ema200=ema200,
                 bb_upper=bb_upper, bb_lower=bb_lower,
-                macd_hist=macd_hist,
-                reason=f"EMA200 위 + BB하단 반등 + MACD강세 (강도 {strength}%)"
+                macd_hist=macd_hist, regime=regime,
+                reason=f"EMA200 위 + BB하단 반등 + MACD강세 ({regime}, 강도 {strength}%)"
             )
 
         if short_ema and short_bb and short_macd and short_rsi and self.cfg.ALLOW_SHORT:
@@ -153,8 +191,8 @@ class StrategyEngine:
                 ema_ok=short_ema, bb_ok=short_bb, macd_ok=short_macd,
                 close=close, ema200=ema200,
                 bb_upper=bb_upper, bb_lower=bb_lower,
-                macd_hist=macd_hist,
-                reason=f"EMA200 아래 + BB상단 반전 + MACD약세 (강도 {strength}%)"
+                macd_hist=macd_hist, regime=regime,
+                reason=f"EMA200 아래 + BB상단 반전 + MACD약세 ({regime}, 강도 {strength}%)"
             )
 
         # 부분 신호 강도 계산 (스캐너 표시용)
@@ -165,7 +203,7 @@ class StrategyEngine:
                 ema_ok=long_ema, bb_ok=long_bb, macd_ok=long_macd,
                 close=close, ema200=ema200,
                 bb_upper=bb_upper, bb_lower=bb_lower,
-                macd_hist=macd_hist, reason="조건 미충족"
+                macd_hist=macd_hist, regime=regime, reason="조건 미충족"
             )
 
         return Signal(

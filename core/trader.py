@@ -10,6 +10,7 @@ from datetime import datetime, date, timedelta, timezone
 from core.exchange import OKXClient
 from core.strategy import Signal
 from core.config import CFG
+from core.strategy import StrategyEngine, Signal
 import core.stats as stats_store
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ class AutoTrader:
         self._today: date = date.today()
         self._pending_entries: Dict[str, datetime] = {}
         self._last_entry_at: Dict[str, datetime] = {}
+        self.strategy = StrategyEngine() # 시장 성격 판별용
 
     # ── 제어 ───────────────────────────────────────────
 
@@ -113,6 +115,24 @@ class AutoTrader:
                     side=side,
                     margin_usdt=margin_usdt,
                 )
+                
+                # v2.0.0: 진입 즉시 시장 성격에 따른 SL/TP/Trailing 설정
+                if result:
+                    size = result.get("amount", 0)
+                    entry_price = result.get("entry_price", 0)
+                    if size > 0:
+                        use_trailing = (sig.regime == "Trend")
+                        self.client.place_sl_tp_orders(
+                            symbol=sig.symbol,
+                            side=sig.direction,
+                            amount=size,
+                            entry_price=entry_price,
+                            sl_pct=self.cfg.STOP_LOSS_PCT,
+                            tp_pct=self.cfg.TAKE_PROFIT_PCT,
+                            use_trailing=use_trailing,
+                            callback_pct=self.cfg.TRAILING_CALLBACK_PCT,
+                            activate_pct=self.cfg.TRAILING_ACTIVATE_PCT
+                        )
             except Exception as e:
                 logger.error(f"[ERR] 주문 실행 중 예외 발생: {e}")
             finally:
@@ -279,12 +299,21 @@ class AutoTrader:
                             needs_update = True
                             break
                 
+                # 3. v2.0.0: 현재 시장 성격 재판별
+                ticker_df = self.client.get_ohlcv(symbol, timeframe=self.cfg.TIMEFRAME, limit=100)
+                ticker_df = self.strategy.calculate_indicators(ticker_df)
+                current_regime = self.strategy.get_market_regime(ticker_df)
+                use_trailing = (current_regime == "Trend")
+
                 if needs_update:
-                    logger.info(f"[SYNC] {symbol} 설정 변경 감지 -> SL/TP 주문 갱신 시작")
+                    logger.info(f"[SYNC] {symbol} 설정 변경 감지 ({current_regime}) -> SL/TP/Trailing 주문 갱신")
                     self.client.cancel_sl_tp_orders(symbol)
                     self.client.place_sl_tp_orders(
                         symbol, side, size, entry_price,
-                        self.cfg.STOP_LOSS_PCT, self.cfg.TAKE_PROFIT_PCT
+                        self.cfg.STOP_LOSS_PCT, self.cfg.TAKE_PROFIT_PCT,
+                        use_trailing=use_trailing,
+                        callback_pct=self.cfg.TRAILING_CALLBACK_PCT,
+                        activate_pct=self.cfg.TRAILING_ACTIVATE_PCT
                     )
                     
         except Exception as e:

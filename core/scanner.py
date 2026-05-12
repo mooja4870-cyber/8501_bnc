@@ -104,6 +104,7 @@ class Scanner:
                     "ema_ok": sig.ema_ok,
                     "macd_ok": sig.macd_ok,
                     "bb_ok": sig.bb_ok,
+                    "regime": sig.regime,
                     "reason": sig.reason,
                     "timestamp": datetime.now(),
                 })

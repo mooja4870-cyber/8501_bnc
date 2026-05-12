@@ -1,6 +1,6 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.10)
-Streamlit 기반 전문가용 실시간 대시보드
+AI QUANTUM — OKX Auto-Trading Dashboard (v2.0.0)
+시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
 import pandas as pd
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.10</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.0</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1028,15 +1028,21 @@ with tabs[1]:
                 df_scan = df_scan[df_scan["signal"] == "none"]
 
             # 표시용 포맷
-            display = df_scan[["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok"]].copy()
-            display.columns = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","EMA200","MACD","BB"]
+            display = df_scan[["symbol","price","change_pct","volume_m","signal","strength","regime","ema_ok","macd_ok","bb_ok"]].copy()
+            display.columns = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","시장성격","EMA200","MACD","BB"]
             display["신호"] = display["신호"].map({"long":"🟢 LONG","short":"🔴 SHORT","none":"— "})
             display["EMA200"] = display["EMA200"].map({True:"✅",False:"❌"})
             display["MACD"] = display["MACD"].map({True:"✅",False:"❌"})
             display["BB"] = display["BB"].map({True:"✅",False:"❌"})
 
             st.dataframe(
-                display,
+                display.style.applymap(
+                    lambda v: "color: #3b82f6; font-weight: bold;" if "LONG" in str(v) else ("color: #ef4444; font-weight: bold;" if "SHORT" in str(v) else ""),
+                    subset=["신호"]
+                ).applymap(
+                    lambda v: "color: #0ea5e9; font-weight: bold;" if v == "Trend" else ("color: #f59e0b; font-weight: bold;" if v == "Range" else ""),
+                    subset=["시장성격"]
+                ),
                 use_container_width=True,
                 height=500,
                 hide_index=True,
@@ -1365,6 +1371,24 @@ with tabs[5]:
             set_key(".env", "TAKE_PROFIT_PCT", str(new_tp))
             time.sleep(1.0)
             st.toast(f"✅ 익절 라인 변경 완료: {new_tp_val}%")
+            st.rerun()
+
+    with col3:
+        st.markdown("##### 🚀 트레일링 스톱 (v2.0.0)")
+        prev_ta = float(CFG.TRAILING_ACTIVATE_PCT)
+        new_ta_val = st.number_input("활성화 지점 (%)", 0.1, 10.0, float(prev_ta * 100), step=0.1)
+        new_ta = new_ta_val / 100.0
+        
+        prev_tc = float(CFG.TRAILING_CALLBACK_PCT)
+        new_tc_val = st.number_input("콜백 비율 (%)", 0.05, 5.0, float(prev_tc * 100), step=0.05)
+        new_tc = new_tc_val / 100.0
+        
+        if abs(new_ta - prev_ta) > 0.0001 or abs(new_tc - prev_tc) > 0.0001:
+            CFG.TRAILING_ACTIVATE_PCT = new_ta
+            CFG.TRAILING_CALLBACK_PCT = new_tc
+            set_key(".env", "TRAILING_ACTIVATE_PCT", str(new_ta))
+            set_key(".env", "TRAILING_CALLBACK_PCT", str(new_tc))
+            st.toast("✅ 트레일링 스톱 설정 업데이트 완료")
             st.rerun()
 
         prev_vol = float(CFG.MIN_VOLUME_USDT)

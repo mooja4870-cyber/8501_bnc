@@ -1,8 +1,8 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v2.0.0 Adaptive Smart Engine**: 시장 판별(Trend/Range)에 따른 가변 익절 전략(고정 익절 vs 트레일링 스톱) 도입.
 - **v1.2.10 Dual Input UI**: 손절/익절 설정 시 슬라이더와 숫자 입력기를 병행 사용 가능하도록 개선 (0.01% 정밀도).
-- **v1.2.09 Slider Precision**: 손절/익절 슬라이더 단위를 0.5%에서 0.25%로 세분화하여 정밀 설정 지원.
 - **v1.2.08 Cleanup**: 상단 헤더에서 서버중지 버튼 및 관련 로직/스타일 완전 삭제.
 
 ## v1.2.10 (2026-05-12)

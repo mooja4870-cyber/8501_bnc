@@ -33,6 +33,8 @@ class TradingConfig:
     # ── 손익 설정 ──────────────────────────────────────
     STOP_LOSS_PCT: float = 0.015          # 손절 1.5%
     TAKE_PROFIT_PCT: float = 0.02         # 익절 2.0%
+    TRAILING_ACTIVATE_PCT: float = 0.015  # 트레일링 시작 (1.5%)
+    TRAILING_CALLBACK_PCT: float = 0.005  # 트레일링 콜백 (0.5%)
     PROFIT_FACTOR_MIN: float = 2.0        # Profit Factor 최소 기준
 
     # ── 리스크 한도 ────────────────────────────────────
@@ -67,6 +69,8 @@ class TradingConfig:
         self.MAX_POSITIONS = int(os.getenv("MAX_POSITIONS", 5))
         self.STOP_LOSS_PCT = float(os.getenv("STOP_LOSS_PCT", 0.015))
         self.TAKE_PROFIT_PCT = float(os.getenv("TAKE_PROFIT_PCT", 0.02))
+        self.TRAILING_ACTIVATE_PCT = float(os.getenv("TRAILING_ACTIVATE_PCT", 0.015))
+        self.TRAILING_CALLBACK_PCT = float(os.getenv("TRAILING_CALLBACK_PCT", 0.005))
         self.SCAN_INTERVAL_SEC = int(os.getenv("SCAN_INTERVAL_SEC", 30))
         self.MIN_VOLUME_USDT = float(os.getenv("MIN_VOLUME_USDT", 1000000.0))
         self.MAX_DRAWDOWN_PCT = float(os.getenv("MAX_DRAWDOWN_PCT", 0.15))

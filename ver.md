@@ -2,8 +2,10 @@
 
 | 버전 (Version) | 수정 및 구현 내용 (Modifications & Implementations) |
 | :--- | :--- |
+| 버전 (Version) | 수정 및 구현 내용 (Modifications & Implementations) |
+| :--- | :--- |
+| **v2.0.0** | 시장 적응형(Market Regime Adaptive) 엔진 도입 (Trend/Range 판별 및 트레일링 스톱 연동) |
 | **v1.2.10** | 손익 설정 듀얼 입력 UI 구현 및 설정 로드 신뢰성 강화 (load_dotenv 보강) |
-| **v1.2.09** | 손익 설정 슬라이더 단위 정밀화 (0.5% -> 0.25%) |
 | **v1.2.07** | 표준 st.button 기반 서버중지 기능 복구 및 강력한 CSS 스타일 강제 적용 |
 | **v1.2.06** | 서버중지 버튼 순수 HTML/CSS 초정밀 재구축 (디자인 및 정렬 완전 해결) |
 | **v1.2.05** | 스트림릿 내부 셀렉터 타겟팅으로 서버중지 버튼 스타일 강제 주입 |
