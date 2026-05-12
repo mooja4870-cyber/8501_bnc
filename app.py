@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.09)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.10)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.09</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.10</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1328,25 +1328,42 @@ with tabs[5]:
             st.rerun()
 
         prev_sl = float(CFG.STOP_LOSS_PCT)
-        new_sl_val = st.slider("손절 (%)", 1.0, 10.0, float(prev_sl * 100), step=0.25)
+        # 듀얼 입력: 숫자 입력기와 슬라이더
+        c1, c2 = st.columns([0.4, 0.6])
+        with c1:
+            val_sl = st.number_input("손절 (%)", 0.1, 10.0, float(prev_sl * 100), step=0.01, key="num_sl")
+        with c2:
+            slide_sl = st.slider(" ", 0.1, 10.0, float(prev_sl * 100), step=0.25, key="slide_sl", label_visibility="hidden")
+        
+        # 동기화 및 저장 로직 (어느 쪽이든 변경되면 반영)
+        new_sl_val = val_sl if val_sl != float(prev_sl * 100) else slide_sl
         new_sl = new_sl_val / 100.0
-        if abs(new_sl - prev_sl) > 0.0001:
+        
+        if abs(new_sl - prev_sl) > 0.00001:
             CFG.STOP_LOSS_PCT = new_sl
             os.environ["STOP_LOSS_PCT"] = str(new_sl)
             set_key(".env", "STOP_LOSS_PCT", str(new_sl))
-            time.sleep(1.5)
+            time.sleep(1.0)
             st.toast(f"✅ 손절 라인 변경 완료: {new_sl_val}%")
             st.rerun()
 
     with s2:
         prev_tp = float(CFG.TAKE_PROFIT_PCT)
-        new_tp_val = st.slider("익절 (%)", 1.0, 20.0, float(prev_tp * 100), step=0.25)
+        # 듀얼 입력: 숫자 입력기와 슬라이더
+        c1, c2 = st.columns([0.4, 0.6])
+        with c1:
+            val_tp = st.number_input("익절 (%)", 0.1, 30.0, float(prev_tp * 100), step=0.01, key="num_tp")
+        with c2:
+            slide_tp = st.slider(" ", 0.1, 30.0, float(prev_tp * 100), step=0.25, key="slide_tp", label_visibility="hidden")
+            
+        new_tp_val = val_tp if val_tp != float(prev_tp * 100) else slide_tp
         new_tp = new_tp_val / 100.0
-        if abs(new_tp - prev_tp) > 0.0001:
+        
+        if abs(new_tp - prev_tp) > 0.00001:
             CFG.TAKE_PROFIT_PCT = new_tp
             os.environ["TAKE_PROFIT_PCT"] = str(new_tp)
             set_key(".env", "TAKE_PROFIT_PCT", str(new_tp))
-            time.sleep(1.5)
+            time.sleep(1.0)
             st.toast(f"✅ 익절 라인 변경 완료: {new_tp_val}%")
             st.rerun()
 

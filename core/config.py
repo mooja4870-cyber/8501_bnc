@@ -5,6 +5,10 @@ AI QUANTUM — OKX Auto-Trading System
 """
 from dataclasses import dataclass, field
 from typing import List
+from dotenv import load_dotenv
+
+# .env 파일을 최우선으로 로드 (시스템 환경변수보다 우선)
+load_dotenv(override=True)
 
 
 @dataclass
@@ -63,6 +67,9 @@ class TradingConfig:
         self.MAX_POSITIONS = int(os.getenv("MAX_POSITIONS", 5))
         self.STOP_LOSS_PCT = float(os.getenv("STOP_LOSS_PCT", 0.015))
         self.TAKE_PROFIT_PCT = float(os.getenv("TAKE_PROFIT_PCT", 0.02))
+        self.SCAN_INTERVAL_SEC = int(os.getenv("SCAN_INTERVAL_SEC", 30))
+        self.MIN_VOLUME_USDT = float(os.getenv("MIN_VOLUME_USDT", 1000000.0))
+        self.MAX_DRAWDOWN_PCT = float(os.getenv("MAX_DRAWDOWN_PCT", 0.15))
 
 # ── 전역 설정 인스턴스 ────────────────────────────────
 CFG = TradingConfig()
