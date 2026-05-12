@@ -55,41 +55,28 @@ class StrategyEngine:
 
         df = df.copy()
 
-        # EMA 200
-        df["ema200"] = ta.trend.ema_indicator(df["close"], window=self.cfg.EMA_PERIOD)
+        # 지표 계산 (v2.1.2 결측치 철저 방어)
+        df["ema200"] = ta.trend.ema_indicator(df["close"], window=self.cfg.EMA_PERIOD).fillna(df["close"])
+        
+        bb = ta.volatility.BollingerBands(df["close"], window=self.cfg.BB_PERIOD, window_dev=self.cfg.BB_STD)
+        df["bb_upper"] = bb.bollinger_hband().fillna(df["close"])
+        df["bb_mid"] = bb.bollinger_mavg().fillna(df["close"])
+        df["bb_lower"] = bb.bollinger_lband().fillna(df["close"])
+        df["bb_width"] = ((df["bb_upper"] - df["bb_lower"]) / df["bb_mid"]).fillna(0)
 
-        # Bollinger Bands
-        bb = ta.volatility.BollingerBands(
-            df["close"], window=self.cfg.BB_PERIOD, window_dev=self.cfg.BB_STD
-        )
-        df["bb_upper"] = bb.bollinger_hband()
-        df["bb_mid"] = bb.bollinger_mavg()
-        df["bb_lower"] = bb.bollinger_lband()
-        df["bb_width"] = (df["bb_upper"] - df["bb_lower"]) / df["bb_mid"]
+        macd = ta.trend.MACD(df["close"], window_fast=self.cfg.MACD_FAST, window_slow=self.cfg.MACD_SLOW, window_sign=self.cfg.MACD_SIGNAL)
+        df["macd"] = macd.macd().fillna(0)
+        df["macd_signal"] = macd.macd_signal().fillna(0)
+        df["macd_hist"] = macd.macd_diff().fillna(0)
 
-        # MACD
-        macd = ta.trend.MACD(
-            df["close"],
-            window_fast=self.cfg.MACD_FAST,
-            window_slow=self.cfg.MACD_SLOW,
-            window_sign=self.cfg.MACD_SIGNAL,
-        )
-        df["macd"] = macd.macd()
-        df["macd_signal"] = macd.macd_signal()
-        df["macd_hist"] = macd.macd_diff()
-
-        # ADX (추세 강도) - 결측치 방지 처리
         adx_series = ta.trend.adx(df["high"], df["low"], df["close"], window=14)
         df["adx"] = adx_series.fillna(0)
         
-        # EMA 20, 50 (추세 정배열 확인용) - 결측치 방지
         df["ema20"] = ta.trend.ema_indicator(df["close"], window=20).fillna(df["close"])
         df["ema50"] = ta.trend.ema_indicator(df["close"], window=50).fillna(df["close"])
-
-        # RSI (보조)
         df["rsi"] = ta.momentum.RSIIndicator(df["close"], window=14).rsi().fillna(50)
 
-        return df.dropna()
+        return df
 
     def get_market_regime(self, df: pd.DataFrame) -> str:
         """현재 시장이 추세장인지 횡보장인지 판별 (v2.1.1 동기화 및 단순화)"""
@@ -120,13 +107,13 @@ class StrategyEngine:
             ema_gap_pct = 0.010
             
         # 1. 추세장 판별 (ADX가 높고 이평선 방향이 명확할 때)
-        is_trending_long = (adx >= range_adx) and (close > ema20)
-        is_trending_short = (adx >= range_adx) and (close < ema20)
-        
-        if is_trending_long: return "Trend"
-        if is_trending_short: return "Trend"
+        # float 캐스팅을 통해 안정성 확보
+        adx_val = float(adx)
+        if adx_val >= range_adx:
+            if close > ema20: return "Trend"
+            if close < ema20: return "Trend"
             
-        # 2. 그 외 모든 경우는 횡보장(Range)으로 간주 (Neutral 고착 해제)
+        # 2. 그 외 모든 경우는 횡보장(Range)으로 간주 (Neutral 고착 방지)
         return "Range"
 
     def generate_signal(self, df: pd.DataFrame, symbol: str) -> Signal:
