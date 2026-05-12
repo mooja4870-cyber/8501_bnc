@@ -831,11 +831,6 @@ with tabs[0]:
         st.markdown("---")
 
         # ── 하단 리스크 및 통계 ───────────────────────
-        st.markdown(
-            '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#666;letter-spacing:0.1em;margin-bottom:10px;">RISK & PERFORMANCE METRICS</p>',
-            unsafe_allow_html=True,
-        )
-        
         # ── 거래소 이력 기반 실시간 집계 (stats.json 의존 제거) ──
         all_trades = engine.get_trade_history(limit=100)
         from datetime import datetime as _dt, timezone as _tz, timedelta as _td
