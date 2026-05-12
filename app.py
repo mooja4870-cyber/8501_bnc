@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.94)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.95)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -184,13 +184,15 @@ st.markdown(
     .red { color: #ef4444 !important; }
     /* 청산 버튼 특화 스타일 (77% 축소) */
     .small-btn button {
-        font-size: 0.34rem !important;
-        height: 19px !important;
-        min-height: 19px !important;
-        width: 45% !important;
+        font-size: 0.26rem !important;
+        height: 15px !important;
+        min-height: 15px !important;
+        width: 35% !important;
         padding: 0 !important;
         margin: 0 auto !important;
         display: block !important;
+        transform: scale(0.77) !important;
+        transform-origin: center !important;
     }
     /* 분홍색 깜빡임 애니메이션 */
     @keyframes pink-fade {
@@ -609,7 +611,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.94</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.95</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
