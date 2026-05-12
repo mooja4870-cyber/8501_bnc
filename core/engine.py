@@ -73,6 +73,18 @@ class QuantumEngine:
             except Exception as e:
                 logger.error(f"엔진 초기화 실패: {e}")
                 return False, f"❌ 엔진 초기화 오류: {e}"
+            
+    def reboot(self) -> tuple[bool, str]:
+        """현재 설정된 API 키로 엔진을 완전히 재시작합니다. (v2.23)"""
+        if not self.client:
+            return False, "❌ 초기화된 클라이언트가 없습니다."
+        
+        # 기존 자격 증명 사용
+        api_key = self.client.exchange.apiKey
+        secret_key = self.client.exchange.secret
+        passphrase = self.client.exchange.password
+        
+        return self.initialize(api_key, secret_key, passphrase)
 
     @property
     def is_ready(self) -> bool:

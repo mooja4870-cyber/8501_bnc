@@ -1,5 +1,5 @@
 """
-AI QUANT — OKX Auto-Trading Dashboard (v2.22)
+AI QUANT — OKX Auto-Trading Dashboard (v2.23)
 시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.22</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.23</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1492,6 +1492,16 @@ with tabs[5]:
             st.rerun()
     
     st.markdown("---")
+    if st.button("♻️ 엔진 소프트 리셋", use_container_width=True, help="백그라운드 스레드를 최신 코드로 재시작합니다."):
+        with st.spinner("엔진 재시작 중..."):
+            ok, msg = engine.reboot()
+            if ok:
+                st.toast("✅ 엔진 리셋 성공")
+                time.sleep(0.5)
+                st.rerun()
+            else:
+                st.error(msg)
+
     if st.button("💾 모든 설정 영구 저장 (.env)", use_container_width=True):
         set_key(".env", "LEVERAGE", str(CFG.LEVERAGE))
         set_key(".env", "MARGIN_USDT", str(CFG.MARGIN_USDT))
@@ -1502,6 +1512,7 @@ with tabs[5]:
         set_key(".env", "MIN_VOLUME_USDT", str(CFG.MIN_VOLUME_USDT))
         set_key(".env", "MAX_DRAWDOWN_PCT", str(CFG.MAX_DRAWDOWN_PCT))
         set_key(".env", "REGIME_SENSITIVITY", str(CFG.REGIME_SENSITIVITY))
+        set_key(".env", "MAX_HOLDING_HOURS", str(CFG.MAX_HOLDING_HOURS)) # v2.23 추가
         st.toast("✅ 모든 설정이 .env 파일에 영구 저장되었습니다.")
         time.sleep(0.5)
         st.rerun()
