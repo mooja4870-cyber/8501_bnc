@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.97)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.98)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.97</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.98</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -950,7 +950,13 @@ with tabs[0]:
         with c1:
             st.metric("누적 수익률", f"{accu_profit_pct:+.2f}%", f"{pnl_24h_pct:+.2f}% (24h)")
         with c2:
-            st.metric("일 평균 수익률", f"{daily_avg_pct:+.2f}%", f"{start_date.strftime('%m/%d/%Y')}~")
+            st.markdown(f"""
+                <div style="line-height: 1.2;">
+                    <p style="font-size: 0.85rem; color: #888; margin-bottom: 4px;">일 평균 수익률</p>
+                    <p style="font-size: 1.6rem; font-weight: 700; color: #fff; margin-bottom: 2px;">{daily_avg_pct:+.2f}%</p>
+                    <p style="font-size: 0.85rem; color: #666;">{start_date.strftime('%m/%d/%Y')}~</p>
+                </div>
+            """, unsafe_allow_html=True)
         with c3:
             st.metric("누적 승률", f"{total_win_rate:.1f}%", win_summary)
         with c4:
