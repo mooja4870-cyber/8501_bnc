@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.86)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.87)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -607,7 +607,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.86</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.87</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -654,7 +654,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown(
         """
-        <div style="font-family:'IBM Plex Mono';font-size:0.65rem;color:#666;line-height:1.6;">
+        <div style="font-family:'IBM Plex Mono';font-size:0.72rem;color:#666;line-height:1.6;">
         <b style="color:#888;">서버 켜기 (실행)</b><br>
         <code>streamlit run app.py</code><br><br>
         <b style="color:#888;">서버작동 확인</b><br>
