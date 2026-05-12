@@ -881,10 +881,16 @@ with tabs[0]:
         equity_24h_ago = total_equity - pnl_24h_usdt
         pnl_24h_pct = (pnl_24h_usdt / equity_24h_ago) * 100 if equity_24h_ago > 0 else 0.0
 
-        # 4컬럼 레이아웃
+        # ── 4컬럼 레이아웃 ──
+        total_win_rate = stats_store.get_win_rate()
+        _st = stats_store.load_stats()
+        total_wins = _st.get("total_wins", 0)
+        total_losses = _st.get("total_losses", 0)
+        win_summary = f"{total_wins}W / {total_losses}L"
+
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            st.metric("Profit Accu.", f"{accu_profit_pct:+.2f} %", f"({pnl_24h_pct:+.2f}% 24h)")
+            st.metric("누적 승률", f"{total_win_rate:.1f}%", win_summary)
         with c2:
             st.metric("금일 승률", win_label, win_delta)
         with c3:
