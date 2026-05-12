@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.95)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.96)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -43,6 +43,21 @@ if not acquire_server_lock():
 # ── 환경 설정 로드 ─────────────────────────────────
 load_dotenv(override=True)
 CFG.refresh()
+
+@st.cache_data
+def get_system_start_date():
+    """Git 로그에서 최초 커밋 날짜를 추출함"""
+    try:
+        import subprocess
+        cmd = ["git", "log", "--reverse", "--format=%ai"]
+        result = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('utf-8')
+        first_line = result.split('\n')[0].strip()
+        if first_line:
+            return pd.to_datetime(first_line)
+    except Exception:
+        pass
+    # 기본값: 2026-05-10 (v1.1.75 기준 시점)
+    return pd.to_datetime("2026-05-10 15:48:45 +0900")
 
 # ── 다크 테마 CSS ─────────────────────────────────────
 st.markdown(
@@ -611,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.95</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.96</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -917,21 +932,30 @@ with tabs[0]:
         equity_24h_ago = total_equity - pnl_24h_usdt
         pnl_24h_pct = (pnl_24h_usdt / equity_24h_ago) * 100 if equity_24h_ago > 0 else 0.0
 
-        # ── 4컬럼 레이아웃 ──
+        # 일 평균 수익률 계산
+        start_date = get_system_start_date()
+        # 타임존 통일 (UTC 기준 계산)
+        now_utc = pd.Timestamp.now(tz=start_date.tz)
+        days_elapsed = (now_utc - start_date).days + 1
+        daily_avg_pct = accu_profit_pct / days_elapsed if days_elapsed > 0 else accu_profit_pct
+
+        # ── 5컬럼 레이아웃 ──
         total_win_rate = stats_store.get_win_rate()
         _st = stats_store.load_stats()
         total_wins = _st.get("total_wins", 0)
         total_losses = _st.get("total_losses", 0)
         win_summary = f"{total_wins}W / {total_losses}L"
 
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4, c5 = st.columns(5)
         with c1:
             st.metric("누적 수익률", f"{accu_profit_pct:+.2f}%", f"{pnl_24h_pct:+.2f}% (24h)")
         with c2:
-            st.metric("누적 승률", f"{total_win_rate:.1f}%", win_summary)
+            st.metric("일 평균 수익률", f"{daily_avg_pct:+.2f}%", f"Since {start_date.strftime('%m/%d')}")
         with c3:
-            st.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "Max Risk")
+            st.metric("누적 승률", f"{total_win_rate:.1f}%", win_summary)
         with c4:
+            st.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "Max Risk")
+        with c5:
             st.metric("금일 주문", f"{orders_today}건", "Today")
 
 
