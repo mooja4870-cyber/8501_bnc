@@ -1,9 +1,12 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v1.1.86 Sidebar Manual**: 사이드바 하단에 서버 실행 및 확인을 위한 명령어 매뉴얼 섹션 추가.
 - **v1.1.85 Bi-directional Lock**: 롱/숏 포지션 토글 제거 및 양방향 매매 항시 허용 적용.
 - **v1.1.84 Sidebar Cleanup**: 사이드바 하단의 불필요한 설정 정보 텍스트 블록 제거 완료.
-- **v1.1.83 Layout Fix**: Streamlit 실행 규정에 따라 `set_page_config`를 최상단으로 이동하여 실행 에러 해결.
+
+## v1.1.86 (2026-05-12)
+- [UI] **사이드바 매뉴얼 추가**: 서버 실행(`streamlit run`), 프로세스 확인(`tasklist`), 포트 체크(`netstat`) 명령어를 사이드바 하단에 상시 표시하여 운영 편의성 향상.
 
 ## v1.1.85 (2026-05-12)
 - [UI/Logic] **양방향 매매 고정**: 사용자가 항상 양방향 포지션을 유지하므로, 사이드바의 롱/숏 허용 토글을 삭제하고 시스템적으로 항상 둘 다 허용(True)되도록 고정함.
