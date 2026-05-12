@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.08)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.09)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.08</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.09</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1328,7 +1328,7 @@ with tabs[5]:
             st.rerun()
 
         prev_sl = float(CFG.STOP_LOSS_PCT)
-        new_sl_val = st.slider("손절 (%)", 1.0, 10.0, float(prev_sl * 100), step=0.5)
+        new_sl_val = st.slider("손절 (%)", 1.0, 10.0, float(prev_sl * 100), step=0.25)
         new_sl = new_sl_val / 100.0
         if abs(new_sl - prev_sl) > 0.0001:
             CFG.STOP_LOSS_PCT = new_sl
@@ -1340,7 +1340,7 @@ with tabs[5]:
 
     with s2:
         prev_tp = float(CFG.TAKE_PROFIT_PCT)
-        new_tp_val = st.slider("익절 (%)", 1.0, 20.0, float(prev_tp * 100), step=0.5)
+        new_tp_val = st.slider("익절 (%)", 1.0, 20.0, float(prev_tp * 100), step=0.25)
         new_tp = new_tp_val / 100.0
         if abs(new_tp - prev_tp) > 0.0001:
             CFG.TAKE_PROFIT_PCT = new_tp
