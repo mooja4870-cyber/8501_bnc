@@ -1,5 +1,5 @@
 """
-AI QUANT — OKX Auto-Trading Dashboard (v2.0.6)
+AI QUANT — OKX Auto-Trading Dashboard (v2.0.7)
 시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.6</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.7</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1401,9 +1401,24 @@ with tabs[5]:
 
     st.markdown("---")
     st.markdown("##### ⚙️ 공통 시스템 설정")
-    cc1, cc2, cc3 = st.columns(3)
+    row1_c1, row1_c2, row1_c3 = st.columns(3)
     
-    with cc1:
+    with row1_c1:
+        prev_sense = CFG.REGIME_SENSITIVITY
+        sense_options = ["Aggressive", "Neutral", "Conservative"]
+        new_sense = st.selectbox(
+            "시장 판별 민감도", 
+            sense_options, 
+            index=sense_options.index(prev_sense) if prev_sense in sense_options else 1,
+            help="공격: 추세/횡보를 더 예민하게 포착 | 보수: 확실한 구간만 판별"
+        )
+        if new_sense != prev_sense:
+            CFG.REGIME_SENSITIVITY = new_sense
+            set_key(".env", "REGIME_SENSITIVITY", new_sense)
+            st.toast(f"✅ 민감도 설정 완료: {new_sense}")
+            st.rerun()
+
+    with row1_c2:
         prev_vol = float(CFG.MIN_VOLUME_USDT)
         new_vol = st.number_input("최소 거래대금 (USDT)", 1_000_000.0, 100_000_000.0, prev_vol, step=1_000_000.0)
         if new_vol != prev_vol:
@@ -1412,7 +1427,7 @@ with tabs[5]:
             st.toast(f"✅ 최소 거래대금 변경 완료: ${new_vol:,.0f}")
             st.rerun()
 
-    with cc2:
+    with row1_c3:
         prev_scan = int(CFG.SCAN_INTERVAL_SEC)
         new_scan = st.slider("스캔 주기 (초)", 10, 300, prev_scan, step=10)
         if new_scan != prev_scan:
@@ -1421,7 +1436,8 @@ with tabs[5]:
             st.toast(f"✅ 스캔 주기 변경 완료: {new_scan}초")
             st.rerun()
 
-    with cc3:
+    row2_c1, row2_c2, row2_c3 = st.columns(3)
+    with row2_c1:
         prev_mdd = float(CFG.MAX_DRAWDOWN_PCT)
         new_mdd_val = st.slider("MDD 한도 (%)", 5.0, 50.0, float(prev_mdd * 100), step=1.0)
         new_mdd = new_mdd_val / 100.0
@@ -1441,6 +1457,7 @@ with tabs[5]:
         set_key(".env", "SCAN_INTERVAL_SEC", str(CFG.SCAN_INTERVAL_SEC))
         set_key(".env", "MIN_VOLUME_USDT", str(CFG.MIN_VOLUME_USDT))
         set_key(".env", "MAX_DRAWDOWN_PCT", str(CFG.MAX_DRAWDOWN_PCT))
+        set_key(".env", "REGIME_SENSITIVITY", str(CFG.REGIME_SENSITIVITY))
         st.toast("✅ 모든 설정이 .env 파일에 영구 저장되었습니다.")
         time.sleep(0.5)
         st.rerun()

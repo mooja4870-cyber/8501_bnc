@@ -46,6 +46,7 @@ class TradingConfig:
     MIN_VOLUME_USDT: float = 1_000_000.0   # 최소 24h 거래대금 (1백만 USDT)
     QUOTE_CURRENCY: str = "USDT"
     MARKET_TYPE: str = "swap"             # 선물(영구 계약)
+    REGIME_SENSITIVITY: str = "Neutral"  # Aggressive | Neutral | Conservative
 
     # ── 지표 파라미터 ──────────────────────────────────
     EMA_PERIOD: int = 200
@@ -74,6 +75,7 @@ class TradingConfig:
         self.SCAN_INTERVAL_SEC = int(os.getenv("SCAN_INTERVAL_SEC", 30))
         self.MIN_VOLUME_USDT = float(os.getenv("MIN_VOLUME_USDT", 1000000.0))
         self.MAX_DRAWDOWN_PCT = float(os.getenv("MAX_DRAWDOWN_PCT", 0.15))
+        self.REGIME_SENSITIVITY = os.getenv("REGIME_SENSITIVITY", "Neutral")
 
 # ── 전역 설정 인스턴스 ────────────────────────────────
 CFG = TradingConfig()
