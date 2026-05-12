@@ -89,7 +89,7 @@ class Scanner:
                 if vol < self.cfg.MIN_VOLUME_USDT:
                     continue
 
-                df = self.client.get_ohlcv(sym, limit=250)
+                df = self.client.get_ohlcv(sym, limit=500)
                 if df.empty:
                     continue
 

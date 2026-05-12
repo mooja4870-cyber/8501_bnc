@@ -1,5 +1,5 @@
 """
-AI QUANT — OKX Auto-Trading Dashboard (v2.0.8)
+AI QUANT — OKX Auto-Trading Dashboard (v2.0.9)
 시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.8</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.9</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
