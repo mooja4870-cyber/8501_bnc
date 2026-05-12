@@ -91,34 +91,44 @@ class StrategyEngine:
         return df.dropna()
 
     def get_market_regime(self, df: pd.DataFrame) -> str:
-        """현재 시장이 추세장인지 횡보장인지 판별 (v2.0.7 가변 민감도 적용)"""
+        """현재 시장이 추세장인지 횡보장인지 판별 (v2.0.8 민감도 재정의)"""
         if df.empty or len(df) < 5: return "Neutral"
         
         cur = df.iloc[-1]
+        prev = df.iloc[-2]
         
         adx = cur["adx"]
         ema20 = cur["ema20"]
         ema50 = cur["ema50"]
         ema200 = cur["ema200"]
+        bb_width = cur["bb_width"]
+        prev_bb_width = prev["bb_width"]
         
         # 민감도에 따른 임계값 설정
         sensitivity = self.cfg.REGIME_SENSITIVITY
         if sensitivity == "Aggressive":
-            trend_adx = 21
-            range_adx = 24
-            ema_gap_pct = 0.008
+            # 가장 예민함 (Neutral 최소화)
+            trend_adx = 20
+            range_adx = 26
+            ema_gap_pct = 0.012
+            use_bb_expansion = False # 밴드 확장 여부 무시
         elif sensitivity == "Conservative":
-            trend_adx = 30
-            range_adx = 15
-            ema_gap_pct = 0.003
-        else: # Neutral (Default) - v2.0.0 오리지널 로직 원복
+            # 가장 엄격함 (기존 v2.0.0 오리지널)
             trend_adx = 25
             range_adx = 20
             ema_gap_pct = 0.005
-
+            use_bb_expansion = True # 반드시 밴드가 확장 중이어야 함
+        else: # Neutral (Default)
+            # 밸런스형
+            trend_adx = 23
+            range_adx = 22
+            ema_gap_pct = 0.008
+            use_bb_expansion = False
+            
         # 1. 추세장 판별
-        is_trending_long = (adx > trend_adx) and (ema20 > ema50 > ema200)
-        is_trending_short = (adx > trend_adx) and (ema20 < ema50 < ema200)
+        bb_ok = (bb_width > prev_bb_width) if use_bb_expansion else True
+        is_trending_long = (adx > trend_adx) and (ema20 > ema50 > ema200) and bb_ok
+        is_trending_short = (adx > trend_adx) and (ema20 < ema50 < ema200) and bb_ok
         
         if is_trending_long or is_trending_short:
             return "Trend"
