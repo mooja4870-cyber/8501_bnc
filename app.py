@@ -1,5 +1,5 @@
 """
-AI QUANT — OKX Auto-Trading Dashboard (v2.0.4)
+AI QUANT — OKX Auto-Trading Dashboard (v2.0.5)
 시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.4</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.5</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1399,49 +1399,51 @@ with tabs[5]:
             st.toast("✅ 트레일링 스톱 설정 업데이트 완료")
             st.rerun()
 
+    st.markdown("---")
+    st.markdown("##### ⚙️ 공통 시스템 설정")
+    cc1, cc2, cc3 = st.columns(3)
+    
+    with cc1:
         prev_vol = float(CFG.MIN_VOLUME_USDT)
-        new_vol = st.number_input("최소 거래대금 (USDT)", 1_000_000.0, 50_000_000.0, prev_vol, step=1_000_000.0)
+        new_vol = st.number_input("최소 거래대금 (USDT)", 1_000_000.0, 100_000_000.0, prev_vol, step=1_000_000.0)
         if new_vol != prev_vol:
             CFG.MIN_VOLUME_USDT = new_vol
-            os.environ["MIN_VOLUME_USDT"] = str(new_vol)
             set_key(".env", "MIN_VOLUME_USDT", str(new_vol))
-            time.sleep(1.5)
             st.toast(f"✅ 최소 거래대금 변경 완료: ${new_vol:,.0f}")
             st.rerun()
 
+    with cc2:
         prev_scan = int(CFG.SCAN_INTERVAL_SEC)
         new_scan = st.slider("스캔 주기 (초)", 10, 300, prev_scan, step=10)
         if new_scan != prev_scan:
             CFG.SCAN_INTERVAL_SEC = new_scan
-            os.environ["SCAN_INTERVAL_SEC"] = str(new_scan)
             set_key(".env", "SCAN_INTERVAL_SEC", str(new_scan))
-            time.sleep(1.5)
             st.toast(f"✅ 스캔 주기 변경 완료: {new_scan}초")
             st.rerun()
 
+    with cc3:
         prev_mdd = float(CFG.MAX_DRAWDOWN_PCT)
         new_mdd_val = st.slider("MDD 한도 (%)", 5.0, 50.0, float(prev_mdd * 100), step=1.0)
         new_mdd = new_mdd_val / 100.0
         if abs(new_mdd - prev_mdd) > 0.0001:
             CFG.MAX_DRAWDOWN_PCT = new_mdd
-            os.environ["MAX_DRAWDOWN_PCT"] = str(new_mdd)
             set_key(".env", "MAX_DRAWDOWN_PCT", str(new_mdd))
-            time.sleep(1.5)
             st.toast(f"✅ MDD 한도 변경 완료: {new_mdd_val}%")
             st.rerun()
-        
-        if st.button("💾 모든 설정 영구 저장 (.env)", use_container_width=True):
-            set_key(".env", "LEVERAGE", str(CFG.LEVERAGE))
-            set_key(".env", "MARGIN_USDT", str(CFG.MARGIN_USDT))
-            set_key(".env", "MAX_POSITIONS", str(CFG.MAX_POSITIONS))
-            set_key(".env", "STOP_LOSS_PCT", str(CFG.STOP_LOSS_PCT))
-            set_key(".env", "TAKE_PROFIT_PCT", str(CFG.TAKE_PROFIT_PCT))
-            set_key(".env", "SCAN_INTERVAL_SEC", str(CFG.SCAN_INTERVAL_SEC))
-            set_key(".env", "MIN_VOLUME_USDT", str(CFG.MIN_VOLUME_USDT))
-            set_key(".env", "MAX_DRAWDOWN_PCT", str(CFG.MAX_DRAWDOWN_PCT))
-            st.toast("✅ 모든 설정이 .env 파일에 영구 저장되었습니다.")
-            time.sleep(0.5)
-            st.rerun()
+    
+    st.markdown("---")
+    if st.button("💾 모든 설정 영구 저장 (.env)", use_container_width=True):
+        set_key(".env", "LEVERAGE", str(CFG.LEVERAGE))
+        set_key(".env", "MARGIN_USDT", str(CFG.MARGIN_USDT))
+        set_key(".env", "MAX_POSITIONS", str(CFG.MAX_POSITIONS))
+        set_key(".env", "STOP_LOSS_PCT", str(CFG.STOP_LOSS_PCT))
+        set_key(".env", "TAKE_PROFIT_PCT", str(CFG.TAKE_PROFIT_PCT))
+        set_key(".env", "SCAN_INTERVAL_SEC", str(CFG.SCAN_INTERVAL_SEC))
+        set_key(".env", "MIN_VOLUME_USDT", str(CFG.MIN_VOLUME_USDT))
+        set_key(".env", "MAX_DRAWDOWN_PCT", str(CFG.MAX_DRAWDOWN_PCT))
+        st.toast("✅ 모든 설정이 .env 파일에 영구 저장되었습니다.")
+        time.sleep(0.5)
+        st.rerun()
 
     st.markdown("---")
     st.markdown(
