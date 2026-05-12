@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.84)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.85)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -607,7 +607,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.84</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.85</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -637,18 +637,8 @@ with st.sidebar:
             else:
                 st.error(msg)
 
-    st.markdown("---")
-    st.markdown(
-        '<p style="font-family:IBM Plex Mono;font-size:0.65rem;color:#555;letter-spacing:0.08em;">매매 제어</p>',
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:0.72rem;color:#00ff41;letter-spacing:0.08em;">AUTO TRADING: ON AFTER OKX CONNECT</div>',
-        unsafe_allow_html=True,
-    )
-    longs = st.toggle("롱 포지션 허용", value=st.session_state.allow_long)
-    shorts = st.toggle("숏 포지션 허용", value=st.session_state.allow_short)
+    longs = True
+    shorts = True
 
     engine: QuantumEngine = st.session_state.engine
 
@@ -658,8 +648,8 @@ with st.sidebar:
             engine.start_scanner()
 
     if engine.is_ready and engine.trader:
-        engine.trader.allow_long = longs
-        engine.trader.allow_short = shorts
+        engine.trader.allow_long = True
+        engine.trader.allow_short = True
 
 
 
