@@ -79,8 +79,8 @@ class StrategyEngine:
         return df
 
     def get_market_regime(self, df: pd.DataFrame) -> str:
-        """현재 시장이 추세장/중립장/횡보장인지 3단계로 판별 (v2.1.4 고도화)"""
-        if df.empty or len(df) < 5: return "Neutral"
+        """현재 시장이 추세장/횡보장인지 이분법으로 판별 (v2.1.5 최적화)"""
+        if df.empty or len(df) < 5: return "Range"
         
         from core.config import CFG
         sensitivity = CFG.REGIME_SENSITIVITY
@@ -88,34 +88,24 @@ class StrategyEngine:
         cur = df.iloc[-1]
         try:
             adx = float(cur["adx"])
-            close = float(cur["close"])
-            ema20 = float(cur["ema20"])
         except Exception:
-            return "Neutral"
+            return "Range"
         
-        # 민감도에 따른 임계값 (v2.1.4 정상화)
-        # Aggressive: 낮은 ADX에도 Trend로 인정 / Conservative: 높은 ADX여야 Trend로 인정
+        # 민감도에 따른 임계값 (v2.1.5)
+        # 공격: 낮은 ADX(20)에도 Trend / 중립: 28 / 보수: 높은 ADX(35)여야 Trend
         if sensitivity == "Aggressive":
-            trend_high = 20
-            trend_low = 15
+            threshold = 20
         elif sensitivity == "Conservative":
-            trend_high = 35
-            trend_low = 25
+            threshold = 35
         else: # Neutral
-            trend_high = 28
-            trend_low = 20
+            threshold = 28
             
         adx_val = float(adx)
         
-        # 1. Trend (강한 추세)
-        if adx_val > trend_high:
+        # 이분법 판별: Trend (Trailing Stop ON) / Range (Trailing Stop OFF)
+        if adx_val > threshold:
             return "Trend"
             
-        # 2. Neutral (추세 준비/전환 구간)
-        if adx_val >= trend_low:
-            return "Neutral"
-            
-        # 3. Range (지루한 횡보/정체)
         return "Range"
 
     def generate_signal(self, df: pd.DataFrame, symbol: str) -> Signal:

@@ -1,5 +1,5 @@
 """
-AI QUANT — OKX Auto-Trading Dashboard (v2.1.4)
+AI QUANT — OKX Auto-Trading Dashboard (v2.1.5)
 시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.1.4</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.1.5</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1016,25 +1016,20 @@ with tabs[1]:
         if results:
             df_scan = pd.DataFrame(results)
 
-            # ── 시장 성격 요약 지표 (Colored Circles) ──
+            # ── 시장 성격 요약 지표 (Binary Circles) ──
             trend_count = len(df_scan[df_scan["regime"] == "Trend"])
-            neutral_count = len(df_scan[df_scan["regime"] == "Neutral"])
             range_count = len(df_scan[df_scan["regime"] == "Range"])
             
-            # v2.1.4: 3영역 판별 로직에 따른 정밀 매핑 (Trend:Red, Neutral:Yellow, Range:Blue)
+            # v2.1.5: 이분법 로직(Trend/Range)에 따른 핵심 지표 매핑
             st.markdown(f"""
-                <div style="display: flex; justify-content: center; gap: 35px; margin: 15px 0 25px 0;">
-                    <div style="width: 105px; height: 105px; border-radius: 50%; background: rgba(239, 68, 68, 0.08); border: 2px solid #ef4444; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(239, 68, 68, 0.12); backdrop-filter: blur(8px);">
-                        <span style="font-size: 0.65rem; color: #ef4444; font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: 0.08em;">TREND</span>
-                        <span style="font-size: 2.2rem; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-weight: 700; line-height: 1;">{trend_count}</span>
+                <div style="display: flex; justify-content: center; gap: 40px; margin: 15px 0 25px 0;">
+                    <div style="width: 110px; height: 110px; border-radius: 50%; background: rgba(239, 68, 68, 0.08); border: 2px solid #ef4444; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(239, 68, 68, 0.12); backdrop-filter: blur(8px);">
+                        <span style="font-size: 0.7rem; color: #ef4444; font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: 0.08em;">TREND</span>
+                        <span style="font-size: 2.4rem; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-weight: 700; line-height: 1;">{trend_count}</span>
                     </div>
-                    <div style="width: 105px; height: 105px; border-radius: 50%; background: rgba(245, 158, 11, 0.08); border: 2px solid #f59e0b; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(245, 158, 11, 0.12); backdrop-filter: blur(8px);">
-                        <span style="font-size: 0.65rem; color: #f59e0b; font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: 0.08em;">NEUTRAL</span>
-                        <span style="font-size: 2.2rem; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-weight: 700; line-height: 1;">{neutral_count}</span>
-                    </div>
-                    <div style="width: 105px; height: 105px; border-radius: 50%; background: rgba(59, 130, 246, 0.08); border: 2px solid #3b82f6; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(59, 130, 246, 0.12); backdrop-filter: blur(8px);">
-                        <span style="font-size: 0.55rem; color: #3b82f6; font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: 0.05em; text-align: center; padding: 0 5px;">CONSERVATIVE</span>
-                        <span style="font-size: 2.2rem; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-weight: 700; line-height: 1;">{range_count}</span>
+                    <div style="width: 110px; height: 110px; border-radius: 50%; background: rgba(245, 158, 11, 0.08); border: 2px solid #f59e0b; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(245, 158, 11, 0.12); backdrop-filter: blur(8px);">
+                        <span style="font-size: 0.7rem; color: #f59e0b; font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: 0.08em;">RANGE</span>
+                        <span style="font-size: 2.4rem; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-weight: 700; line-height: 1;">{range_count}</span>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
