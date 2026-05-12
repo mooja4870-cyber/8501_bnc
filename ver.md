@@ -4,8 +4,8 @@
 | :--- | :--- |
 | 버전 (Version) | 수정 및 구현 내용 (Modifications & Implementations) |
 | :--- | :--- |
+| **v2.0.2** | 사이드바 시스템 점검 안내 섹션에 비상 복구용 RollBack 명령어 가이드 추가 |
 | **v2.0.1** | [Hotfix] 스캐너 필드 누락으로 인한 KeyError 방어 로직 추가 |
-| **v2.0.0** | 시장 적응형(Market Regime Adaptive) 엔진 도입 (Trend/Range 판별 및 트레일링 스톱 연동) |
 | **v1.2.10** | 손익 설정 듀얼 입력 UI 구현 및 설정 로드 신뢰성 강화 (load_dotenv 보강) |
 | **v1.2.07** | 표준 st.button 기반 서버중지 기능 복구 및 강력한 CSS 스타일 강제 적용 |
 | **v1.2.06** | 서버중지 버튼 순수 HTML/CSS 초정밀 재구축 (디자인 및 정렬 완전 해결) |
