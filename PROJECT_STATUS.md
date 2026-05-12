@@ -1,9 +1,13 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v1.2.07 Standard Component Kill Switch**: 표준 st.button 기반으로 서버중지 기능 복구 및 강력한 CSS 디자인 강제 적용.
 - **v1.2.06 Pixel Perfect Kill Switch**: 순수 HTML/CSS 버튼 재구축 및 초정밀 세로 정렬 완료.
 - **v1.2.05 Forced Styling**: 스트림릿 내부 셀렉터 타겟팅으로 서버중지 버튼 스타일 강제 주입.
-- **v1.2.04 Ultimate Kill Switch**: 커스텀 HTML 버튼을 통한 서버중지 UI 완성 및 정렬 해결.
+
+## v1.2.07 (2026-05-12)
+- [System] **서버중지 기능 표준 컴포넌트 복구**: HTML 링크 방식에서 발생할 수 있는 작동 불량 문제를 해결하기 위해 표준 `st.button`으로 기능을 복구함.
+- [UI/UX] **궁극의 스타일링 강제 적용**: `div[data-testid="stButton"] button`을 타겟팅하는 강력한 CSS 셀렉터를 통해 **빨간색 바탕(#ef4444)**과 **흰색 텍스트**를 강제로 구현함. 컬럼 너비를 확장하여 버튼이 잘리지 않도록 하고 수직 정렬을 완벽하게 맞춤.
 
 ## v1.2.06 (2026-05-12)
 - [UI/UX] **서버중지 버튼 초정밀 재구축**: 스트림릿 컴포넌트의 테마 간섭을 100% 배제하기 위해 순수 HTML과 인라인 CSS 스타일로 버튼을 재구축함. **선명한 빨간색 배경(#ef4444)**과 흰색 텍스트를 고정하고, `flex` 컨테이너와 픽셀 단위 패딩 조정을 통해 시간 표시 및 배지들과 **완벽하게 동일한 수평선상**에 놓이도록 보정함.
