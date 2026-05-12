@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.02)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.03)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -254,23 +254,42 @@ st.markdown(
         animation: pink-fade 1.5s infinite ease-in-out;
         box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
     }
-    /* 서버 중지 버튼 스타일 (빨간 원형) */
+    /* 서버 중지 버튼 스타일 (빨간 가로 타원형) */
+    .btn-stop-server {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        height: 100% !important;
+        padding-top: 8px !important;
+    }
     .btn-stop-server button {
         background-color: #ef4444 !important;
         color: white !important;
         border-radius: 20px !important;
-        border: 1px solid rgba(255,255,255,0.3) !important;
+        border: 1px solid rgba(255,255,255,0.4) !important;
         font-size: 0.72rem !important;
-        font-weight: 700 !important;
-        height: 28px !important;
-        padding: 0 12px !important;
-        margin-top: 5px !important;
-        transition: all 0.3s ease;
+        font-weight: 800 !important;
+        height: 30px !important;
+        min-height: 30px !important;
+        line-height: 30px !important;
+        padding: 0 15px !important;
+        margin: 0 !important;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
     }
     .btn-stop-server button:hover {
         background-color: #dc2626 !important;
-        transform: scale(1.05);
-        box-shadow: 0 0 15px rgba(239, 68, 68, 0.5) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4) !important;
+    }
+    .btn-stop-server button:active {
+        transform: translateY(0px) !important;
+    }
+    /* 스트림릿 기본 버튼 패딩 제거 */
+    .btn-stop-server div[data-testid="stButton"] {
+        display: inline-flex !important;
+        align-items: center !important;
+        margin: 0 !important;
     }
     @keyframes green-pulse {
         0% { opacity: 1; }
@@ -644,7 +663,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.02</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.03</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -719,7 +738,7 @@ with tabline_time:
 
 with tabline_stop:
     st.markdown('<div class="btn-stop-server">', unsafe_allow_html=True)
-    if st.button("서버중지", key="kill_server"):
+    if st.button("서버중지", key="kill_server", use_container_width=True):
         import os
         os._exit(0)
     st.markdown('</div>', unsafe_allow_html=True)

@@ -1,9 +1,12 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v1.2.03 Kill Switch UI Fix**: 서버중지 버튼의 색상 고정 및 세로 정렬 최적화 완료.
 - **v1.2.02 Kill Switch**: 상단 탭라인에 서버 프로세스를 즉시 종료하는 '서버중지' 버튼 추가.
 - **v1.2.01 Font Weight Tweak**: 일 평균 수익률 수치 텍스트를 볼드체에서 보통체로 변경.
-- **v1.2.00 Milestone Update**: 누적 성과 지표 최적화 완료 및 폰트 크기 고정(14px).
+
+## v1.2.03 (2026-05-12)
+- [UI] **서버중지 버튼 디자인 정교화**: 버튼 색상을 선명한 빨간색(#ef4444)으로 고정하고 글자색을 흰색으로 변경하여 가시성을 극대화함. 또한 `LIVE CONNECTION` 및 `REFRESH` 버튼과 동일한 선상에 놓이도록 세로 정렬(Vertical Alignment)을 보정함.
 
 ## v1.2.02 (2026-05-12)
 - [Feature] **서버 강제 중지 버튼 추가**: 상단 탭라인의 시간 표시와 상태 배지 사이에 빨간색 원형의 '서버중지' 버튼을 구현함. 클릭 시 `os._exit(0)`을 호출하여 터미널에서 실행 중인 Streamlit 서버를 즉시 안전하게 종료할 수 있음.
