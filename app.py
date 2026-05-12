@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.80)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.81)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -8,7 +8,7 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import time
 import os
 from dotenv import load_dotenv, set_key
@@ -23,7 +23,11 @@ import core.stats as stats_store
 from core.utils import ServerLock
 
 # ── 중복 실행 방지 (Windows Mutex) ───────────────────
-if not ServerLock.acquire():
+@st.cache_resource
+def acquire_server_lock():
+    return ServerLock.acquire()
+
+if not acquire_server_lock():
     st.error("⚠️ **이미 다른 터미널에서 서버가 실행 중입니다.**")
     st.info("이중 실행 시 주문이 중복으로 발생할 수 있어 실행을 원천 차단합니다. 기존 터미널을 종료하거나 확인해 주세요.")
     st.stop()
@@ -571,6 +575,19 @@ if not st.session_state.api_connected:
     if ak and sk and pw:
         connect_api(ak, sk, pw)
 
+# ── 백테스트 자동 실행 로직 (글로벌) ───────────────────
+if st.session_state.get("auto_backtest_pending", False):
+    st.session_state.auto_backtest_pending = False
+    with st.spinner("🚀 [자동화] 기본 종목 백테스트 실행 중..."):
+        bt_symbol = DEFAULT_BACKTEST_SYMBOL
+        period_days = BACKTEST_PERIOD_DAYS[DEFAULT_BACKTEST_PERIOD]
+        limit = period_days * 24
+        
+        df_bt = engine.client.get_ohlcv(bt_symbol, timeframe="1h", limit=min(limit, 1500))
+        bt_engine = BacktestEngine()
+        st.session_state.last_bt_report = bt_engine.run(df_bt, bt_symbol, DEFAULT_BACKTEST_PERIOD)
+        st.toast(f"✅ {bt_symbol} 백테스트 완료")
+
 
 # ── Plotly 공통 레이아웃 ──────────────────────────────
 
@@ -590,7 +607,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.80</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.81</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -660,7 +677,7 @@ with st.sidebar:
 # 메인 헤더
 # ══════════════════════════════════════════════════════
 
-now_kst = datetime.utcnow() + timedelta(hours=9)
+now_kst = datetime.now(timezone.utc) + timedelta(hours=9)
 tabline_spacer, tabline_time, tabline_status, tabline_refresh = st.columns([4.8, 1.8, 1.35, 1.45])
 
 with tabline_time:
@@ -1025,14 +1042,11 @@ with tabs[2]:
         with bt3:
             run_bt = st.button("📊  백테스트 실행", use_container_width=True)
 
-        auto_run_bt = st.session_state.get("auto_backtest_pending", False)
-        if auto_run_bt:
-            bt_symbol = DEFAULT_BACKTEST_SYMBOL
-            bt_period = DEFAULT_BACKTEST_PERIOD
-            st.info(f"OKX 연결 완료: {bt_symbol} {bt_period} 기본 백테스트를 자동 실행합니다.")
-
-        if run_bt or auto_run_bt:
-            st.session_state.auto_backtest_pending = False
+        auto_run_bt = False # 글로벌에서 이미 처리됨
+        
+        report = st.session_state.get("last_bt_report")
+        
+        if run_bt:
             period_days = BACKTEST_PERIOD_DAYS[bt_period]
             limit = period_days * 24  # 1h 캔들 수
 
@@ -1040,7 +1054,9 @@ with tabs[2]:
                 df_bt = engine.client.get_ohlcv(bt_symbol, timeframe="1h", limit=min(limit, 1500))
                 bt_engine = BacktestEngine()
                 report = bt_engine.run(df_bt, bt_symbol, bt_period)
+                st.session_state.last_bt_report = report
 
+        if report:
             if report.total_trades == 0:
                 st.warning("백테스트 결과가 없습니다. 데이터를 확인하세요.")
             else:

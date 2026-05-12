@@ -1,9 +1,14 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v1.1.81 Auto-Flow Optimized**: OKX 연결 시 자동매매/스캐닝/백테스트가 즉시 실행되도록 개선 및 락 충돌 해결.
 - **v1.1.80 Server Guard**: 터미널 이중 실행을 원천 차단하는 Windows Mutex 기반 서버 락 적용 완료.
 - **v1.1.79 Engine Singleton**: 이중 실행 방지를 위한 싱글톤 엔진 및 전역 상태 공유 적용 완료.
-- **v1.1.78 Git Sync Test**: 태그 동기화 테스트.
+
+## v1.1.81 (2026-05-12)
+- [System] **자동화 흐름 개선**: OKX 연결 시 자동매매 ON, 스캐너 가동, 백테스트 실행이 탭 전환 없이도 즉시 수행되도록 글로벌 로직으로 이동.
+- [Fix] **서버 락 충돌 해결**: 스트림릿 리로드 시 Mutex가 중복 생성되어 서버가 멈추던 현상을 `cache_resource` 적용으로 해결.
+- [Maintenance] **UTC 경고 수정**: `datetime.utcnow()`를 최신 표준인 `datetime.now(timezone.utc)`로 교체하여 시스템 안정성 확보.
 
 ## v1.1.80 (2026-05-12)
 - [System] **서버 중복 실행 방지**: Windows Mutex를 활용하여 동일한 PC에서 `streamlit run`이 중복으로 실행되지 않도록 차단함.
