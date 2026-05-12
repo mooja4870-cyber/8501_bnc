@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.79)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.80)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -20,6 +20,13 @@ from core.engine import QuantumEngine
 from core.backtest import BacktestEngine
 from core.config import CFG, TradingConfig
 import core.stats as stats_store
+from core.utils import ServerLock
+
+# ── 중복 실행 방지 (Windows Mutex) ───────────────────
+if not ServerLock.acquire():
+    st.error("⚠️ **이미 다른 터미널에서 서버가 실행 중입니다.**")
+    st.info("이중 실행 시 주문이 중복으로 발생할 수 있어 실행을 원천 차단합니다. 기존 터미널을 종료하거나 확인해 주세요.")
+    st.stop()
 
 # ── 환경 설정 로드 ─────────────────────────────────
 load_dotenv(override=True)
@@ -583,7 +590,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.79</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.80</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")

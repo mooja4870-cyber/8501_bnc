@@ -1,9 +1,13 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v1.1.80 Server Guard**: 터미널 이중 실행을 원천 차단하는 Windows Mutex 기반 서버 락 적용 완료.
 - **v1.1.79 Engine Singleton**: 이중 실행 방지를 위한 싱글톤 엔진 및 전역 상태 공유 적용 완료.
 - **v1.1.78 Git Sync Test**: 태그 동기화 테스트.
-- **v1.1.77 Version Synced**: 로고 버전 텍스트 최신화 완료.
+
+## v1.1.80 (2026-05-12)
+- [System] **서버 중복 실행 방지**: Windows Mutex를 활용하여 동일한 PC에서 `streamlit run`이 중복으로 실행되지 않도록 차단함.
+- [UI] **중복 실행 경고**: 이미 서버가 실행 중인 경우 사용자에게 안내 메시지를 표시하고 프로세스를 즉시 중단하여 이중 주문 리스크를 제거함.
 
 ## v1.1.79 (2026-05-12)
 - [System] **엔진 싱글톤 패턴 적용**: `QuantumEngine`을 싱글톤으로 변경하여 여러 브라우저 탭에서 동일한 엔진 인스턴스를 공유하도록 함.
