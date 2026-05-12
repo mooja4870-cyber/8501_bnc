@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.01)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.02)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -253,6 +253,24 @@ st.markdown(
         color: #ef4444;
         animation: pink-fade 1.5s infinite ease-in-out;
         box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+    }
+    /* 서버 중지 버튼 스타일 (빨간 원형) */
+    .btn-stop-server button {
+        background-color: #ef4444 !important;
+        color: white !important;
+        border-radius: 20px !important;
+        border: 1px solid rgba(255,255,255,0.3) !important;
+        font-size: 0.72rem !important;
+        font-weight: 700 !important;
+        height: 28px !important;
+        padding: 0 12px !important;
+        margin-top: 5px !important;
+        transition: all 0.3s ease;
+    }
+    .btn-stop-server button:hover {
+        background-color: #dc2626 !important;
+        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.5) !important;
     }
     @keyframes green-pulse {
         0% { opacity: 1; }
@@ -626,7 +644,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.01</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.02</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -691,13 +709,20 @@ with st.sidebar:
 # ══════════════════════════════════════════════════════
 
 now_kst = datetime.now(timezone.utc) + timedelta(hours=9)
-tabline_spacer, tabline_time, tabline_status, tabline_refresh = st.columns([4.8, 1.8, 1.35, 1.45])
+tabline_spacer, tabline_time, tabline_stop, tabline_status, tabline_refresh = st.columns([4.2, 1.8, 0.9, 1.35, 1.45])
 
 with tabline_time:
     st.markdown(
         f'<p class="tabline-time">{now_kst.strftime("%Y-%m-%d %H:%M:%S")} KST</p>',
         unsafe_allow_html=True,
     )
+
+with tabline_stop:
+    st.markdown('<div class="btn-stop-server">', unsafe_allow_html=True)
+    if st.button("서버중지", key="kill_server"):
+        import os
+        os._exit(0)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with tabline_status:
     # 엔진의 실제 실행 상태를 기준으로 표시
