@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.78 Sync Test)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.79)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -508,9 +508,13 @@ def activate_okx_auto_flow(engine: QuantumEngine):
         engine.start_scanner()
 
 
+@st.cache_resource
+def get_engine():
+    return QuantumEngine()
+
 def init_session():
     defaults = {
-        "engine": QuantumEngine(),
+        "engine": get_engine(),
         "api_connected": False,
         "auto_trading": False,
         "allow_long": True,
@@ -545,6 +549,13 @@ def connect_api(api_key, secret_key, passphrase, activate_automation=False):
     return False, msg
 
 init_session()
+engine = st.session_state.engine
+
+# 엔진 상태와 세션 상태 동기화
+if engine.is_ready:
+    st.session_state.api_connected = True
+    if engine.scanner and engine.scanner.is_running:
+        st.session_state.auto_trading = True
 
 if not st.session_state.api_connected:
     ak = os.getenv("OKX_API_KEY", "")
@@ -572,7 +583,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.77</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.79</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -652,7 +663,12 @@ with tabline_time:
     )
 
 with tabline_status:
-    if st.session_state.auto_trading:
+    # 엔진의 실제 실행 상태를 기준으로 표시
+    is_live = False
+    if engine.is_ready and engine.scanner and engine.scanner.is_running:
+        is_live = True
+    
+    if is_live:
         status_html = '<div class="badge-live"><span class="dot"></span><span>LIVE CONNECTION</span></div>'
     else:
         status_html = '<div class="badge-stopped">● STOPPED</div>'

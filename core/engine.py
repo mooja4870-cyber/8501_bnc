@@ -16,11 +16,26 @@ logger = logging.getLogger(__name__)
 
 class QuantumEngine:
     """
-    퀀텀 엔진 (Orchestrator)
+    퀀텀 엔진 (Orchestrator) - Singleton
     - UI(app.py)와 비즈니스 로직 사이의 완벽한 분리 제공
     - 모든 하위 모듈의 생명주기(Lifecycle) 관리
+    - 전역적으로 단 하나의 인스턴스만 생성 (이중 실행 방지)
     """
+    _instance = None
+    _singleton_lock = threading.Lock()
+
+    def __new__(cls):
+        with cls._singleton_lock:
+            if cls._instance is None:
+                cls._instance = super(QuantumEngine, cls).__new__(cls)
+                cls._instance._initialized_inner = False
+            return cls._instance
+
     def __init__(self):
+        # __init__은 매번 호출될 수 있으므로 내부 플래그로 초기화 방지
+        if getattr(self, "_initialized_inner", False):
+            return
+            
         self.client: Optional[OKXClient] = None
         self.scanner: Optional[Scanner] = None
         self.trader: Optional[AutoTrader] = None
@@ -30,6 +45,7 @@ class QuantumEngine:
         self._prev_position_symbols: set = set()  # 청산 감지용 스냅샷
         self._prev_initialized: bool = False       # 첫 스캔 시 초기화 여부
         self._recorded_closes: set = set()          # 이미 기록한 청산 ID (중복 방지)
+        self._initialized_inner = True
 
     def initialize(self, api_key: str, secret_key: str, passphrase: str) -> tuple[bool, str]:
         """API 연결 및 모듈 초기화 (기본 스레드 정리 포함)"""
