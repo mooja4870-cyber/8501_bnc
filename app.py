@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.81)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.83)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -22,6 +22,14 @@ from core.config import CFG, TradingConfig
 import core.stats as stats_store
 from core.utils import ServerLock
 
+# ── 페이지 설정 (MUST BE FIRST) ──────────────────────
+st.set_page_config(
+    page_title="AI QUANTUM · OKX Trader",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
 # ── 중복 실행 방지 (Windows Mutex) ───────────────────
 @st.cache_resource
 def acquire_server_lock():
@@ -35,14 +43,6 @@ if not acquire_server_lock():
 # ── 환경 설정 로드 ─────────────────────────────────
 load_dotenv(override=True)
 CFG.refresh()
-
-# ── 페이지 설정 ───────────────────────────────────────
-st.set_page_config(
-    page_title="AI QUANTUM · OKX Trader",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
 
 # ── 다크 테마 CSS ─────────────────────────────────────
 st.markdown(
@@ -607,7 +607,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.81</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.83</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
