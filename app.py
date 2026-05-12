@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.07)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.2.08)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -12,10 +12,6 @@ from datetime import datetime, timedelta, timezone
 import time
 import os
 from dotenv import load_dotenv, set_key
-
-# ── 서버 강제 종료 로직 (v1.2.07) ──────────────────
-if "kill_server_final" in st.session_state:
-    os._exit(0)
 
 from core.exchange import OKXClient
 from core.scanner import Scanner
@@ -257,44 +253,6 @@ st.markdown(
         color: #ef4444;
         animation: pink-fade 1.5s infinite ease-in-out;
         box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
-    }
-    /* 서버 중지 버튼 커스텀 (v1.2.07 Ultimate) */
-    .btn-stop-wrapper {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        height: 100% !important;
-        padding-top: 8px !important;
-    }
-    /* 특정 키를 가진 스트림릿 버튼 강제 스타일링 */
-    div[data-testid="stButton"] button:has(div p:contains("서버중지")),
-    div[data-testid="stButton"] button:has(span:contains("서버중지")) {
-        background-color: #ef4444 !important;
-        color: white !important;
-        border-radius: 50px !important;
-        border: 1px solid rgba(255,255,255,0.4) !important;
-        font-size: 0.72rem !important;
-        font-weight: 800 !important;
-        height: 28px !important;
-        padding: 0 15px !important;
-        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3) !important;
-        transition: all 0.2s ease !important;
-    }
-    /* 위 셀렉터가 안먹을 경우를 대비한 범용 셀렉터 */
-    .btn-stop-wrapper button {
-        background-color: #ef4444 !important;
-        color: white !important;
-        border-radius: 50px !important;
-        border: 1px solid rgba(255,255,255,0.4) !important;
-    }
-    .btn-stop-wrapper button p {
-        color: white !important;
-        font-weight: 800 !important;
-    }
-    .btn-stop-wrapper button:hover {
-        background-color: #dc2626 !important;
-        box-shadow: 0 4px 10px rgba(239, 68, 68, 0.5) !important;
-        transform: translateY(-1px) !important;
     }
     @keyframes green-pulse {
         0% { opacity: 1; }
@@ -668,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.07</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.2.08</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -733,20 +691,13 @@ with st.sidebar:
 # ══════════════════════════════════════════════════════
 
 now_kst = datetime.now(timezone.utc) + timedelta(hours=9)
-tabline_spacer, tabline_time, tabline_stop, tabline_status, tabline_refresh = st.columns([3.8, 1.8, 1.3, 1.35, 1.45])
+tabline_spacer, tabline_time, tabline_status, tabline_refresh = st.columns([4.8, 1.8, 1.35, 1.45])
 
 with tabline_time:
     st.markdown(
         f'<p class="tabline-time">{now_kst.strftime("%Y-%m-%d %H:%M:%S")} KST</p>',
         unsafe_allow_html=True,
     )
-
-with tabline_stop:
-    st.markdown('<div class="btn-stop-wrapper">', unsafe_allow_html=True)
-    if st.button("서버중지", key="kill_server_final"):
-        import os
-        os._exit(0)
-    st.markdown('</div>', unsafe_allow_html=True)
 
 with tabline_status:
     # 엔진의 실제 실행 상태를 기준으로 표시
