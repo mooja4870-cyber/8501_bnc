@@ -1,10 +1,13 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v2.1.4 Regime Engine Upgrade**: 시장 판별 로직을 3영역(Trend/Neutral/Range)으로 고도화하고 민감도 설정을 정상화함.
 - **v2.1.3 Scanner Visualizer**: 스캐너 상단에 시장 성격(Trend/Neutral/Conservative)별 종목 수 시각화 지표 추가.
-- **v2.0.0 Adaptive Smart Engine**: 시장 판별(Trend/Range)에 따른 가변 익절 전략(고정 익절 vs 트레일링 스톱) 도입.
 
-## v2.1.3 (2026-05-12)
+## v2.1.4 (2026-05-12)
+- [System] **3영역 시장 판별 시스템 도입**: 단순 이분법(Trend/Range)에서 벗어나 ADX 기반의 3영역(강추세/전환기/박스권) 판별 로직을 도입하여 시장 성격 분석의 정밀도를 높임.
+- [Logic] **민감도 논리 정상화**: '공격' 설정 시 더 낮은 ADX에서도 추세를 포착하고, '보수' 설정 시 더 엄격한 기준으로 추세를 판별하도록 로직을 재설계함.
+- [UI/UX] **반응형 스캔 동기화**: 민감도 설정 변경 시 기존 스캔 결과를 즉시 초기화하여 사용자에게 실시간 계산 상태를 명확히 전달함.
 - [UI/UX] **시장 성격 시각화 지표 추가**: 스캐너 화면 상단에 3색 원형 인디케이터(Red: Trend, Yellow: Neutral, Blue: Conservative)를 배치하여 현재 시장의 전반적인 추세 분포를 한눈에 파악 가능하도록 개선.
 - [UI/UX] **프리미엄 디자인 적용**: Glassmorphism 스타일과 JetBrains Mono 폰트, 미세한 그림자 효과를 적용하여 가독성과 시각적 완성도를 높임.
 - [UI/UX] **하이브리드 손익 설정 UI**: 슬라이더(빠른 조절)와 숫자 입력기(정밀 입력)를 동시에 배치하여 편의성을 극대화함. 숫자 입력기를 통해 **0.01% 단위의 초정밀 설정**이 가능해짐.

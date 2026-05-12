@@ -1,5 +1,5 @@
 """
-AI QUANT — OKX Auto-Trading Dashboard (v2.1.3)
+AI QUANT — OKX Auto-Trading Dashboard (v2.1.4)
 시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.1.3</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.1.4</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1018,10 +1018,10 @@ with tabs[1]:
 
             # ── 시장 성격 요약 지표 (Colored Circles) ──
             trend_count = len(df_scan[df_scan["regime"] == "Trend"])
-            range_count = len(df_scan[df_scan["regime"] == "Range"])
             neutral_count = len(df_scan[df_scan["regime"] == "Neutral"])
+            range_count = len(df_scan[df_scan["regime"] == "Range"])
             
-            # 사용자 요청에 따른 명칭 매핑: Trend(Red), Neutral(Range/Yellow), Conservative(Neutral/Blue)
+            # v2.1.4: 3영역 판별 로직에 따른 정밀 매핑 (Trend:Red, Neutral:Yellow, Range:Blue)
             st.markdown(f"""
                 <div style="display: flex; justify-content: center; gap: 35px; margin: 15px 0 25px 0;">
                     <div style="width: 105px; height: 105px; border-radius: 50%; background: rgba(239, 68, 68, 0.08); border: 2px solid #ef4444; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(239, 68, 68, 0.12); backdrop-filter: blur(8px);">
@@ -1030,11 +1030,11 @@ with tabs[1]:
                     </div>
                     <div style="width: 105px; height: 105px; border-radius: 50%; background: rgba(245, 158, 11, 0.08); border: 2px solid #f59e0b; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(245, 158, 11, 0.12); backdrop-filter: blur(8px);">
                         <span style="font-size: 0.65rem; color: #f59e0b; font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: 0.08em;">NEUTRAL</span>
-                        <span style="font-size: 2.2rem; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-weight: 700; line-height: 1;">{range_count}</span>
+                        <span style="font-size: 2.2rem; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-weight: 700; line-height: 1;">{neutral_count}</span>
                     </div>
                     <div style="width: 105px; height: 105px; border-radius: 50%; background: rgba(59, 130, 246, 0.08); border: 2px solid #3b82f6; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(59, 130, 246, 0.12); backdrop-filter: blur(8px);">
                         <span style="font-size: 0.55rem; color: #3b82f6; font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: 0.05em; text-align: center; padding: 0 5px;">CONSERVATIVE</span>
-                        <span style="font-size: 2.2rem; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-weight: 700; line-height: 1;">{neutral_count}</span>
+                        <span style="font-size: 2.2rem; color: #ffffff; font-family: 'JetBrains Mono', monospace; font-weight: 700; line-height: 1;">{range_count}</span>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
@@ -1438,6 +1438,9 @@ with tabs[5]:
         if new_sense != prev_sense:
             CFG.REGIME_SENSITIVITY = new_sense
             set_key(".env", "REGIME_SENSITIVITY", new_sense)
+            # 설정 변경 시 스캔 결과 초기화 (즉각 반영을 위한 시각적 피드백)
+            if engine.scanner:
+                engine.scanner.scan_results = []
             st.toast(f"✅ 민감도 설정 완료: {new_sense}")
             st.rerun()
 
