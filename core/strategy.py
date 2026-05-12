@@ -78,54 +78,54 @@ class StrategyEngine:
         df["macd_signal"] = macd.macd_signal()
         df["macd_hist"] = macd.macd_diff()
 
-        # ADX (추세 강도)
-        df["adx"] = ta.trend.adx(df["high"], df["low"], df["close"], window=14)
+        # ADX (추세 강도) - 결측치 방지 처리
+        adx_series = ta.trend.adx(df["high"], df["low"], df["close"], window=14)
+        df["adx"] = adx_series.fillna(0)
         
-        # EMA 20, 50 (추세 정배열 확인용)
-        df["ema20"] = ta.trend.ema_indicator(df["close"], window=20)
-        df["ema50"] = ta.trend.ema_indicator(df["close"], window=50)
+        # EMA 20, 50 (추세 정배열 확인용) - 결측치 방지
+        df["ema20"] = ta.trend.ema_indicator(df["close"], window=20).fillna(df["close"])
+        df["ema50"] = ta.trend.ema_indicator(df["close"], window=50).fillna(df["close"])
 
         # RSI (보조)
-        df["rsi"] = ta.momentum.RSIIndicator(df["close"], window=14).rsi()
+        df["rsi"] = ta.momentum.RSIIndicator(df["close"], window=14).rsi().fillna(50)
 
         return df.dropna()
 
     def get_market_regime(self, df: pd.DataFrame) -> str:
-        """현재 시장이 추세장인지 횡보장인지 판별 (v2.0.9 반응성 강화)"""
+        """현재 시장이 추세장인지 횡보장인지 판별 (v2.1.0 구조적 개선)"""
         if df.empty or len(df) < 5: return "Neutral"
         
         cur = df.iloc[-1]
-        
-        adx = cur["adx"]
-        ema20 = cur["ema20"]
-        ema50 = cur["ema50"]
-        close = cur["close"]
+        adx = float(cur.get("adx", 0))
+        ema20 = float(cur.get("ema20", cur["close"]))
+        ema50 = float(cur.get("ema50", cur["close"]))
+        close = float(cur["close"])
         
         # 민감도에 따른 임계값 설정
         sensitivity = self.cfg.REGIME_SENSITIVITY
         if sensitivity == "Aggressive":
-            trend_adx = 18   # 아주 낮은 추세도 포착
-            range_adx = 28   # 횡보 판정 범위 확대
-            ema_gap_pct = 0.015
+            trend_adx = 15   # 매우 낮춤
+            range_adx = 30   # 매우 높임
+            ema_gap_pct = 0.020
         elif sensitivity == "Conservative":
-            trend_adx = 28   # 확실한 추세만
-            range_adx = 18   # 확실한 횡보만
+            trend_adx = 30
+            range_adx = 15
             ema_gap_pct = 0.005
         else: # Neutral (Default)
-            trend_adx = 23
-            range_adx = 23
+            trend_adx = 22
+            range_adx = 22
             ema_gap_pct = 0.010
             
-        # 1. 추세장 판별 (EMA 200 대신 가격과 이평선 정배열 사용)
-        is_trending_long = (adx > trend_adx) and (close > ema20 > ema50)
-        is_trending_short = (adx > trend_adx) and (close < ema20 < ema50)
+        # 1. 횡보장 판별 (ADX가 낮거나 이평선이 밀집된 경우) - 횡보를 먼저 잡음
+        is_ranging = (adx < range_adx) or (abs(ema20 - ema50) / ema20 < ema_gap_pct)
+        
+        # 2. 추세장 판별 (ADX가 충분히 높고 가격이 이평선 위에 있는 경우)
+        is_trending_long = (adx >= range_adx) and (close > ema20)
+        is_trending_short = (adx >= range_adx) and (close < ema20)
         
         if is_trending_long or is_trending_short:
             return "Trend"
-            
-        # 2. 횡보장 판별 (ADX가 낮거나 이평선이 밀집된 경우)
-        is_ranging = (adx < range_adx) or (abs(ema20 - ema50) / ema20 < ema_gap_pct)
-        if is_ranging:
+        elif is_ranging:
             return "Range"
             
         return "Neutral"
