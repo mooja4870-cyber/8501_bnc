@@ -91,7 +91,7 @@ class StrategyEngine:
         return df.dropna()
 
     def get_market_regime(self, df: pd.DataFrame) -> str:
-        """현재 시장이 추세장인지 횡보장인지 판별"""
+        """현재 시장이 추세장인지 횡보장인지 판별 (v2.0.6 최적화)"""
         if df.empty or len(df) < 5: return "Neutral"
         
         cur = df.iloc[-1]
@@ -102,17 +102,18 @@ class StrategyEngine:
         ema50 = cur["ema50"]
         ema200 = cur["ema200"]
         bb_width = cur["bb_width"]
-        prev_bb_width = prev["bb_width"]
         
-        # 1. 추세장 판별 (ADX > 25 AND EMA 정배열 AND BB폭 증가)
-        is_trending_long = (adx > 25) and (ema20 > ema50 > ema200) and (bb_width > prev_bb_width)
-        is_trending_short = (adx > 25) and (ema20 < ema50 < ema200) and (bb_width > prev_bb_width)
+        # 1. 추세장 판별 (ADX 기준 완화 및 방향성 중점)
+        # ADX > 23 (기존 25에서 하향) AND EMA 정배열
+        is_trending_long = (adx > 23) and (ema20 > ema50 > ema200 * 0.998)
+        is_trending_short = (adx > 23) and (ema20 < ema50 < ema200 * 1.002)
         
         if is_trending_long or is_trending_short:
             return "Trend"
             
-        # 2. 횡보장 판별 (ADX < 20 OR EMA 밀집)
-        is_ranging = (adx < 20) or (abs(ema20 - ema50) / ema20 < 0.005)
+        # 2. 횡보장 판별 (변동성 저하 구간 포함)
+        # ADX < 21 (기존 20에서 상향) OR EMA 밀집 OR BB 폭이 매우 좁음
+        is_ranging = (adx < 21) or (abs(ema20 - ema50) / ema20 < 0.008) or (bb_width < 0.01)
         if is_ranging:
             return "Range"
             
