@@ -92,43 +92,42 @@ class StrategyEngine:
         return df.dropna()
 
     def get_market_regime(self, df: pd.DataFrame) -> str:
-        """현재 시장이 추세장인지 횡보장인지 판별 (v2.1.0 구조적 개선)"""
+        """현재 시장이 추세장인지 횡보장인지 판별 (v2.1.1 동기화 및 단순화)"""
         if df.empty or len(df) < 5: return "Neutral"
         
-        cur = df.iloc[-1]
-        adx = float(cur.get("adx", 0))
-        ema20 = float(cur.get("ema20", cur["close"]))
-        ema50 = float(cur.get("ema50", cur["close"]))
-        close = float(cur["close"])
+        # 전역 설정 실시간 반영 (동기화 이슈 해결)
+        from core.config import CFG
+        sensitivity = CFG.REGIME_SENSITIVITY
         
-        # 민감도에 따른 임계값 설정
-        sensitivity = self.cfg.REGIME_SENSITIVITY
+        cur = df.iloc[-1]
+        try:
+            adx = float(cur["adx"])
+            ema20 = float(cur["ema20"])
+            ema50 = float(cur["ema50"])
+            close = float(cur["close"])
+        except Exception:
+            return "Neutral"
+        
+        # 민감도에 따른 임계값 (v2.1.1 최적화)
         if sensitivity == "Aggressive":
-            trend_adx = 15   # 매우 낮춤
-            range_adx = 30   # 매우 높임
-            ema_gap_pct = 0.020
+            range_adx = 30  # ADX 30 미만은 모두 횡보로 흡수
+            ema_gap_pct = 0.015
         elif sensitivity == "Conservative":
-            trend_adx = 30
-            range_adx = 15
+            range_adx = 18
             ema_gap_pct = 0.005
-        else: # Neutral (Default)
-            trend_adx = 22
-            range_adx = 22
+        else: # Neutral
+            range_adx = 23
             ema_gap_pct = 0.010
             
-        # 1. 횡보장 판별 (ADX가 낮거나 이평선이 밀집된 경우) - 횡보를 먼저 잡음
-        is_ranging = (adx < range_adx) or (abs(ema20 - ema50) / ema20 < ema_gap_pct)
-        
-        # 2. 추세장 판별 (ADX가 충분히 높고 가격이 이평선 위에 있는 경우)
+        # 1. 추세장 판별 (ADX가 높고 이평선 방향이 명확할 때)
         is_trending_long = (adx >= range_adx) and (close > ema20)
         is_trending_short = (adx >= range_adx) and (close < ema20)
         
-        if is_trending_long or is_trending_short:
-            return "Trend"
-        elif is_ranging:
-            return "Range"
+        if is_trending_long: return "Trend"
+        if is_trending_short: return "Trend"
             
-        return "Neutral"
+        # 2. 그 외 모든 경우는 횡보장(Range)으로 간주 (Neutral 고착 해제)
+        return "Range"
 
     def generate_signal(self, df: pd.DataFrame, symbol: str) -> Signal:
         """최신 캔들 기준 매매 신호 생성"""
