@@ -1,9 +1,12 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v1.1.84 Sidebar Cleanup**: 사이드바 하단의 불필요한 설정 정보 텍스트 블록 제거 완료.
 - **v1.1.83 Layout Fix**: Streamlit 실행 규정에 따라 `set_page_config`를 최상단으로 이동하여 실행 에러 해결.
 - **v1.1.81 Auto-Flow Optimized**: OKX 연결 시 자동매매/스캐닝/백테스트가 즉시 실행되도록 개선 및 락 충돌 해결.
-- **v1.1.80 Server Guard**: 터미널 이중 실행을 원천 차단하는 Windows Mutex 기반 서버 락 적용 완료.
+
+## v1.1.84 (2026-05-12)
+- [UI] **사이드바 정리**: 사이드바 하단에 중복으로 표시되던 레버리지, 증거금 등 설정 정보 텍스트 블록을 삭제하여 화면을 간소화함.
 
 ## v1.1.83 (2026-05-12)
 - [Fix] **실행 에러 수정**: `st.set_page_config()`가 첫 번째 명령어가 아니어서 발생하던 `StreamlitSetPageConfigMustBeFirstCommandError`를 해결하기 위해 호출 위치를 최상단으로 조정.

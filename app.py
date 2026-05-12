@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.83)
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.84)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -607,7 +607,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.83</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v1.1.84</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -661,16 +661,6 @@ with st.sidebar:
         engine.trader.allow_long = longs
         engine.trader.allow_short = shorts
 
-    st.markdown("---")
-    st.markdown(
-        f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:#444;">
-        레버리지: {CFG.LEVERAGE}x ISOLATED<br>
-        1회 증거금: {CFG.MARGIN_USDT} USDT<br>
-        최대 포지션: {CFG.MAX_POSITIONS}개<br>
-        SL: {CFG.STOP_LOSS_PCT*100:.0f}% / TP: {CFG.TAKE_PROFIT_PCT*100:.0f}%
-        </div>""",
-        unsafe_allow_html=True,
-    )
 
 
 # ══════════════════════════════════════════════════════
