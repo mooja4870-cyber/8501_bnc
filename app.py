@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard
+AI QUANTUM — OKX Auto-Trading Dashboard (v1.1.78 Sync Test)
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
