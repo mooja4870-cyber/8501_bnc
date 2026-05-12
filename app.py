@@ -834,7 +834,7 @@ with tabs[0]:
         )
         
         # ── 거래소 이력 기반 실시간 집계 (stats.json 의존 제거) ──
-        all_trades = engine.get_trade_history(limit=200)
+        all_trades = engine.get_trade_history(limit=100)
         from datetime import datetime as _dt, timezone as _tz, timedelta as _td
         _kst = _tz(_td(hours=9))
         _today_str = _dt.now(_kst).strftime("%Y-%m-%d")
