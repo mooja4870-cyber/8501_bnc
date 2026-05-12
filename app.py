@@ -1,5 +1,5 @@
 """
-AI QUANT — OKX Auto-Trading Dashboard (v2.0.3)
+AI QUANT — OKX Auto-Trading Dashboard (v2.0.4)
 시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.3</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.4</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1339,25 +1339,6 @@ with tabs[5]:
             st.toast(f"✅ 최대 포지션 변경 완료: {new_max_pos}개")
             st.rerun()
 
-        prev_sl = float(CFG.STOP_LOSS_PCT)
-        # 듀얼 입력: 숫자 입력기와 슬라이더
-        c1, c2 = st.columns([0.4, 0.6])
-        with c1:
-            val_sl = st.number_input("손절 (%)", 0.1, 10.0, float(prev_sl * 100), step=0.01, key="num_sl")
-        with c2:
-            slide_sl = st.slider(" ", 0.1, 10.0, float(prev_sl * 100), step=0.25, key="slide_sl", label_visibility="hidden")
-        
-        # 동기화 및 저장 로직 (어느 쪽이든 변경되면 반영)
-        new_sl_val = val_sl if val_sl != float(prev_sl * 100) else slide_sl
-        new_sl = new_sl_val / 100.0
-        
-        if abs(new_sl - prev_sl) > 0.00001:
-            CFG.STOP_LOSS_PCT = new_sl
-            os.environ["STOP_LOSS_PCT"] = str(new_sl)
-            set_key(".env", "STOP_LOSS_PCT", str(new_sl))
-            time.sleep(1.0)
-            st.toast(f"✅ 손절 라인 변경 완료: {new_sl_val}%")
-            st.rerun()
 
     with s2:
         prev_tp = float(CFG.TAKE_PROFIT_PCT)
@@ -1377,6 +1358,27 @@ with tabs[5]:
             set_key(".env", "TAKE_PROFIT_PCT", str(new_tp))
             time.sleep(1.0)
             st.toast(f"✅ 익절 라인 변경 완료: {new_tp_val}%")
+            st.rerun()
+
+        st.markdown("---")
+        prev_sl = float(CFG.STOP_LOSS_PCT)
+        # 듀얼 입력: 숫자 입력기와 슬라이더
+        c1_sl, c2_sl = st.columns([0.4, 0.6])
+        with c1_sl:
+            val_sl = st.number_input("손절 (%)", 0.1, 10.0, float(prev_sl * 100), step=0.01, key="num_sl")
+        with c2_sl:
+            slide_sl = st.slider(" ", 0.1, 10.0, float(prev_sl * 100), step=0.25, key="slide_sl", label_visibility="hidden")
+        
+        # 동기화 및 저장 로직 (어느 쪽이든 변경되면 반영)
+        new_sl_val = val_sl if val_sl != float(prev_sl * 100) else slide_sl
+        new_sl = new_sl_val / 100.0
+        
+        if abs(new_sl - prev_sl) > 0.00001:
+            CFG.STOP_LOSS_PCT = new_sl
+            os.environ["STOP_LOSS_PCT"] = str(new_sl)
+            set_key(".env", "STOP_LOSS_PCT", str(new_sl))
+            time.sleep(1.0)
+            st.toast(f"✅ 손절 라인 변경 완료: {new_sl_val}%")
             st.rerun()
 
     with s3:
