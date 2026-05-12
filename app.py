@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard (v2.0.0)
+AI QUANTUM — OKX Auto-Trading Dashboard (v2.0.1)
 시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.0</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.0.1</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -1026,6 +1026,10 @@ with tabs[1]:
                 df_scan = df_scan[df_scan["signal"] == "short"]
             elif signal_filter == "신호 없음":
                 df_scan = df_scan[df_scan["signal"] == "none"]
+
+            # v2.0.1: 데이터 안정성 보강 (regime 필드 누락 방지)
+            if "regime" not in df_scan.columns:
+                df_scan["regime"] = "Neutral"
 
             # 표시용 포맷
             display = df_scan[["symbol","price","change_pct","volume_m","signal","strength","regime","ema_ok","macd_ok","bb_ok"]].copy()
