@@ -82,6 +82,7 @@ class OKXClient:
                         "pnl_usdt": round(p.get("unrealizedPnl", 0) or 0, 4),
                         "leverage": p.get("leverage", CFG.LEVERAGE),
                         "margin": round(p.get("initialMargin", 0) or 0, 4),
+                        "entry_time_ms": int(p.get("info", {}).get("cTime", 0)), # v2.21 시간 기반 청산용
                     })
             return active
         except Exception as e:

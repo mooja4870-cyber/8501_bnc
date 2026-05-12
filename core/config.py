@@ -29,6 +29,7 @@ class TradingConfig:
     PENDING_ENTRY_TTL_SEC: int = 120       # 주문 진행 상태 중복 방지 유지 시간
     ALLOW_LONG: bool = True
     ALLOW_SHORT: bool = True
+    MAX_HOLDING_HOURS: float = 12.0        # v2.21 최대 보유 시간 (단위: 시간)
 
     # ── 손익 설정 ──────────────────────────────────────
     STOP_LOSS_PCT: float = 0.015          # 손절 1.5%
@@ -76,6 +77,7 @@ class TradingConfig:
         self.MIN_VOLUME_USDT = float(os.getenv("MIN_VOLUME_USDT", 1000000.0))
         self.MAX_DRAWDOWN_PCT = float(os.getenv("MAX_DRAWDOWN_PCT", 0.15))
         self.REGIME_SENSITIVITY = os.getenv("REGIME_SENSITIVITY", "Neutral")
+        self.MAX_HOLDING_HOURS = float(os.getenv("MAX_HOLDING_HOURS", 12.0))
 
 # ── 전역 설정 인스턴스 ────────────────────────────────
 CFG = TradingConfig()

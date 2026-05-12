@@ -4,6 +4,7 @@
 """
 import threading
 import logging
+import time
 from typing import Optional, List, Dict
 from datetime import datetime, date, timedelta, timezone
 
@@ -275,6 +276,16 @@ class AutoTrader:
                 side = p["side"]
                 size = p["size"]
                 entry_price = p["entry_price"]
+                entry_time_ms = p.get("entry_time_ms", 0)
+                
+                # [v2.21] 시간 기반 자동 청산 (Time-Based Exit)
+                if entry_time_ms > 0:
+                    elapsed_hours = (time.time() * 1000 - entry_time_ms) / (1000 * 3600)
+                    if elapsed_hours > self.cfg.MAX_HOLDING_HOURS:
+                        logger.info(f"[TIME EXIT] {symbol} 보유시간 초과 ({elapsed_hours:.1f}h > {self.cfg.MAX_HOLDING_HOURS}h) -> 강제 청산")
+                        self.client.close_position(symbol, side)
+                        self.client.cancel_sl_tp_orders(symbol)
+                        continue # 청산했으므로 다음 포지션으로
                 
                 # 1. 현재 설정에 따른 목표가 계산
                 target_sl = entry_price * (1 - self.cfg.STOP_LOSS_PCT) if side == "long" else entry_price * (1 + self.cfg.STOP_LOSS_PCT)

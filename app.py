@@ -1,5 +1,5 @@
 """
-AI QUANT — OKX Auto-Trading Dashboard (v2.1.5)
+AI QUANT — OKX Auto-Trading Dashboard (v2.21)
 시장 적응형(Market Regime Adaptive) 스마트 엔진
 """
 import streamlit as st
@@ -626,7 +626,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.1.5</span></div>',
+        '<div class="quantum-logo"><span class="quantum-logo-title">MACD-BB-EMA</span><br><span class="quantum-version">v2.21</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
@@ -827,6 +827,14 @@ with tabs[0]:
                     side_badge = (
                         "🟢 LONG" if p["side"] == "long" else "🔴 SHORT"
                     )
+                    
+                    # [v2.21] 보유 시간 계산
+                    entry_time_ms = p.get("entry_time_ms", 0)
+                    holding_time_str = "—"
+                    if entry_time_ms > 0:
+                        elapsed = (time.time() * 1000 - entry_time_ms) / (1000 * 3600)
+                        holding_time_str = f"{elapsed:.1f}h"
+
                     pc1, pc2 = st.columns([3.5, 1])
                     with pc1:
                         st.markdown(
@@ -841,6 +849,7 @@ with tabs[0]:
                               </div>
                               <div style="font-family:'IBM Plex Mono';font-size:0.7rem;color:#555;display:flex;gap:16px;">
                                 <span>{side_badge}</span>
+                                <span style="color:#888;">🕒 {holding_time_str}</span>
                                 <span>진입가 ${p['entry_price']:,.4f}</span>
                                 <span>현재가 ${p['mark_price']:,.4f}</span>
                                 <span>{p['leverage']}x LEV</span>
@@ -1455,6 +1464,16 @@ with tabs[5]:
             CFG.SCAN_INTERVAL_SEC = new_scan
             set_key(".env", "SCAN_INTERVAL_SEC", str(new_scan))
             st.toast(f"✅ 스캔 주기 변경 완료: {new_scan}초")
+            st.rerun()
+
+    row2_c1, row2_c2, row2_c3 = st.columns(3)
+    with row2_c1:
+        prev_max_h = float(CFG.MAX_HOLDING_HOURS)
+        new_max_h = st.slider("최대 보유 시간 (h)", 1.0, 48.0, prev_max_h, step=1.0, help="지정한 시간이 지나도 수익/손실 결판이 안 나면 강제 청산합니다.")
+        if new_max_h != prev_max_h:
+            CFG.MAX_HOLDING_HOURS = new_max_h
+            set_key(".env", "MAX_HOLDING_HOURS", str(new_max_h))
+            st.toast(f"✅ 최대 보유 시간 변경: {new_max_h}시간")
             st.rerun()
 
     row2_c1, row2_c2, row2_c3 = st.columns(3)
