@@ -1,11 +1,12 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **v2.1.3 Scanner Visualizer**: 스캐너 상단에 시장 성격(Trend/Neutral/Conservative)별 종목 수 시각화 지표 추가.
 - **v2.0.0 Adaptive Smart Engine**: 시장 판별(Trend/Range)에 따른 가변 익절 전략(고정 익절 vs 트레일링 스톱) 도입.
-- **v1.2.10 Dual Input UI**: 손절/익절 설정 시 슬라이더와 숫자 입력기를 병행 사용 가능하도록 개선 (0.01% 정밀도).
-- **v1.2.08 Cleanup**: 상단 헤더에서 서버중지 버튼 및 관련 로직/스타일 완전 삭제.
 
-## v1.2.10 (2026-05-12)
+## v2.1.3 (2026-05-12)
+- [UI/UX] **시장 성격 시각화 지표 추가**: 스캐너 화면 상단에 3색 원형 인디케이터(Red: Trend, Yellow: Neutral, Blue: Conservative)를 배치하여 현재 시장의 전반적인 추세 분포를 한눈에 파악 가능하도록 개선.
+- [UI/UX] **프리미엄 디자인 적용**: Glassmorphism 스타일과 JetBrains Mono 폰트, 미세한 그림자 효과를 적용하여 가독성과 시각적 완성도를 높임.
 - [UI/UX] **하이브리드 손익 설정 UI**: 슬라이더(빠른 조절)와 숫자 입력기(정밀 입력)를 동시에 배치하여 편의성을 극대화함. 숫자 입력기를 통해 **0.01% 단위의 초정밀 설정**이 가능해짐.
 - [System] **설정 로드 신뢰성 보강**: `core/config.py` 최상단에 `load_dotenv(override=True)`를 강제 호출하여, 노트북 재부팅 및 앱 재실행 시 항상 `.env` 파일의 최신값이 최우선으로 로드되도록 보장함.
 
