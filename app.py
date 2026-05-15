@@ -698,7 +698,7 @@ with tabs[0]:
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">누적 수익률</div>
                     <div class="terminal-metric-value" style="color:{total_color};">{total_pnl_pct:+.2f}%</div>
-                    <div class="terminal-metric-sub" style="color:{daily_color};">
+                    <div class="terminal-metric-sub" style="color:#ffffff;">
                         <span>{daily_arrow}</span> {abs(daily_pnl_pct):.2f}% (24h)
                     </div>
                 </div>
@@ -730,7 +730,7 @@ with tabs[0]:
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">금일 주문</div>
                     <div class="terminal-metric-value">{orders_today}건</div>
-                    <div class="terminal-metric-sub" style="color:#ef4444;">
+                    <div class="terminal-metric-sub" style="color:#ffffff;">
                         <span style="font-size:0.7rem;">↑</span> Today
                     </div>
                 </div>

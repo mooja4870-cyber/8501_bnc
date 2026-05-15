@@ -57,7 +57,8 @@
 
 
 
-- **[v1.2.48] Metric Visual Feedback:** Implemented dynamic coloring for Win Rate (Red if > 50%, Blue if <= 50%) for clearer performance visualization.
+
+- **[v1.2.49] Sub-text Styling:** Changed sub-text colors for Cumulative ROI and Orders Today to White (#ffffff) for better visual hierarchy.
 
 
 
@@ -95,7 +96,8 @@
 
 
 
-- **[v1.2.48] Metric Visual Feedback:** Implemented dynamic coloring for Win Rate (Red if > 50%, Blue if <= 50%) for clearer performance visualization.
+
+- **[v1.2.49] Sub-text Styling:** Changed sub-text colors for Cumulative ROI and Orders Today to White (#ffffff) for better visual hierarchy.
 
 ## Active Issues
 - None.
@@ -288,3 +290,6 @@
 
 ## v1.2.48 (2026-05-15)
 - [UI] Dynamic coloring for Win Rate (>50% Red, <=50% Blue).
+
+## v1.2.49 (2026-05-15)
+- [UI] Set ROI/Orders sub-text to White.
