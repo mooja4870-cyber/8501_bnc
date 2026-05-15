@@ -651,17 +651,28 @@ with tabs[0]:
         elapsed_days = max(elapsed_seconds / 86400.0, 1.0)
         daily_avg_roi = total_pnl_pct / elapsed_days
         
-        # [v1.2.43] 매매 이력 기반 실시간 승률 계산 (메서드명 수정)
+        # [v1.2.44] 매매 이력 기반 실시간 승률 계산 (분할 체결 통합 로직)
         all_trades = engine.get_trade_history(limit=100)
         today_str = "2026-05-15"
-        # 오늘자 청산 거래만 필터링
+        
+        # 오늘자 '청산' 거래만 필터링 (필드명 category, timestamp 주의)
         today_exits = [
             t for t in all_trades 
-            if t.get('구분') == '청산' and str(t.get('time', '')).startswith(today_str)
+            if t.get('category') == '청산' and str(t.get('timestamp', '')).startswith(today_str)
         ]
         
-        wins = len([t for t in today_exits if float(t.get('fillPnl', 0)) > 0])
-        losses = len([t for t in today_exits if float(t.get('fillPnl', 0)) < 0])
+        # 주문 번호(order_id)별로 그룹화하여 분할 체결 건을 1건으로 통합
+        order_results = {}
+        for t in today_exits:
+            oid = t.get('order_id')
+            if oid:
+                if oid not in order_results:
+                    order_results[oid] = 0.0
+                order_results[oid] += float(t.get('pnl', 0))
+        
+        # 통합된 주문별 손익 결과로 승/패 카운트
+        wins = len([pnl for pnl in order_results.values() if pnl > 0])
+        losses = len([pnl for pnl in order_results.values() if pnl < 0])
         total_exits = wins + losses
         win_rate = (wins / total_exits * 100) if total_exits > 0 else 0.0
         

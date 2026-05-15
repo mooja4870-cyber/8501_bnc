@@ -52,7 +52,8 @@
 
 
 
-- **[v1.2.43] Hotfix:** Fixed AttributeError by correcting the method name from etch_my_trades to get_trade_history in pp.py.
+
+- **[v1.2.44] Trade Aggregation Logic:** Implemented Order ID-based grouping for live Win Rate calculation to handle partial fills. One multi-fill order now correctly counts as one trade.
 
 
 
@@ -85,7 +86,8 @@
 
 
 
-- **[v1.2.43] Hotfix:** Fixed AttributeError by correcting the method name from etch_my_trades to get_trade_history in pp.py.
+
+- **[v1.2.44] Trade Aggregation Logic:** Implemented Order ID-based grouping for live Win Rate calculation to handle partial fills. One multi-fill order now correctly counts as one trade.
 
 ## Active Issues
 - None.
@@ -262,3 +264,6 @@
 
 ## v1.2.43 (2026-05-15)
 - [Bugfix] Fixed method name in Win Rate calculation.
+
+## v1.2.44 (2026-05-15)
+- [Core] Implemented Trade Aggregation by Order ID for Win Rate.
