@@ -30,7 +30,8 @@
 
 
 
-- **[v1.2.21] Module Deletion:** Completely removed the Backtest module and its associated files to focus on live trading performance.
+
+- **[v1.2.22] Universal Color Logic:** Applied the Red/Blue color scheme to all numerical metrics, including st.metric deltas and scanner results.
 
 
 
@@ -41,7 +42,8 @@
 
 
 
-- **[v1.2.21] Module Deletion:** Completely removed the Backtest module and its associated files to focus on live trading performance.
+
+- **[v1.2.22] Universal Color Logic:** Applied the Red/Blue color scheme to all numerical metrics, including st.metric deltas and scanner results.
 
 ## Active Issues
 - None.
@@ -139,3 +141,6 @@
 
 ## v1.2.21 (2026-05-15)
 - [Core] Deleted Backtest module (core/backtest.py and UI tab).
+
+## v1.2.22 (2026-05-15)
+- [UI] Standardized Red (+) and Blue (-) colors across all metrics and tables.

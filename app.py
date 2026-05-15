@@ -273,6 +273,21 @@ st.markdown(
     .badge-pink-blink, .badge-green-blink, .badge-red-blink {
         border-radius: 0px !important;
         animation: terminal-blink 1s infinite steps(1);
+    /* Streamlit Metric Delta Color Override (Profit: Red, Loss: Blue) */
+    [data-testid="stMetricDelta"] > div {
+        color: #ef4444 !important;
+    }
+    [data-testid="stMetricDelta"] > div:has(svg[data-testid="stMetricDeltaIconDown"]) {
+        color: #3b82f6 !important;
+    }
+    /* Fallback for browsers not supporting :has */
+    [data-testid="stMetricDelta"] > div[style*="color: rgb(9, 171,  green)"],
+    [data-testid="stMetricDelta"] > div[style*="color: #09ab3b"] {
+        color: #ef4444 !important;
+    }
+    [data-testid="stMetricDelta"] > div[style*="color: rgb(255, 43, 43)"],
+    [data-testid="stMetricDelta"] > div[style*="color: #ff2b2b"] {
+        color: #3b82f6 !important;
     }
     </style>
     """,
@@ -609,9 +624,11 @@ with tabs[0]:
         losses = _st.get("total_losses", 0)
         orders_today = _st.get("orders_today", 0)
         
-        pnl_color = "#ef4444" if total_pnl >= 0 else "#3b82f6"
+        # 수익률 색상 결정 (수익: 빨강, 손실: 파랑)
+        total_color = "#ef4444" if total_pnl >= 0 else "#3b82f6"
         daily_color = "#ef4444" if daily_pnl >= 0 else "#3b82f6"
         daily_arrow = "↑" if daily_pnl >= 0 else "↓"
+        total_arrow = "↑" if total_pnl >= 0 else "↓"
         
         st.markdown(
             f"""
@@ -619,7 +636,7 @@ with tabs[0]:
                 <!-- 누적 수익률 -->
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">누적 수익률</div>
-                    <div class="terminal-metric-value">{total_pnl_pct:+.2f}%</div>
+                    <div class="terminal-metric-value" style="color:{total_color};">{total_pnl_pct:+.2f}%</div>
                     <div class="terminal-metric-sub" style="color:{daily_color};">
                         <span>{daily_arrow}</span> {abs(daily_pnl_pct):.2f}% (24h)
                     </div>
@@ -627,32 +644,32 @@ with tabs[0]:
                 <!-- 연 평균 수익률 -->
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">연 평균 수익률</div>
-                    <div class="terminal-metric-value">{total_pnl_pct:+.2f}%</div>
-                    <div class="terminal-metric-sub" style="color:#22c55e;">
-                        2026.05.14 ~
+                    <div class="terminal-metric-value" style="color:{total_color};">{total_pnl_pct:+.2f}%</div>
+                    <div class="terminal-metric-sub" style="color:#ef4444;">
+                        {total_arrow} 2026.05.14 ~
                     </div>
                 </div>
                 <!-- 누적 승률 -->
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">누적 승률</div>
                     <div class="terminal-metric-value">{win_rate:.1f}%</div>
-                    <div class="terminal-metric-sub" style="color:#22c55e;">
+                    <div class="terminal-metric-sub" style="color:#ef4444;">
                         <span style="font-size:0.7rem;">↑</span> {wins}W / {losses}L
                     </div>
                 </div>
                 <!-- MDD 한도 -->
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">MDD 한도</div>
-                    <div class="terminal-metric-value">-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%</div>
-                    <div class="terminal-metric-sub" style="color:#22c55e;">
-                        <span style="font-size:0.7rem;">↑</span> Max Risk
+                    <div class="terminal-metric-value" style="color:#3b82f6;">-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%</div>
+                    <div class="terminal-metric-sub" style="color:#3b82f6;">
+                        <span style="font-size:0.7rem;">↓</span> Max Risk
                     </div>
                 </div>
                 <!-- 금일 주문 -->
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">금일 주문</div>
                     <div class="terminal-metric-value">{orders_today}건</div>
-                    <div class="terminal-metric-sub" style="color:#22c55e;">
+                    <div class="terminal-metric-sub" style="color:#ef4444;">
                         <span style="font-size:0.7rem;">↑</span> Today
                     </div>
                 </div>
@@ -732,8 +749,12 @@ with tabs[1]:
             display["MACD"] = display["MACD"].map({True:"✅",False:"❌"})
             display["BB"] = display["BB"].map({True:"✅",False:"❌"})
 
+            def style_pnl(val):
+                color = '#ef4444' if val >= 0 else '#3b82f6'
+                return f'color: {color}; font-weight: bold;'
+
             st.dataframe(
-                display,
+                display.style.map(style_pnl, subset=["등락(%)"]),
                 use_container_width=True,
                 height=500,
                 hide_index=True,
