@@ -491,11 +491,11 @@ with tabs[0]:
         m1, m2, m3, m4, m5 = st.columns(5)
         
         def render_terminal_metric(label, value, delta=None, is_pnl=False):
-            # 색상 결정 로직 (수익/양수: 빨강, 손실/음수: 파랑)
-            val_num = float(str(value).replace('$','').replace(',','').replace('+',''))
-            color = "#ef4444" if val_num >= 0 else "#3b82f6"
-            if not is_pnl and val_num >= 0: # 잔고 등 일반 수치는 중립(White) 또는 빨강 선택 가능. 유저 요청에 따라 빨강 적용
-                color = "#ef4444" 
+            if is_pnl:
+                val_num = float(str(value).replace('$','').replace(',','').replace('+',''))
+                color = "#ef4444" if val_num >= 0 else "#3b82f6"
+            else:
+                color = "#ffffff" # 일반 지표는 중립 색상(White) 적용
             
             delta_html = ""
             if delta is not None:

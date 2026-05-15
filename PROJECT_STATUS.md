@@ -32,7 +32,8 @@
 
 
 
-- **[v1.2.23] Custom Terminal Metrics:** Replaced standard st.metric with custom HTML/CSS metrics to enforce the Red/Blue color scheme on main values as requested.
+
+- **[v1.2.24] Metric Color Refinement:** Reverted Total Balance and Margin metrics to neutral white while maintaining PnL-based coloring for earnings.
 
 
 
@@ -45,7 +46,8 @@
 
 
 
-- **[v1.2.23] Custom Terminal Metrics:** Replaced standard st.metric with custom HTML/CSS metrics to enforce the Red/Blue color scheme on main values as requested.
+
+- **[v1.2.24] Metric Color Refinement:** Reverted Total Balance and Margin metrics to neutral white while maintaining PnL-based coloring for earnings.
 
 ## Active Issues
 - None.
@@ -149,3 +151,6 @@
 
 ## v1.2.23 (2026-05-15)
 - [UI] Implemented custom HTML metrics in the header to allow full color control (Red/Blue).
+
+## v1.2.24 (2026-05-15)
+- [UI] Reverted colors for balance and margin metrics to neutral white.
