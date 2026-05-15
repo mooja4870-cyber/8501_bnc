@@ -640,21 +640,25 @@ with tabs[0]:
         # [v1.2.37] 수익률 계산 기준 업데이트
         seed_money = 40.43 # 기준 자산
         total_pnl_pct = ((dash['total_balance'] / seed_money) - 1) * 100
-        # 24시간 변동률도 시드 대비 비율로 표시
         daily_pnl_pct = (daily_pnl / seed_money) * 100
         
         # 일 평균 수익률 계산 (2026-05-15 00:00:00 기준)
         perf_start_dt = datetime(2026, 5, 15, 0, 0, 0)
         now_dt = datetime.utcnow()
         elapsed_seconds = (now_dt - perf_start_dt).total_seconds()
-        # 경과 일수 계산 (최소 1초로 제한하여 0 나누기 방지)
         elapsed_days = max(elapsed_seconds / 86400.0, 1/86400.0)
         daily_avg_roi = total_pnl_pct / elapsed_days
         
-        win_rate = stats_store.get_win_rate()
-        wins = _st.get("total_wins", 0)
-        losses = _st.get("total_losses", 0)
-        orders_today = _st.get("orders_today", 0)
+        # [v1.2.38] 승률 및 주문 건수 필터링 (2026-05-15 00:00:00 KST 이후)
+        filter_start_kst = pd.Timestamp("2026-05-15 00:00:00")
+        trade_history = engine.get_trade_history(limit=100)
+        filtered_trades = [t for t in trade_history if t["timestamp"] >= filter_start_kst]
+        
+        f_wins = sum(1 for t in filtered_trades if t["category"] == "청산" and t["pnl"] > 0)
+        f_losses = sum(1 for t in filtered_trades if t["category"] == "청산" and t["pnl"] <= 0)
+        f_total_exits = f_wins + f_losses
+        win_rate = (f_wins / f_total_exits * 100) if f_total_exits > 0 else 0.0
+        orders_today = len(filtered_trades)
         
         # 수익률 색상 결정 (수익: 빨강, 손실: 파랑)
         total_color = "#ef4444" if total_pnl_pct >= 0 else "#3b82f6"
@@ -689,7 +693,7 @@ with tabs[0]:
                     <div class="terminal-metric-label">누적 승률</div>
                     <div class="terminal-metric-value">{win_rate:.1f}%</div>
                     <div class="terminal-metric-sub" style="color:#ef4444;">
-                        <span style="font-size:0.7rem;">↑</span> {wins}W / {losses}L
+                        <span style="font-size:0.7rem;">↑</span> {f_wins}W / {f_losses}L
                     </div>
                 </div>
                 <!-- MDD 한도 -->

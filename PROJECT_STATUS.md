@@ -46,7 +46,8 @@
 
 
 
-- **[v1.2.37] ROI Logic Refinement:** Fixed base capital to .43 for cumulative ROI and replaced 'Annual ROI' with 'Daily Average ROI' starting from 2026-05-15.
+
+- **[v1.2.38] Metric Start Reset:** Filtered 'Cumulative Win Rate' and 'Today's Orders' to only count trades after 2026-05-15 00:00 KST, ensuring consistency across all performance metrics.
 
 
 
@@ -73,7 +74,8 @@
 
 
 
-- **[v1.2.37] ROI Logic Refinement:** Fixed base capital to .43 for cumulative ROI and replaced 'Annual ROI' with 'Daily Average ROI' starting from 2026-05-15.
+
+- **[v1.2.38] Metric Start Reset:** Filtered 'Cumulative Win Rate' and 'Today's Orders' to only count trades after 2026-05-15 00:00 KST, ensuring consistency across all performance metrics.
 
 ## Active Issues
 - None.
@@ -225,3 +227,6 @@
 
 ## v1.2.37 (2026-05-15)
 - [Core] Updated ROI logic (.43 seed) and introduced Daily Avg ROI.
+
+## v1.2.38 (2026-05-15)
+- [Core] Reset win rate and order count tracking to start from 2026-05-15.
