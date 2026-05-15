@@ -41,7 +41,8 @@
 
 
 
-- **[v1.2.32] Intuitive Entry Logic:** Updated TAB 4 with middle-schooler friendly explanations for trading conditions, highlighted in yellow.
+
+- **[v1.2.33] Strategy Summary Boxes:** Added fun, intuitive summary boxes with metaphors for Long/Short entry conditions in TAB 4.
 
 
 
@@ -63,7 +64,8 @@
 
 
 
-- **[v1.2.32] Intuitive Entry Logic:** Updated TAB 4 with middle-schooler friendly explanations for trading conditions, highlighted in yellow.
+
+- **[v1.2.33] Strategy Summary Boxes:** Added fun, intuitive summary boxes with metaphors for Long/Short entry conditions in TAB 4.
 
 ## Active Issues
 - None.
@@ -194,3 +196,6 @@
 
 ## v1.2.32 (2026-05-15)
 - [UI] Updated Entry Conditions (TAB 4) with easy-to-understand explanations in yellow.
+
+## v1.2.33 (2026-05-15)
+- [UI] Added fun summary boxes for Entry Conditions with metaphors.
