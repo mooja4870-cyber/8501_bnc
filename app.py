@@ -487,20 +487,45 @@ with tabs[0]:
         dash = engine.get_dashboard_data()
         positions = dash.get("positions", [])
 
-        # ── 상단 지표 ──────────────────────────────
+        # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
         m1, m2, m3, m4, m5 = st.columns(5)
+        
+        def render_terminal_metric(label, value, delta=None, is_pnl=False):
+            # 색상 결정 로직 (수익/양수: 빨강, 손실/음수: 파랑)
+            val_num = float(str(value).replace('$','').replace(',','').replace('+',''))
+            color = "#ef4444" if val_num >= 0 else "#3b82f6"
+            if not is_pnl and val_num >= 0: # 잔고 등 일반 수치는 중립(White) 또는 빨강 선택 가능. 유저 요청에 따라 빨강 적용
+                color = "#ef4444" 
+            
+            delta_html = ""
+            if delta is not None:
+                d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
+                d_color = "#ef4444" if d_num >= 0 else "#3b82f6"
+                delta_html = f'<div style="color:{d_color}; font-size:0.6rem; margin-top:2px;">{delta}</div>'
+                
+            st.markdown(
+                f"""
+                <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:0px; height:80px;">
+                    <div style="color:#666; font-size:0.55rem; font-family:'JetBrains Mono'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
+                    <div style="color:{color}; font-size:1.1rem; font-family:'JetBrains Mono'; font-weight:700; margin-top:4px;">{value}</div>
+                    {delta_html}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
         with m1:
-            st.metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
+            render_terminal_metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
         with m2:
             total_upnl = sum(p["pnl_usdt"] for p in positions)
-            st.metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}")
+            render_terminal_metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}", is_pnl=True)
         with m3:
             dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
-            st.metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}")
+            render_terminal_metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}", is_pnl=True)
         with m4:
-            st.metric("사용 중 증거금", f"${dash['used_margin']:,.2f}")
+            render_terminal_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}")
         with m5:
-            st.metric("가용 증거금", f"${dash['free_margin']:,.2f}")
+            render_terminal_metric("가용 증거금", f"${dash['free_margin']:,.2f}")
 
         st.markdown("---")
 
