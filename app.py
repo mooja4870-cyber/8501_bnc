@@ -676,7 +676,9 @@ with tabs[0]:
         total_exits = wins + losses
         win_rate = (wins / total_exits * 100) if total_exits > 0 else 0.0
         
-        orders_today = _st.get("orders_today", 0)
+        # [v1.2.45] 금일 주문 건수 실시간 집계 (모든 유니크 주문 번호)
+        today_trades = [t for t in all_trades if str(t.get('timestamp', '')).startswith(today_str)]
+        orders_today = len(set(t.get('order_id') for t in today_trades if t.get('order_id')))
         
         # 수익률 색상 결정 (수익: 빨강, 손실: 파랑)
         total_color = "#ef4444" if total_pnl_pct >= 0 else "#3b82f6"

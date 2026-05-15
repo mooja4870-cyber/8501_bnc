@@ -53,7 +53,8 @@
 
 
 
-- **[v1.2.44] Trade Aggregation Logic:** Implemented Order ID-based grouping for live Win Rate calculation to handle partial fills. One multi-fill order now correctly counts as one trade.
+
+- **[v1.2.45] Live Order Count:** Updated Orders Today to count unique order IDs from live trade history, ensuring accuracy and consistency with the Win Rate metric.
 
 
 
@@ -87,7 +88,8 @@
 
 
 
-- **[v1.2.44] Trade Aggregation Logic:** Implemented Order ID-based grouping for live Win Rate calculation to handle partial fills. One multi-fill order now correctly counts as one trade.
+
+- **[v1.2.45] Live Order Count:** Updated Orders Today to count unique order IDs from live trade history, ensuring accuracy and consistency with the Win Rate metric.
 
 ## Active Issues
 - None.
@@ -267,3 +269,6 @@
 
 ## v1.2.44 (2026-05-15)
 - [Core] Implemented Trade Aggregation by Order ID for Win Rate.
+
+## v1.2.45 (2026-05-15)
+- [Core] Live unique order count for Orders Today metric.
