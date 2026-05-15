@@ -38,7 +38,8 @@
 
 
 
-- **[v1.2.29] Entry Highlighting:** Styled *진입 rows with bold yellow font and hid PnL/Percentage fields for clarity.
+
+- **[v1.2.30] Settings Reorganization:** Reordered strategy parameters: Scan Interval moved to s1, and Stop Loss moved below Take Profit in s2.
 
 
 
@@ -57,7 +58,8 @@
 
 
 
-- **[v1.2.29] Entry Highlighting:** Styled *진입 rows with bold yellow font and hid PnL/Percentage fields for clarity.
+
+- **[v1.2.30] Settings Reorganization:** Reordered strategy parameters: Scan Interval moved to s1, and Stop Loss moved below Take Profit in s2.
 
 ## Active Issues
 - None.
@@ -179,3 +181,6 @@
 
 ## v1.2.29 (2026-05-15)
 - [UI] Styled *진입 rows with bold yellow and hid PnL fields.
+
+## v1.2.30 (2026-05-15)
+- [UI] Reorganized setting items for better usability.
