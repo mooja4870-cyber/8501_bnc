@@ -51,7 +51,8 @@
 
 
 
-- **[v1.2.42] Live Win Rate Calibration:** Switched Win Rate calculation to use live trade history (Exit trades only) for 100% data accuracy. Removed baseline date from the UI.
+
+- **[v1.2.43] Hotfix:** Fixed AttributeError by correcting the method name from etch_my_trades to get_trade_history in pp.py.
 
 
 
@@ -83,7 +84,8 @@
 
 
 
-- **[v1.2.42] Live Win Rate Calibration:** Switched Win Rate calculation to use live trade history (Exit trades only) for 100% data accuracy. Removed baseline date from the UI.
+
+- **[v1.2.43] Hotfix:** Fixed AttributeError by correcting the method name from etch_my_trades to get_trade_history in pp.py.
 
 ## Active Issues
 - None.
@@ -257,3 +259,6 @@
 
 ## v1.2.42 (2026-05-15)
 - [Core] Implemented live history-based Win Rate calculation.
+
+## v1.2.43 (2026-05-15)
+- [Bugfix] Fixed method name in Win Rate calculation.

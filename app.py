@@ -651,8 +651,8 @@ with tabs[0]:
         elapsed_days = max(elapsed_seconds / 86400.0, 1.0)
         daily_avg_roi = total_pnl_pct / elapsed_days
         
-        # [v1.2.42] 매매 이력 기반 실시간 승률 계산
-        all_trades = engine.fetch_my_trades(limit=100)
+        # [v1.2.43] 매매 이력 기반 실시간 승률 계산 (메서드명 수정)
+        all_trades = engine.get_trade_history(limit=100)
         today_str = "2026-05-15"
         # 오늘자 청산 거래만 필터링
         today_exits = [
