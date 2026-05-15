@@ -73,3 +73,10 @@
 ## v1.1.27 (2026-05-11)
 - [UI] Applied stitch_trading_bot_ui_design.zip style system as app-wide override (Space Grotesk/Inter/JetBrains Mono, cyber dark palette, glass cards, neon green primary + cyan refresh accents).
 - [UI] Updated header live badge label to 'LIVE CONNECTION' and sidebar version label to v1.1.27.
+
+## v1.1.28 (2026-05-15)
+- [UI/UX] Overhauled dashboard UI to "Wall Street Professional Terminal" style.
+- [UI/UX] Applied deep black background (#050505) and Bloomberg-inspired color palette (#FF9900).
+- [UI/UX] Switched numerical fonts to JetBrains Mono for enhanced terminal readability.
+- [UI/UX] Replaced rounded glassmorphism cards with sharp-edged grid containers.
+- [UI/UX] Optimized information density for high-end financial dashboard feel.

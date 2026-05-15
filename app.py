@@ -31,328 +31,205 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── 다크 테마 CSS ─────────────────────────────────────
+# ── Wall Street Professional Terminal CSS ─────────────────────────────
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap');
+
+    :root {
+        --terminal-bg: #050505;
+        --terminal-surface: #0f0f0f;
+        --terminal-border: #262626;
+        --terminal-text: #e0e0e0;
+        --terminal-dim: #666666;
+        --terminal-accent: #ff9900; /* Bloomberg Orange */
+        --terminal-green: #00ff00;
+        --terminal-red: #ff3b30;
+    }
 
     html, body, [data-testid="stAppViewContainer"] {
-        background-color: #0a0a0a !important;
-        color: #e8e8e8 !important;
-        font-family: 'Noto Sans KR', sans-serif;
+        background-color: var(--terminal-bg) !important;
+        color: var(--terminal-text) !important;
+        font-family: 'Inter', sans-serif !important;
     }
-    [data-testid="stHeader"] { background: transparent !important; }
-    [data-testid="stSidebar"] { background: #111111 !important; border-right: 1px solid rgba(255,255,255,0.07) !important; }
 
-    /* 메트릭 카드 */
+    [data-testid="stHeader"] { background: transparent !important; }
+
+    [data-testid="stSidebar"] {
+        background-color: var(--terminal-surface) !important;
+        border-right: 1px solid var(--terminal-border) !important;
+    }
+
+    /* 메트릭 카드: 각진 모서리, 그리드 스타일 */
     [data-testid="metric-container"] {
-        background: #111111 !important;
-        border: 1px solid rgba(255,255,255,0.07) !important;
-        border-radius: 8px !important;
-        padding: 12px 16px !important;
+        background: var(--terminal-surface) !important;
+        border: 1px solid var(--terminal-border) !important;
+        border-radius: 0px !important;
+        padding: 10px 15px !important;
     }
     [data-testid="stMetricValue"] {
-        font-family: 'IBM Plex Mono', monospace !important;
-        font-size: 1.5rem !important;
-        color: #e8e8e8 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 1.4rem !important;
+        font-weight: 700 !important;
+        color: var(--terminal-text) !important;
     }
     [data-testid="stMetricLabel"] {
-        font-family: 'IBM Plex Mono', monospace !important;
+        font-family: 'JetBrains Mono', monospace !important;
         font-size: 0.65rem !important;
-        letter-spacing: 0.08em !important;
-        color: #666 !important;
+        letter-spacing: 0.1em !important;
+        color: var(--terminal-dim) !important;
         text-transform: uppercase !important;
     }
-    [data-testid="stMetricDelta"] { font-family: 'IBM Plex Mono', monospace !important; }
 
-    /* 버튼 */
+    /* 버튼: 전문 터미널 감성 */
     .stButton > button {
-        background: #c8f53b !important;
-        color: #0a0a0a !important;
-        border: none !important;
-        border-radius: 6px !important;
-        font-family: 'IBM Plex Mono', monospace !important;
+        background: var(--terminal-surface) !important;
+        color: var(--terminal-accent) !important;
+        border: 1px solid var(--terminal-accent) !important;
+        border-radius: 0px !important;
+        font-family: 'JetBrains Mono', monospace !important;
         font-weight: 600 !important;
-        letter-spacing: 0.05em !important;
+        font-size: 0.75rem !important;
+        transition: all 0.2s;
     }
-    .stButton > button:hover { opacity: 0.85 !important; }
+    .stButton > button:hover {
+        background: var(--terminal-accent) !important;
+        color: var(--terminal-bg) !important;
+    }
+
+    /* 특수 버튼 (새로고침 등) */
     .refresh-btn button {
-        background: rgba(9, 18, 28, 0.9) !important;
+        border-color: #5de1ff !important;
         color: #5de1ff !important;
-        border: 1px solid rgba(93, 225, 255, 0.6) !important;
-        border-radius: 12px !important;
-        box-shadow: inset 0 0 0 1px rgba(93, 225, 255, 0.15), 0 0 10px rgba(93, 225, 255, 0.15) !important;
-        letter-spacing: 0.08em !important;
     }
     .refresh-btn button:hover {
-        opacity: 1 !important;
-        box-shadow: inset 0 0 0 1px rgba(93, 225, 255, 0.35), 0 0 16px rgba(93, 225, 255, 0.35) !important;
+        background: #5de1ff !important;
+        color: #000 !important;
     }
 
-    /* 구분선 */
-    hr { border-color: rgba(255,255,255,0.07) !important; }
-
     /* 탭 */
-    .stTabs [data-baseweb="tab-list"] { background: #111111; border-radius: 8px; padding: 4px; }
-    .stTabs [data-baseweb="tab"] { color: #888 !important; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; letter-spacing: 0.05em; }
-    .stTabs [aria-selected="true"] { background: #c8f53b !important; color: #0a0a0a !important; border-radius: 6px !important; }
+    .stTabs [data-baseweb="tab-list"] {
+        background: var(--terminal-surface);
+        border: 1px solid var(--terminal-border);
+        border-radius: 0px;
+        padding: 2px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        color: var(--terminal-dim) !important;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.7rem;
+        padding: 8px 16px;
+    }
+    .stTabs [aria-selected="true"] {
+        background: var(--terminal-accent) !important;
+        color: var(--terminal-bg) !important;
+        border-radius: 0px !important;
+    }
 
-    /* 인풋 */
+    /* 인풋 필드 */
     .stTextInput input, .stSelectbox select, .stNumberInput input {
-        background: #1a1a1a !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        color: #e8e8e8 !important;
-        font-family: 'IBM Plex Mono', monospace !important;
-        border-radius: 6px !important;
+        background: #000000 !important;
+        border: 1px solid var(--terminal-border) !important;
+        color: var(--terminal-text) !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        border-radius: 0px !important;
+        font-size: 0.8rem !important;
     }
 
     /* 데이터프레임 */
-    [data-testid="stDataFrame"] { background: #111111 !important; }
-    .dataframe { background: #111111 !important; color: #e8e8e8 !important; }
-
-    /* 로고 헤더 */
-    .quantum-logo {
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #c8f53b;
-        letter-spacing: 0.1em;
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--terminal-border) !important;
     }
-    .quantum-logo span { color: #555; font-weight: 400; }
 
-    /* 상태 배지 */
-    .badge-live {
-        display: inline-flex; align-items: center; gap: 10px;
-        background: rgba(17, 24, 39, 0.8);
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 20px;
-        padding: 8px 16px;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.72rem;
+    /* 로고 */
+    .quantum-logo {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1rem;
         font-weight: 700;
-        color: #7ef45a;
-        letter-spacing: 0.08em;
-        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.12);
+        color: var(--terminal-accent);
+        border-bottom: 2px solid var(--terminal-accent);
+        padding-bottom: 5px;
+        margin-bottom: 20px;
+    }
+    .quantum-logo span { color: var(--terminal-dim); font-weight: 400; }
+
+    /* 상태 뱃지 */
+    .badge-live {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: #003300;
+        border: 1px solid var(--terminal-green);
+        padding: 4px 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--terminal-green);
     }
     .badge-live .dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: #7ef45a;
-        box-shadow: 0 0 8px rgba(126, 244, 90, 0.8);
-        animation: green-pulse 1.2s infinite ease-in-out;
+        width: 8px; height: 8px;
+        background: var(--terminal-green);
+        border-radius: 0%; /* Sharp dot */
     }
     .badge-stopped {
-        display: inline-flex; align-items: center; gap: 6px;
-        background: rgba(239,68,68,0.1);
-        border: 1px solid rgba(239,68,68,0.3);
-        border-radius: 20px;
-        padding: 3px 12px;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.7rem;
-        color: #ef4444;
+        display: inline-flex; align-items: center; gap: 8px;
+        background: #330000;
+        border: 1px solid var(--terminal-red);
+        padding: 4px 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.65rem;
+        color: var(--terminal-red);
     }
+
+    /* 시스템 로그 박스 */
     .log-box {
-        background: #0a0a0a;
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 6px;
-        padding: 10px 14px;
-        font-family: 'IBM Plex Mono', monospace;
+        background: #000000;
+        border: 1px solid var(--terminal-border);
+        border-radius: 0px;
+        padding: 10px;
+        font-family: 'JetBrains Mono', monospace;
         font-size: 0.7rem;
-        color: #666;
-        height: 220px;
+        color: var(--terminal-dim);
+        height: 250px;
         overflow-y: auto;
-        line-height: 1.8;
-        white-space: pre-wrap;
+        line-height: 1.5;
     }
-    .neon { color: #c8f53b !important; }
-    .green { color: #22c55e !important; }
-    .red { color: #ef4444 !important; }
-    /* 청산 버튼 특화 스타일 (77% 축소) */
+    .log-latest {
+        color: #ffffff !important;
+        background: #222;
+        padding: 0 4px;
+    }
+
+    /* 구분선 */
+    hr { border-color: var(--terminal-border) !important; margin: 15px 0 !important; }
+
+    /* 청산 버튼 특화 (Small & Sharp) */
     .small-btn button {
-        font-size: 0.65rem !important;
-        height: 28px !important;
-        min-height: 28px !important;
-        padding-top: 0px !important;
-        padding-bottom: 0px !important;
+        font-size: 0.6rem !important;
+        height: 24px !important;
+        padding: 0 8px !important;
+        border-color: var(--terminal-red) !important;
+        color: var(--terminal-red) !important;
     }
-    /* 분홍색 깜빡임 애니메이션 */
-    @keyframes pink-fade {
-        0% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.5; transform: scale(0.98); }
-        100% { opacity: 1; transform: scale(1); }
+    .small-btn button:hover {
+        background: var(--terminal-red) !important;
+        color: white !important;
     }
-    .badge-pink-blink {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: rgba(255, 20, 147, 0.15);
-        border: 1px solid rgba(255, 20, 147, 0.5);
-        border-radius: 6px;
-        padding: 6px 16px;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #ff69b4;
-        animation: pink-fade 1.5s infinite ease-in-out;
-        box-shadow: 0 0 10px rgba(255, 20, 147, 0.2);
-    }
-    .badge-green-blink {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: rgba(200, 245, 59, 0.15);
-        border: 1px solid rgba(200, 245, 59, 0.5);
-        border-radius: 6px;
-        padding: 6px 16px;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #c8f53b;
-        animation: pink-fade 1.5s infinite ease-in-out;
-        box-shadow: 0 0 10px rgba(200, 245, 59, 0.2);
-    }
-    .badge-red-blink {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: rgba(239, 68, 68, 0.15);
-        border: 1px solid rgba(239, 68, 68, 0.5);
-        border-radius: 6px;
-        padding: 6px 16px;
-        font-family: 'IBM Plex Mono', monospace;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #ef4444;
-        animation: pink-fade 1.5s infinite ease-in-out;
-        box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
-    }
-    @keyframes green-pulse {
+
+    /* 깜빡임 애니메이션 (터미널 스타일) */
+    @keyframes terminal-blink {
         0% { opacity: 1; }
-        50% { opacity: 0.5; }
+        50% { opacity: 0.4; }
         100% { opacity: 1; }
     }
-    .log-latest {
-        color: #c8f53b !important;
-        font-weight: 700 !important;
-        animation: green-pulse 1.2s infinite ease-in-out;
+    .badge-pink-blink, .badge-green-blink, .badge-red-blink {
+        border-radius: 0px !important;
+        animation: terminal-blink 1s infinite steps(1); /* Sharp blinking */
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# ── 첨부 디자인 오버라이드 (stitch_trading_bot_ui_design.zip) ──
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
-
-    :root {
-        --cyber-bg: #0a0c10;
-        --cyber-surface: #161b22;
-        --cyber-text: #e2e2e8;
-        --cyber-dim: #8f9bb3;
-        --cyber-green: #00ff41;
-        --cyber-cyan: #00e5ff;
-        --cyber-red: #ff3b30;
-    }
-
-    html, body, [data-testid="stAppViewContainer"] {
-        background: var(--cyber-bg) !important;
-        color: var(--cyber-text) !important;
-        font-family: 'Inter', 'Noto Sans KR', sans-serif !important;
-    }
-    [data-testid="stSidebar"] {
-        background: rgba(22, 27, 34, 0.82) !important;
-        border-right: 1px solid rgba(132, 150, 126, 0.2) !important;
-        backdrop-filter: blur(12px) !important;
-    }
-
-    [data-testid="metric-container"] {
-        background: rgba(22, 27, 34, 0.78) !important;
-        border: 1px solid rgba(255,255,255,0.08) !important;
-        border-radius: 12px !important;
-        backdrop-filter: blur(12px) !important;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
-    }
-    [data-testid="stMetricValue"] {
-        font-family: 'JetBrains Mono', monospace !important;
-    }
-    [data-testid="stMetricLabel"] {
-        font-family: 'JetBrains Mono', monospace !important;
-        color: #7f8aa3 !important;
-    }
-
-    .stButton > button {
-        background: var(--cyber-green) !important;
-        color: #0c110d !important;
-        border: 1px solid rgba(0,255,65,0.32) !important;
-        border-radius: 8px !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        font-weight: 700 !important;
-        box-shadow: 0 0 10px rgba(0,255,65,0.16) !important;
-    }
-    .stButton > button:hover {
-        opacity: 1 !important;
-        box-shadow: 0 0 16px rgba(0,255,65,0.35) !important;
-    }
-    .refresh-btn button {
-        background: rgba(9, 18, 28, 0.9) !important;
-        color: var(--cyber-cyan) !important;
-        border: 1px solid rgba(0,229,255,0.62) !important;
-        border-radius: 12px !important;
-        box-shadow: inset 0 0 0 1px rgba(0,229,255,0.18), 0 0 11px rgba(0,229,255,0.2) !important;
-        letter-spacing: 0.08em !important;
-    }
-    .refresh-btn button:hover {
-        box-shadow: inset 0 0 0 1px rgba(0,229,255,0.42), 0 0 18px rgba(0,229,255,0.34) !important;
-    }
-
-    .stTabs [data-baseweb="tab-list"] {
-        background: rgba(22, 27, 34, 0.82);
-        border: 1px solid rgba(132, 150, 126, 0.2);
-        border-radius: 10px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        color: #94a3b8 !important;
-        font-family: 'JetBrains Mono', monospace !important;
-    }
-    .stTabs [aria-selected="true"] {
-        background: var(--cyber-green) !important;
-        color: #0a0c10 !important;
-    }
-
-    .quantum-logo {
-        font-family: 'Space Grotesk', sans-serif !important;
-        font-weight: 700 !important;
-        color: var(--cyber-text) !important;
-    }
-    .quantum-logo span {
-        color: var(--cyber-green) !important;
-        letter-spacing: 0.08em !important;
-    }
-
-    .badge-live {
-        background: rgba(18, 26, 34, 0.82) !important;
-        border: 1px solid rgba(126, 244, 90, 0.26) !important;
-        border-radius: 999px !important;
-        color: #7ef45a !important;
-        box-shadow: inset 0 0 0 1px rgba(126, 244, 90, 0.08), 0 0 10px rgba(126, 244, 90, 0.1) !important;
-    }
-    .badge-live .dot {
-        box-shadow: 0 0 9px rgba(126, 244, 90, 0.85) !important;
-    }
-
-    .log-box {
-        background: rgba(10, 12, 16, 0.86) !important;
-        border: 1px solid rgba(255,255,255,0.08) !important;
-        border-radius: 10px !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        color: #7f8aa3 !important;
-    }
-    .log-latest {
-        color: #7ef45a !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
 
 # ── 세션 상태 초기화 ──────────────────────────────────
@@ -418,7 +295,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.27</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.28</span></div>',
         unsafe_allow_html=True,
     )
     st.markdown("---")
