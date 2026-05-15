@@ -54,7 +54,8 @@
 
 
 
-- **[v1.2.45] Live Order Count:** Updated Orders Today to count unique order IDs from live trade history, ensuring accuracy and consistency with the Win Rate metric.
+
+- **[v1.2.46] Metric Synchronization:** Unified Orders Today with Win Rate by limiting the count to completed (Exit) trades only (orders_today = wins + losses).
 
 
 
@@ -89,7 +90,8 @@
 
 
 
-- **[v1.2.45] Live Order Count:** Updated Orders Today to count unique order IDs from live trade history, ensuring accuracy and consistency with the Win Rate metric.
+
+- **[v1.2.46] Metric Synchronization:** Unified Orders Today with Win Rate by limiting the count to completed (Exit) trades only (orders_today = wins + losses).
 
 ## Active Issues
 - None.
@@ -272,3 +274,6 @@
 
 ## v1.2.45 (2026-05-15)
 - [Core] Live unique order count for Orders Today metric.
+
+## v1.2.46 (2026-05-15)
+- [Core] Unified Orders Today metric with Win Rate (W+L only).
