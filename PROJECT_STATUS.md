@@ -58,7 +58,8 @@
 
 
 
-- **[v1.2.49] Sub-text Styling:** Changed sub-text colors for Cumulative ROI and Orders Today to White (#ffffff) for better visual hierarchy.
+
+- **[v1.2.50] Layout Tightening:** Applied a -12px negative margin to the 'Close' button to minimize the gap between elapsed time and the button in position cards.
 
 
 
@@ -97,7 +98,8 @@
 
 
 
-- **[v1.2.49] Sub-text Styling:** Changed sub-text colors for Cumulative ROI and Orders Today to White (#ffffff) for better visual hierarchy.
+
+- **[v1.2.50] Layout Tightening:** Applied a -12px negative margin to the 'Close' button to minimize the gap between elapsed time and the button in position cards.
 
 ## Active Issues
 - None.
@@ -293,3 +295,6 @@
 
 ## v1.2.49 (2026-05-15)
 - [UI] Set ROI/Orders sub-text to White.
+
+## v1.2.50 (2026-05-15)
+- [UI] Applied negative margin to Close button for compact layout.

@@ -252,7 +252,7 @@ st.markdown(
         color: var(--terminal-red) !important;
         border-radius: 0px !important;
         background: transparent !important;
-        margin-top: 0px !important;
+        margin-top: -12px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
