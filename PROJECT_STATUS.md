@@ -24,12 +24,14 @@
 
 
 
-- **[v1.2.15] Position Amount:** Added 'Amount' field (Entry Price * Quantity) to the position details for better exposure tracking.
+
+- **[v1.2.16] Button Optimization:** Reduced liquidation buttons (bulk and individual) to 66% of their original size for higher density.
 
 
 
 
-- **[v1.2.15] Position Amount:** Added 'Amount' field (Entry Price * Quantity) to the position details for better exposure tracking.
+
+- **[v1.2.16] Button Optimization:** Reduced liquidation buttons (bulk and individual) to 66% of their original size for higher density.
 
 ## Active Issues
 - None.
@@ -109,3 +111,6 @@
 
 ## v1.2.15 (2026-05-15)
 - [UI] Added 'Amount' (Notional Entry Value) to active position cards.
+
+## v1.2.16 (2026-05-15)
+- [UI] Minimized liquidation buttons and font sizes to 66% of previous scale.

@@ -240,14 +240,15 @@ st.markdown(
         gap: 2px;
     }
 
-    /* 청산 버튼 특화 (Small & Sharp) */
+    /* 청산 버튼 특화 (Extreme Small & Sharp - 66% of original) */
     .small-btn button {
-        font-size: 0.6rem !important;
-        height: 24px !important;
-        padding: 0 8px !important;
+        font-size: 0.4rem !important;
+        height: 16px !important;
+        padding: 0 5px !important;
         border-color: var(--terminal-red) !important;
         color: var(--terminal-red) !important;
         border-radius: 0px !important;
+        min-height: 16px !important;
     }
     .small-btn button:hover {
         background: var(--terminal-red) !important;
