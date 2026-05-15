@@ -879,17 +879,17 @@ with tabs[3]:
     c1, c2 = st.columns(2)
     with c1:
         st.markdown("**🟢 LONG 포지션 진입 조건**")
-        st.markdown("- **추세:** 현재가가 EMA 보다 높음")
-        st.markdown("- **반등:** 최근 2캔들 내 볼린저 밴드 하단 터치 후 상승 돌파")
-        st.markdown("- **모멘텀:** MACD 히스토그램이 상승 반전 (음수에서 양의 방향)")
-        st.markdown("- **필터:** RSI < 60 (과매수 아님)")
+        st.markdown("- **추세:** 현재가가 EMA 보다 높음 <span style='color:#ffcc00;'>☞ 큰 파도가 위로 치고 있는지 확인하는 거야. 파도가 올라갈 때 타야 멀리 가니까, '지금은 대세 상승장이다!'라는 걸 확인하는 거지.</span>", unsafe_allow_html=True)
+        st.markdown("- **반등:** 최근 2캔들 내 볼린저 밴드 하단 터치 후 상승 돌파 <span style='color:#ffcc00;'>☞ 바닥에 탱탱볼을 던진 것과 같아. 바닥을 튀기고 올라오기 시작할 때가 '이제 진짜 올라갈 때'라는 걸 알려주는 거야.</span>", unsafe_allow_html=True)
+        st.markdown("- **모멘텀:** MACD 히스토그램이 상승 반전 (음수에서 양의 방향) <span style='color:#ffcc00;'>☞ 자동차가 후진하다가 멈추고 이제 막 전진 기어를 넣은 상태야. '이제 힘의 방향이 위로 바뀌었다!'는 증거를 잡는 거지.</span>", unsafe_allow_html=True)
+        st.markdown("- **필터:** RSI < 60 (과매수 아님) <span style='color:#ffcc00;'>☞ 식당에 줄이 너무 길면 들어가기 힘들지? 사람들이 너무 많이 사서 지치기 전인지 확인해서, '아직 더 올라갈 자리가 넉넉하다'는 걸 체크하는 거야.</span>", unsafe_allow_html=True)
 
     with c2:
         st.markdown("**🔴 SHORT 포지션 진입 조건**")
-        st.markdown("- **추세:** 현재가가 EMA 보다 낮음")
-        st.markdown("- **반등:** 최근 2캔들 내 볼린저 밴드 상단 터치 후 하락 돌파")
-        st.markdown("- **모멘텀:** MACD 히스토그램이 하락 반전 (양수에서 음의 방향)")
-        st.markdown("- **필터:** RSI > 40 (과매도 아님)")
+        st.markdown("- **추세:** 현재가가 EMA 보다 낮음 <span style='color:#ffcc00;'>☞ 지금은 내리막길인지 확인하는 거야. 내리막에서 공을 굴려야 잘 굴러가듯이, '지금은 대세 하락장이다!'라는 걸 먼저 확인하는 거지.</span>", unsafe_allow_html=True)
+        st.markdown("- **반등:** 최근 2캔들 내 볼린저 밴드 상단 터치 후 하락 돌파 <span style='color:#ffcc00;'>☞ 천장에 머리를 '콩' 하고 박은 거야. 너무 올라가서 천장을 찍었으니, '이제 아파서 내려올 일만 남았다'는 걸 포착하는 거지.</span>", unsafe_allow_html=True)
+        st.markdown("- **모멘텀:** MACD 히스토그램이 하락 반전 (양수에서 음의 방향) <span style='color:#ffcc00;'>☞ 신나게 달리던 선수가 숨이 차서 속도를 줄이기 시작한 거야. '이제 곧 멈추고 뒤로 밀릴 수 있겠다'는 신호를 미리 채는 거지.</span>", unsafe_allow_html=True)
+        st.markdown("- **필터:** RSI > 40 (과매도 아님) <span style='color:#ffcc00;'>☞ 물건값이 너무 싸져서 다들 팔기 싫어하는 상태인지 보는 거야. '아직은 팔려는 사람들이 더 많고, 더 내려갈 힘이 있다'는 걸 확인하는 거지.</span>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown(

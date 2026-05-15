@@ -40,7 +40,8 @@
 
 
 
-- **[v1.2.31] Settings Summary Zoom:** Increased font size by 122% and brightened text to #cccccc for the strategy summary footer.
+
+- **[v1.2.32] Intuitive Entry Logic:** Updated TAB 4 with middle-schooler friendly explanations for trading conditions, highlighted in yellow.
 
 
 
@@ -61,7 +62,8 @@
 
 
 
-- **[v1.2.31] Settings Summary Zoom:** Increased font size by 122% and brightened text to #cccccc for the strategy summary footer.
+
+- **[v1.2.32] Intuitive Entry Logic:** Updated TAB 4 with middle-schooler friendly explanations for trading conditions, highlighted in yellow.
 
 ## Active Issues
 - None.
@@ -189,3 +191,6 @@
 
 ## v1.2.31 (2026-05-15)
 - [UI] Enlarged and brightened the strategy summary text in Settings.
+
+## v1.2.32 (2026-05-15)
+- [UI] Updated Entry Conditions (TAB 4) with easy-to-understand explanations in yellow.
