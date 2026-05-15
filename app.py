@@ -533,7 +533,19 @@ with tabs[0]:
                             unsafe_allow_html=True,
                         )
                     with pc2:
-                        st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+                        # 경과 시간 계산
+                        duration_str = "[00시간 00분]"
+                        if p.get("timestamp"):
+                            entry_dt = datetime.utcfromtimestamp(p["timestamp"] / 1000)
+                            diff = datetime.utcnow() - entry_dt
+                            hrs, rem = divmod(int(diff.total_seconds()), 3600)
+                            mins = rem // 60
+                            duration_str = f"[{hrs:02d}시간 {mins:02d}분]"
+                            
+                        st.markdown(
+                            f'<div style="font-family:\'JetBrains Mono\';font-size:0.65rem;color:#666;text-align:center;margin-bottom:4px;">{duration_str}</div>',
+                            unsafe_allow_html=True
+                        )
                         st.markdown('<div class="small-btn">', unsafe_allow_html=True)
                         if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
                             if engine.client.close_position(p["symbol"], p["side"]):

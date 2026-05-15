@@ -20,8 +20,10 @@
 - **Implemented Orchestration Engine (`QuantumEngine`):** Centralized module management for Exchange, Scanner, and Trader.
 - **Implemented Test Harness (`harness.py`):** Independent verification environment for core trading logic without UI dependency.
 
-- **[v1.2.11] UI Modernization:** Replaced Portfolio Allocation/Risk Metrics with high-density terminal metric bar (Wall Street Style).
-- **[v1.2.11] Stats Tracking:** Added total_pnl_usdt to stats.py for persistent cumulative performance tracking.
+
+- **[v1.2.12] Position Duration:** Displayed elapsed time since entry above the liquidation button.
+
+- **[v1.2.12] Position Duration:** Displayed elapsed time since entry above the liquidation button.
 
 ## Active Issues
 - None.
@@ -89,3 +91,6 @@
 - [UI] Restored and optimized liquidation buttons' sharp-edged terminal styling.
 
 
+
+## v1.2.12 (2026-05-15)
+- [UI] Added position duration display ([00시간 00분]) above the 'Close Now' button.
