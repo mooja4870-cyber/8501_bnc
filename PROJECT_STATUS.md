@@ -50,7 +50,8 @@
 
 
 
-- **[v1.2.41] MDD Color Update:** Changed MDD limit metric color to Bright Grey (#cccccc) for global style consistency.
+
+- **[v1.2.42] Live Win Rate Calibration:** Switched Win Rate calculation to use live trade history (Exit trades only) for 100% data accuracy. Removed baseline date from the UI.
 
 
 
@@ -81,7 +82,8 @@
 
 
 
-- **[v1.2.41] MDD Color Update:** Changed MDD limit metric color to Bright Grey (#cccccc) for global style consistency.
+
+- **[v1.2.42] Live Win Rate Calibration:** Switched Win Rate calculation to use live trade history (Exit trades only) for 100% data accuracy. Removed baseline date from the UI.
 
 ## Active Issues
 - None.
@@ -252,3 +254,6 @@
 
 ## v1.2.41 (2026-05-15)
 - [UI] Changed MDD limit color to Bright Grey.
+
+## v1.2.42 (2026-05-15)
+- [Core] Implemented live history-based Win Rate calculation.

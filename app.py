@@ -651,9 +651,20 @@ with tabs[0]:
         elapsed_days = max(elapsed_seconds / 86400.0, 1.0)
         daily_avg_roi = total_pnl_pct / elapsed_days
         
-        win_rate = stats_store.get_win_rate()
-        wins = _st.get("total_wins", 0)
-        losses = _st.get("total_losses", 0)
+        # [v1.2.42] 매매 이력 기반 실시간 승률 계산
+        all_trades = engine.fetch_my_trades(limit=100)
+        today_str = "2026-05-15"
+        # 오늘자 청산 거래만 필터링
+        today_exits = [
+            t for t in all_trades 
+            if t.get('구분') == '청산' and str(t.get('time', '')).startswith(today_str)
+        ]
+        
+        wins = len([t for t in today_exits if float(t.get('fillPnl', 0)) > 0])
+        losses = len([t for t in today_exits if float(t.get('fillPnl', 0)) < 0])
+        total_exits = wins + losses
+        win_rate = (wins / total_exits * 100) if total_exits > 0 else 0.0
+        
         orders_today = _st.get("orders_today", 0)
         
         # 수익률 색상 결정 (수익: 빨강, 손실: 파랑)
@@ -689,7 +700,7 @@ with tabs[0]:
                     <div class="terminal-metric-label">누적 승률</div>
                     <div class="terminal-metric-value">{win_rate:.1f}%</div>
                     <div class="terminal-metric-sub" style="color:#cccccc;">
-                        ↑ 2026.05.15 ~ ({wins}W / {losses}L)
+                        <span style="font-size:0.7rem;">↑</span> {wins}W / {losses}L
                     </div>
                 </div>
                 <!-- MDD 한도 -->
