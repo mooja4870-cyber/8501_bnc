@@ -49,7 +49,8 @@
 
 
 
-- **[v1.2.40] Metric Calibration:** Added baseline date to Cumulative Win Rate and switched Daily Avg ROI to a conservative calculation (min 1 day) to avoid over-inflation on Day 1.
+
+- **[v1.2.41] MDD Color Update:** Changed MDD limit metric color to Bright Grey (#cccccc) for global style consistency.
 
 
 
@@ -79,7 +80,8 @@
 
 
 
-- **[v1.2.40] Metric Calibration:** Added baseline date to Cumulative Win Rate and switched Daily Avg ROI to a conservative calculation (min 1 day) to avoid over-inflation on Day 1.
+
+- **[v1.2.41] MDD Color Update:** Changed MDD limit metric color to Bright Grey (#cccccc) for global style consistency.
 
 ## Active Issues
 - None.
@@ -247,3 +249,6 @@
 ## v1.2.40 (2026-05-15)
 - [UI] Added baseline date to Win Rate. 
 - [Core] Conservative Daily ROI (min 1 day).
+
+## v1.2.41 (2026-05-15)
+- [UI] Changed MDD limit color to Bright Grey.

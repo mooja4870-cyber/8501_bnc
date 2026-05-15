@@ -695,8 +695,8 @@ with tabs[0]:
                 <!-- MDD 한도 -->
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">MDD 한도</div>
-                    <div class="terminal-metric-value" style="color:#3b82f6;">-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%</div>
-                    <div class="terminal-metric-sub" style="color:#3b82f6;">
+                    <div class="terminal-metric-value" style="color:#cccccc;">-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%</div>
+                    <div class="terminal-metric-sub" style="color:#cccccc;">
                         <span style="font-size:0.7rem;">↓</span> Max Risk
                     </div>
                 </div>
