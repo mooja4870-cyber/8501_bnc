@@ -643,12 +643,12 @@ with tabs[0]:
         # 24시간 변동률도 시드 대비 비율로 표시
         daily_pnl_pct = (daily_pnl / seed_money) * 100
         
-        # [v1.2.39] 일 평균 수익률 계산 (2026-05-15 00:00:00 KST 기준)
+        # [v1.2.40] 일 평균 수익률 계산 보정 (최소 1일 기준 - 뻥튀기 방지)
         perf_start_dt = datetime(2026, 5, 15, 0, 0, 0)
         now_kst = datetime.utcnow() + timedelta(hours=9)
         elapsed_seconds = (now_kst - perf_start_dt).total_seconds()
-        # 경과 일수 계산 (KST 기준, 최소 1초)
-        elapsed_days = max(elapsed_seconds / 86400.0, 1/86400.0)
+        # 경과 일수 계산 (보수적 접근: 최소 1.0일로 나누어 첫날 과장 방지)
+        elapsed_days = max(elapsed_seconds / 86400.0, 1.0)
         daily_avg_roi = total_pnl_pct / elapsed_days
         
         win_rate = stats_store.get_win_rate()
@@ -688,8 +688,8 @@ with tabs[0]:
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">누적 승률</div>
                     <div class="terminal-metric-value">{win_rate:.1f}%</div>
-                    <div class="terminal-metric-sub" style="color:#ef4444;">
-                        <span style="font-size:0.7rem;">↑</span> {wins}W / {losses}L
+                    <div class="terminal-metric-sub" style="color:#cccccc;">
+                        ↑ 2026.05.15 ~ ({wins}W / {losses}L)
                     </div>
                 </div>
                 <!-- MDD 한도 -->

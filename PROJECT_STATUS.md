@@ -48,7 +48,8 @@
 
 
 
-- **[v1.2.39] Timezone Alignment:** Switched Daily Avg ROI calculation from UTC to KST (Korean Standard Time) for accurate 24-hour performance tracking.
+
+- **[v1.2.40] Metric Calibration:** Added baseline date to Cumulative Win Rate and switched Daily Avg ROI to a conservative calculation (min 1 day) to avoid over-inflation on Day 1.
 
 
 
@@ -77,7 +78,8 @@
 
 
 
-- **[v1.2.39] Timezone Alignment:** Switched Daily Avg ROI calculation from UTC to KST (Korean Standard Time) for accurate 24-hour performance tracking.
+
+- **[v1.2.40] Metric Calibration:** Added baseline date to Cumulative Win Rate and switched Daily Avg ROI to a conservative calculation (min 1 day) to avoid over-inflation on Day 1.
 
 ## Active Issues
 - None.
@@ -241,3 +243,7 @@
 
 ## v1.2.39 (2026-05-15)
 - [Core] Synchronized ROI calculation to KST timezone.
+
+## v1.2.40 (2026-05-15)
+- [UI] Added baseline date to Win Rate. 
+- [Core] Conservative Daily ROI (min 1 day).
