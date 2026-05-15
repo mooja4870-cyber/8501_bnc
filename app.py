@@ -684,10 +684,12 @@ with tabs[0]:
         total_color = "#ef4444" if total_pnl_pct >= 0 else "#3b82f6"
         daily_color = "#ef4444" if daily_pnl >= 0 else "#3b82f6"
         avg_color = "#ef4444" if daily_avg_roi >= 0 else "#3b82f6"
+        win_color = "#ef4444" if win_rate > 50.0 else "#3b82f6"
         
         daily_arrow = "↑" if daily_pnl >= 0 else "↓"
         total_arrow = "↑" if total_pnl_pct >= 0 else "↓"
         avg_arrow = "↑" if daily_avg_roi >= 0 else "↓"
+        win_arrow = "↑" if win_rate > 50.0 else "↓"
         
         st.markdown(
             f"""
@@ -711,9 +713,9 @@ with tabs[0]:
                 <!-- 누적 승률 -->
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">누적 승률</div>
-                    <div class="terminal-metric-value">{win_rate:.1f}%</div>
+                    <div class="terminal-metric-value" style="color:{win_color};">{win_rate:.1f}%</div>
                     <div class="terminal-metric-sub" style="color:#cccccc;">
-                        <span style="font-size:0.7rem;">↑</span> {wins}W / {losses}L
+                        <span style="font-size:0.7rem;">{win_arrow}</span> {wins}W / {losses}L
                     </div>
                 </div>
                 <!-- MDD 한도 -->

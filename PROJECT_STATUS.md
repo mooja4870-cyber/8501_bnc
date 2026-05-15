@@ -56,7 +56,8 @@
 
 
 
-- **[v1.2.47] Layout Optimization:** Reduced vertical gap between position elapsed time and close button. Refactored time calculation to be timezone-aware.
+
+- **[v1.2.48] Metric Visual Feedback:** Implemented dynamic coloring for Win Rate (Red if > 50%, Blue if <= 50%) for clearer performance visualization.
 
 
 
@@ -93,7 +94,8 @@
 
 
 
-- **[v1.2.47] Layout Optimization:** Reduced vertical gap between position elapsed time and close button. Refactored time calculation to be timezone-aware.
+
+- **[v1.2.48] Metric Visual Feedback:** Implemented dynamic coloring for Win Rate (Red if > 50%, Blue if <= 50%) for clearer performance visualization.
 
 ## Active Issues
 - None.
@@ -283,3 +285,6 @@
 ## v1.2.47 (2026-05-15)
 - [UI] Tightened vertical spacing in position cards. 
 - [Core] Refactored datetime for UTC-aware compliance.
+
+## v1.2.48 (2026-05-15)
+- [UI] Dynamic coloring for Win Rate (>50% Red, <=50% Blue).
