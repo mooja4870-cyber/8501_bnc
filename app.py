@@ -202,6 +202,44 @@ st.markdown(
     /* 구분선 */
     hr { border-color: var(--terminal-border) !important; margin: 15px 0 !important; }
 
+    /* Wall Street Metric Bar */
+    .metric-bar-container {
+        display: flex;
+        justify-content: space-between;
+        background: #050505;
+        border: 1px solid var(--terminal-border);
+        padding: 12px 0;
+        margin-bottom: 20px;
+    }
+    .terminal-metric-item {
+        flex: 1;
+        border-right: 1px solid #1a1a1a;
+        padding: 0 20px;
+    }
+    .terminal-metric-item:last-child { border-right: none; }
+    .terminal-metric-label {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.55rem;
+        color: #555;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    .terminal-metric-value {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.1;
+    }
+    .terminal-metric-sub {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.55rem;
+        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+
     /* 청산 버튼 특화 (Small & Sharp) */
     .small-btn button {
         font-size: 0.6rem !important;
@@ -209,6 +247,7 @@ st.markdown(
         padding: 0 8px !important;
         border-color: var(--terminal-red) !important;
         color: var(--terminal-red) !important;
+        border-radius: 0px !important;
     }
     .small-btn button:hover {
         background: var(--terminal-red) !important;
@@ -223,7 +262,7 @@ st.markdown(
     }
     .badge-pink-blink, .badge-green-blink, .badge-red-blink {
         border-radius: 0px !important;
-        animation: terminal-blink 1s infinite steps(1); /* Sharp blinking */
+        animation: terminal-blink 1s infinite steps(1);
     }
     </style>
     """,
@@ -526,49 +565,74 @@ with tabs[0]:
 
         st.markdown("---")
 
-        # ── 자산 배분 차트 ─────────────────────────
-        col_alloc, col_stats = st.columns(2)
-
-        with col_alloc:
-            st.markdown(
-                '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">PORTFOLIO ALLOCATION</p>',
-                unsafe_allow_html=True,
-            )
-            fig_alloc = go.Figure(go.Pie(
-                labels=["실전 투입 (100%)", "예비 유동성 (0%)", "리스크 리저브 (0%)"],
-                values=[100, 0.001, 0.001],
-                hole=0.55,
-                marker=dict(colors=["#c8f53b", "#3b82f6", "#555555"]),
-                textfont=dict(family="IBM Plex Mono", size=10),
-                textinfo="label",
-            ))
-            fig_alloc.update_layout(
-                **PLOT_LAYOUT,
-                showlegend=False,
-                height=220,
-            )
-            st.plotly_chart(fig_alloc, use_container_width=True)
-
-        with col_stats:
-            st.markdown(
-                '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">RISK METRICS</p>',
-                unsafe_allow_html=True,
-            )
-            _st = stats_store.load_stats()
-            orders_today = _st.get("orders_today", 0)
-            win_rate = stats_store.get_win_rate()
-            total_wins = _st.get("total_wins", 0)
-            total_losses = _st.get("total_losses", 0)
-            total_trades = total_wins + total_losses
-            win_label = f"{win_rate:.1f}%" if total_trades > 0 else "-"
-            win_delta = f"{total_wins}W / {total_losses}L" if total_trades > 0 else "매매 데이터 없음"
-
-            r1, r2 = st.columns(2)
-            r1.metric("Profit Factor", "2.45", "목표 ≥ 2.0")
-            r2.metric("승률", win_label, win_delta)
-            r3, r4 = st.columns(2)
-            r3.metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%")
-            r4.metric("금일 주문", f"{orders_today}건")
+        # ── 고밀도 터미널 메트릭 바 (Image 1 Style) ──────────
+        _st = stats_store.load_stats()
+        
+        # 데이터 계산
+        total_pnl = _st.get("total_pnl_usdt", 0.0)
+        daily_pnl = _st.get("daily_pnl_usdt", 0.0)
+        
+        # 수익률 계산 (기본 자산 1000 USDT 가정 또는 잔고 기준)
+        base_equity = max(dash['total_balance'] - total_pnl, 1000)
+        total_pnl_pct = (total_pnl / base_equity) * 100
+        daily_pnl_pct = (daily_pnl / base_equity) * 100
+        
+        win_rate = stats_store.get_win_rate()
+        wins = _st.get("total_wins", 0)
+        losses = _st.get("total_losses", 0)
+        orders_today = _st.get("orders_today", 0)
+        
+        pnl_color = "#ef4444" if total_pnl < 0 else "#22c55e"
+        daily_color = "#ef4444" if daily_pnl < 0 else "#22c55e"
+        daily_arrow = "↓" if daily_pnl < 0 else "↑"
+        
+        st.markdown(
+            f"""
+            <div class="metric-bar-container">
+                <!-- 누적 수익률 -->
+                <div class="terminal-metric-item">
+                    <div class="terminal-metric-label">누적 수익률</div>
+                    <div class="terminal-metric-value">{total_pnl_pct:+.2f}%</div>
+                    <div class="terminal-metric-sub" style="color:{daily_color};">
+                        <span>{daily_arrow}</span> {abs(daily_pnl_pct):.2f}% (24h)
+                    </div>
+                </div>
+                <!-- 연 평균 수익률 -->
+                <div class="terminal-metric-item">
+                    <div class="terminal-metric-label">연 평균 수익률</div>
+                    <div class="terminal-metric-value">{total_pnl_pct:+.2f}%</div>
+                    <div class="terminal-metric-sub" style="color:#22c55e;">
+                        2026.05.14 ~
+                    </div>
+                </div>
+                <!-- 누적 승률 -->
+                <div class="terminal-metric-item">
+                    <div class="terminal-metric-label">누적 승률</div>
+                    <div class="terminal-metric-value">{win_rate:.1f}%</div>
+                    <div class="terminal-metric-sub" style="color:#22c55e;">
+                        <span style="font-size:0.7rem;">↑</span> {wins}W / {losses}L
+                    </div>
+                </div>
+                <!-- MDD 한도 -->
+                <div class="terminal-metric-item">
+                    <div class="terminal-metric-label">MDD 한도</div>
+                    <div class="terminal-metric-value">-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%</div>
+                    <div class="terminal-metric-sub" style="color:#22c55e;">
+                        <span style="font-size:0.7rem;">↑</span> Max Risk
+                    </div>
+                </div>
+                <!-- 금일 주문 -->
+                <div class="terminal-metric-item">
+                    <div class="terminal-metric-label">금일 주문</div>
+                    <div class="terminal-metric-value">{orders_today}건</div>
+                    <div class="terminal-metric-sub" style="color:#22c55e;">
+                        <span style="font-size:0.7rem;">↑</span> Today
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

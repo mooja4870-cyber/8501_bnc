@@ -1,6 +1,8 @@
-# ⚡ AI QUANTUM - Version History
+﻿# ??AI QUANTUM - Version History
 
-| 버전 | 일시 | 내용 | 비고 |
+| 踰꾩쟾 | ?쇱떆 | ?댁슜 | 鍮꾧퀬 |
 | :--- | :--- | :--- | :--- |
-| v1.1.28 | 2026-05-15 | Wall Street Professional UI 전환 및 고밀도 터미널 디자인 적용 | UI Overhaul |
-| v1.1.27 | 2026-05-15 | 프로젝트 초기 상태 (포트 1127 실행 확인) | Baseline |
+| v1.2.11 | 2026-05-15 | ?붽? ?ㅽ???硫뷀듃由?諛??곸슜 (?대?吏 1 ?ㅽ??? | UI/UX |
+| v1.1.28 | 2026-05-15 | Wall Street Professional UI ?꾪솚 諛?怨좊????곕????붿옄???곸슜 | UI Overhaul |
+| v1.1.27 | 2026-05-15 | ?꾨줈?앺듃 珥덇린 ?곹깭 (?ы듃 1127 ?ㅽ뻾 ?뺤씤) | Baseline |
+

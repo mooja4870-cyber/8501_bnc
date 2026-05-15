@@ -54,6 +54,7 @@ def record_result(pnl_usdt: float):
     """청산 결과 기록 (pnl_usdt > 0 → 승, < 0 → 패)"""
     data = load_stats()
     data["daily_pnl_usdt"] = round(data.get("daily_pnl_usdt", 0.0) + pnl_usdt, 4)
+    data["total_pnl_usdt"] = round(data.get("total_pnl_usdt", 0.0) + pnl_usdt, 4)
     if pnl_usdt >= 0:
         data["total_wins"] = data.get("total_wins", 0) + 1
     else:
@@ -77,6 +78,7 @@ def _default() -> Dict:
         "today_date": str(date.today()),
         "orders_today": 0,
         "daily_pnl_usdt": 0.0,
+        "total_pnl_usdt": 0.0,
         "total_trades": 0,
         "total_wins": 0,
         "total_losses": 0,
