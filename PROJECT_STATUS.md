@@ -222,3 +222,6 @@
 
 ## v1.2.37 (2026-05-15)
 - [UI] Updated bottom metrics: Base capital .43, added Daily Average Return.
+
+## v1.2.37 (2026-05-15)
+- [Core] Updated ROI logic (.43 seed) and introduced Daily Avg ROI.
