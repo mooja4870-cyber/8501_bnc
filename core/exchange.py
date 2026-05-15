@@ -68,10 +68,10 @@ class OKXClient:
                     entry = p.get("entryPrice") or 0
                     current = p.get("markPrice") or p.get("lastPrice") or 0
                     side = p.get("side", "long")
-                    pct = 0.0
+                    lev = float(p.get("leverage") or CFG.LEVERAGE)
                     if entry and current:
                         raw = (float(current) - float(entry)) / float(entry)
-                        pct = raw * CFG.LEVERAGE if side == "long" else -raw * CFG.LEVERAGE
+                        pct = raw * lev if side == "long" else -raw * lev
                     market = self._markets.get(p.get("symbol", ""), {})
                     contract_size = market.get("contractSize", 1.0)
                     coins = float(contracts) * contract_size

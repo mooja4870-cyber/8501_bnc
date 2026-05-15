@@ -501,13 +501,13 @@ with tabs[0]:
             if delta is not None:
                 d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
                 d_color = "#ef4444" if d_num >= 0 else "#3b82f6"
-                delta_html = f'<div style="color:{d_color}; font-size:0.6rem; margin-top:2px;">{delta}</div>'
+                delta_html = f'<div style="color:{d_color}; font-size:0.8rem; margin-top:2px;">{delta}</div>'
                 
             st.markdown(
                 f"""
-                <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:0px; height:80px;">
-                    <div style="color:#666; font-size:0.55rem; font-family:'JetBrains Mono'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
-                    <div style="color:{color}; font-size:1.1rem; font-family:'JetBrains Mono'; font-weight:700; margin-top:4px;">{value}</div>
+                <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:0px; height:100px;">
+                    <div style="color:#cccccc; font-size:0.73rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
+                    <div style="color:{color}; font-size:1.46rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
                     {delta_html}
                 </div>
                 """,

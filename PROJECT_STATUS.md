@@ -34,7 +34,8 @@
 
 
 
-- **[v1.2.25] Dynamic Leverage Sizing:** Implemented ticker-specific leverage adjustment logic: pplied_leverage = min(CFG.LEVERAGE, policy_max_leverage).
+
+- **[v1.2.26] Metric UI Zoom:** Increased top metric font sizes by 133% and brightened labels to #cccccc for better terminal aesthetics.
 
 
 
@@ -49,7 +50,8 @@
 
 
 
-- **[v1.2.25] Dynamic Leverage Sizing:** Implemented ticker-specific leverage adjustment logic: pplied_leverage = min(CFG.LEVERAGE, policy_max_leverage).
+
+- **[v1.2.26] Metric UI Zoom:** Increased top metric font sizes by 133% and brightened labels to #cccccc for better terminal aesthetics.
 
 ## Active Issues
 - None.
@@ -159,3 +161,6 @@
 
 ## v1.2.25 (2026-05-15)
 - [Trade] Implemented dynamic leverage sizing based on ticker-specific exchange policy.
+
+## v1.2.26 (2026-05-15)
+- [UI] Enlarged top metrics (133%) and brightened labels. [Fix] Accurate PnL % calculation based on actual leverage.
