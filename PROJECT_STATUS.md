@@ -55,7 +55,8 @@
 
 
 
-- **[v1.2.46] Metric Synchronization:** Unified Orders Today with Win Rate by limiting the count to completed (Exit) trades only (orders_today = wins + losses).
+
+- **[v1.2.47] Layout Optimization:** Reduced vertical gap between position elapsed time and close button. Refactored time calculation to be timezone-aware.
 
 
 
@@ -91,7 +92,8 @@
 
 
 
-- **[v1.2.46] Metric Synchronization:** Unified Orders Today with Win Rate by limiting the count to completed (Exit) trades only (orders_today = wins + losses).
+
+- **[v1.2.47] Layout Optimization:** Reduced vertical gap between position elapsed time and close button. Refactored time calculation to be timezone-aware.
 
 ## Active Issues
 - None.
@@ -277,3 +279,7 @@
 
 ## v1.2.46 (2026-05-15)
 - [Core] Unified Orders Today metric with Win Rate (W+L only).
+
+## v1.2.47 (2026-05-15)
+- [UI] Tightened vertical spacing in position cards. 
+- [Core] Refactored datetime for UTC-aware compliance.
