@@ -26,14 +26,16 @@
 
 
 
-- **[v1.2.17] CSS Reliability:** Switched to marker-based sibling selector for liquidation buttons to ensure styles apply correctly in Streamlit's shadow DOM.
+
+- **[v1.2.18] Text Visibility:** Increased position detail font size to 110% and changed color to Bright Grey (#cccccc) for better contrast against dark background.
 
 
 
 
 
 
-- **[v1.2.17] CSS Reliability:** Switched to marker-based sibling selector for liquidation buttons to ensure styles apply correctly in Streamlit's shadow DOM.
+
+- **[v1.2.18] Text Visibility:** Increased position detail font size to 110% and changed color to Bright Grey (#cccccc) for better contrast against dark background.
 
 ## Active Issues
 - None.
@@ -119,3 +121,6 @@
 
 ## v1.2.17 (2026-05-15)
 - [Fix] Enhanced CSS selector specificity for liquidation buttons using marker div technique.
+
+## v1.2.18 (2026-05-15)
+- [UI] Enhanced visibility of position details with larger, brighter font.

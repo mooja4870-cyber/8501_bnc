@@ -534,7 +534,7 @@ with tabs[0]:
                                   {p['pnl_usdt']:+.4f} USDT ({p['pnl_pct']:+.1f}%)
                                 </span>
                               </div>
-                              <div style="font-family:'IBM Plex Mono';font-size:0.7rem;color:#555;display:flex;gap:16px;">
+                              <div style="font-family:'IBM Plex Mono';font-size:0.77rem;color:#cccccc;display:flex;gap:16px;">
                                 <span>{side_badge}</span>
                                 <span>진입가 ${p['entry_price']:,.4f}</span>
                                 <span>현재가 ${p['mark_price']:,.4f}</span>
