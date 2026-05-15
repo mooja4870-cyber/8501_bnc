@@ -23,11 +23,13 @@
 
 
 
-- **[v1.2.14] Duration Alert:** Enlarged duration font by 122% and added red background for positions active over 3 hours.
+
+- **[v1.2.15] Position Amount:** Added 'Amount' field (Entry Price * Quantity) to the position details for better exposure tracking.
 
 
 
-- **[v1.2.14] Duration Alert:** Enlarged duration font by 122% and added red background for positions active over 3 hours.
+
+- **[v1.2.15] Position Amount:** Added 'Amount' field (Entry Price * Quantity) to the position details for better exposure tracking.
 
 ## Active Issues
 - None.
@@ -104,3 +106,6 @@
 
 ## v1.2.14 (2026-05-15)
 - [UI] Enhanced position duration display with larger font and 3h+ red alert background.
+
+## v1.2.15 (2026-05-15)
+- [UI] Added 'Amount' (Notional Entry Value) to active position cards.

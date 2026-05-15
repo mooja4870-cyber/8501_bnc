@@ -529,6 +529,7 @@ with tabs[0]:
                                 <span>진입가 ${p['entry_price']:,.4f}</span>
                                 <span>현재가 ${p['mark_price']:,.4f}</span>
                                 <span>{p['leverage']}x LEV</span>
+                                <span>Amount ${p['amount_usdt']:,.2f}</span>
                               </div>
                             </div>
                             """,

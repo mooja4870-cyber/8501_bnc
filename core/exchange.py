@@ -72,17 +72,24 @@ class OKXClient:
                     if entry and current:
                         raw = (float(current) - float(entry)) / float(entry)
                         pct = raw * CFG.LEVERAGE if side == "long" else -raw * CFG.LEVERAGE
+                    market = self._markets.get(p.get("symbol", ""), {})
+                    contract_size = market.get("contractSize", 1.0)
+                    coins = float(contracts) * contract_size
+                    entry_val = float(entry) * coins
+                    
                     active.append({
                         "symbol": p.get("symbol", ""),
                         "side": side,
                         "size": float(contracts),
+                        "coins": coins,
                         "entry_price": float(entry),
                         "mark_price": float(current),
                         "pnl_pct": round(pct * 100, 2),
                         "pnl_usdt": round(p.get("unrealizedPnl", 0) or 0, 4),
                         "leverage": p.get("leverage", CFG.LEVERAGE),
                         "margin": round(p.get("initialMargin", 0) or 0, 4),
-                        "timestamp": p.get("timestamp"),  # 진입 시각 (ms)
+                        "timestamp": p.get("timestamp"),
+                        "amount_usdt": round(entry_val, 2), # 진입 가치 (Entry Price * Coins)
                     })
             return active
         except Exception as e:
