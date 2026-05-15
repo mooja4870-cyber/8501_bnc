@@ -29,7 +29,8 @@
 
 
 
-- **[v1.2.20] PnL Color Scheme:** Reversed PnL colors to align with Korean standard (Profit: Red, Loss: Blue).
+
+- **[v1.2.21] Module Deletion:** Completely removed the Backtest module and its associated files to focus on live trading performance.
 
 
 
@@ -39,7 +40,8 @@
 
 
 
-- **[v1.2.20] PnL Color Scheme:** Reversed PnL colors to align with Korean standard (Profit: Red, Loss: Blue).
+
+- **[v1.2.21] Module Deletion:** Completely removed the Backtest module and its associated files to focus on live trading performance.
 
 ## Active Issues
 - None.
@@ -134,3 +136,6 @@
 
 ## v1.2.20 (2026-05-15)
 - [UI] Switched PnL color scheme to Profit: Red / Loss: Blue.
+
+## v1.2.21 (2026-05-15)
+- [Core] Deleted Backtest module (core/backtest.py and UI tab).

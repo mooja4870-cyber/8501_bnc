@@ -17,7 +17,6 @@ from core.exchange import OKXClient
 from core.scanner import Scanner
 from core.trader import AutoTrader
 from core.engine import QuantumEngine
-from core.backtest import BacktestEngine
 from core.config import CFG
 import core.stats as stats_store
 
@@ -453,7 +452,6 @@ st.markdown('<hr style="margin: 8px 0 16px;">', unsafe_allow_html=True)
 tabs = st.tabs([
     "📊  대시보드",
     "🔍  스캐너",
-    "📈  백테스트",
     "📋  매매 이력",
     "🎯  포지션 진입",
     "⚙️  설정",
@@ -747,116 +745,12 @@ with tabs[1]:
             )
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# TAB 3: 백테스트
+
+
+# TAB 3: 매매 이력
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with tabs[2]:
-    engine: QuantumEngine = st.session_state.engine
-
-    if not st.session_state.api_connected or not engine.is_ready:
-        st.info("사이드바에서 OKX API를 연결하세요.")
-    else:
-        bt1, bt2, bt3 = st.columns([2, 1, 1])
-
-        with bt1:
-            bt_symbol = st.selectbox(
-                "종목 선택",
-                ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT", "XRP/USDT:USDT", "DOGE/USDT:USDT"],
-            )
-        with bt2:
-            bt_period = st.selectbox("기간", ["1년", "2년", "3년"])
-        with bt3:
-            run_bt = st.button("📊  백테스트 실행", use_container_width=True)
-
-        if run_bt:
-            period_days = {"1년": 365, "2년": 730, "3년": 1095}[bt_period]
-            limit = period_days * 24  # 1h 캔들 수
-
-            with st.spinner(f"{bt_symbol} {bt_period} 백테스트 실행 중..."):
-                df_bt = engine.client.get_ohlcv(bt_symbol, timeframe="1h", limit=min(limit, 1500))
-                bt_engine = BacktestEngine()
-                report = bt_engine.run(df_bt, bt_symbol, bt_period)
-
-            if report.total_trades == 0:
-                st.warning("백테스트 결과가 없습니다. 데이터를 확인하세요.")
-            else:
-                # 상단 성과 지표
-                c1, c2, c3, c4, c5 = st.columns(5)
-                c1.metric("누적 수익률", f"{report.total_pnl_pct:+.1f}%")
-                c2.metric("승률", f"{report.win_rate:.1f}%")
-                c3.metric("Profit Factor", f"{report.profit_factor:.2f}")
-                c4.metric("최대 낙폭", f"{report.max_drawdown_pct:.1f}%")
-                c5.metric("총 거래수", f"{report.total_trades}회")
-
-                st.markdown("---")
-
-                col_eq, col_monthly = st.columns(2)
-
-                with col_eq:
-                    st.markdown(
-                        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">EQUITY CURVE</p>',
-                        unsafe_allow_html=True,
-                    )
-                    fig_eq = go.Figure()
-                    fig_eq.add_trace(go.Scatter(
-                        y=report.equity_curve,
-                        mode="lines",
-                        line=dict(color="#c8f53b", width=1.5),
-                        fill="tozeroy",
-                        fillcolor="rgba(200,245,59,0.06)",
-                        name="잔고",
-                    ))
-                    fig_eq.update_layout(**PLOT_LAYOUT, height=250, showlegend=False)
-                    st.plotly_chart(fig_eq, use_container_width=True)
-
-                with col_monthly:
-                    st.markdown(
-                        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">MONTHLY RETURNS (%)</p>',
-                        unsafe_allow_html=True,
-                    )
-                    if report.monthly_returns:
-                        months = list(report.monthly_returns.keys())
-                        rets = list(report.monthly_returns.values())
-                        colors = ["#22c55e" if r >= 0 else "#ef4444" for r in rets]
-                        fig_m = go.Figure(go.Bar(
-                            x=months, y=rets,
-                            marker_color=colors,
-                            text=[f"{r:.1f}%" for r in rets],
-                            textposition="outside",
-                            textfont=dict(size=9, family="IBM Plex Mono"),
-                        ))
-                        fig_m.update_layout(**PLOT_LAYOUT, height=250, showlegend=False)
-                        st.plotly_chart(fig_m, use_container_width=True)
-
-                # 거래 목록
-                st.markdown("---")
-                st.markdown(
-                    '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">TRADE LIST</p>',
-                    unsafe_allow_html=True,
-                )
-                if report.trades:
-                    df_trades = pd.DataFrame([
-                        {
-                            "진입시각": t.entry_time.strftime("%Y-%m-%d %H:%M"),
-                            "청산시각": t.exit_time.strftime("%Y-%m-%d %H:%M"),
-                            "방향": "🟢 LONG" if t.direction == "long" else "🔴 SHORT",
-                            "진입가": f"${t.entry_price:,.4f}",
-                            "청산가": f"${t.exit_price:,.4f}",
-                            "수익률(%)": f"{t.pnl_pct:+.2f}%",
-                            "손익(USDT)": f"${t.pnl_usdt:+.4f}",
-                            "청산사유": t.exit_reason.upper(),
-                        }
-                        for t in reversed(report.trades[-100:])
-                    ])
-                    st.dataframe(df_trades, use_container_width=True, hide_index=True)
-
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# TAB 4: 매매 이력
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-with tabs[3]:
     engine: QuantumEngine = st.session_state.engine
 
     if not st.session_state.api_connected or not engine.is_ready:
@@ -895,11 +789,10 @@ with tabs[3]:
                     )
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# TAB 5: 포지션 진입
+# TAB 4: 포지션 진입
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-with tabs[4]:
+with tabs[3]:
     st.markdown(
         '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">ENTRY CONDITIONS</p>',
         unsafe_allow_html=True,
@@ -965,11 +858,10 @@ with tabs[4]:
         CFG.MACD_SLOW = st.number_input("MACD 장기", 1, 100, CFG.MACD_SLOW, step=1)
         CFG.MACD_SIGNAL = st.number_input("MACD 시그널", 1, 50, CFG.MACD_SIGNAL, step=1)
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# TAB 6: 설정
+# TAB 5: 설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-with tabs[5]:
+with tabs[4]:
     st.markdown(
         '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">STRATEGY PARAMETERS</p>',
         unsafe_allow_html=True,
