@@ -43,7 +43,8 @@
 
 
 
-- **[v1.2.34] Summary Box Enhancement:** Enlarged font size to 155% (1.25rem), applied center alignment, and brightened borders for the entry condition summary boxes.
+
+- **[v1.2.35] Summary Box Reordering:** Moved entry condition summary boxes to appear immediately after the titles for better initial focus.
 
 
 
@@ -67,7 +68,8 @@
 
 
 
-- **[v1.2.34] Summary Box Enhancement:** Enlarged font size to 155% (1.25rem), applied center alignment, and brightened borders for the entry condition summary boxes.
+
+- **[v1.2.35] Summary Box Reordering:** Moved entry condition summary boxes to appear immediately after the titles for better initial focus.
 
 ## Active Issues
 - None.
@@ -204,3 +206,6 @@
 
 ## v1.2.34 (2026-05-15)
 - [UI] Enlarged (155%) and center-aligned Entry Condition summary boxes.
+
+## v1.2.35 (2026-05-15)
+- [UI] Moved Entry Condition summary boxes above the detailed list.
