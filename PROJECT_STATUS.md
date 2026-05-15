@@ -33,7 +33,8 @@
 
 
 
-- **[v1.2.24] Metric Color Refinement:** Reverted Total Balance and Margin metrics to neutral white while maintaining PnL-based coloring for earnings.
+
+- **[v1.2.25] Dynamic Leverage Sizing:** Implemented ticker-specific leverage adjustment logic: pplied_leverage = min(CFG.LEVERAGE, policy_max_leverage).
 
 
 
@@ -47,7 +48,8 @@
 
 
 
-- **[v1.2.24] Metric Color Refinement:** Reverted Total Balance and Margin metrics to neutral white while maintaining PnL-based coloring for earnings.
+
+- **[v1.2.25] Dynamic Leverage Sizing:** Implemented ticker-specific leverage adjustment logic: pplied_leverage = min(CFG.LEVERAGE, policy_max_leverage).
 
 ## Active Issues
 - None.
@@ -154,3 +156,6 @@
 
 ## v1.2.24 (2026-05-15)
 - [UI] Reverted colors for balance and margin metrics to neutral white.
+
+## v1.2.25 (2026-05-15)
+- [Trade] Implemented dynamic leverage sizing based on ticker-specific exchange policy.

@@ -219,7 +219,7 @@ class OKXClient:
 
     # ── 주문 실행 ──────────────────────────────────────
 
-    def set_leverage(self, symbol: str, leverage: int = CFG.LEVERAGE) -> bool:
+    def set_leverage(self, symbol: str, leverage: int) -> bool:
         """레버리지 설정"""
         try:
             self.exchange.set_leverage(leverage, symbol, params={"mgnMode": "isolated"})
@@ -228,6 +228,18 @@ class OKXClient:
         except Exception as e:
             logger.error(f"레버리지 설정 실패 ({symbol}): {e}")
             return False
+
+    def get_market_max_leverage(self, symbol: str) -> int:
+        """해당 종목의 거래소 정책상 최대 레버리지 조회"""
+        try:
+            market = self._markets.get(symbol, {})
+            info = market.get("info", {})
+            # OKX v5 API는 maxLvl 필드에 최대 레버리지를 제공함
+            max_lvl = int(info.get("maxLvl", 10))
+            return max_lvl
+        except Exception as e:
+            logger.warning(f"최대 레버리지 조회 실패 ({symbol}), 기본값 10 적용: {e}")
+            return 10
 
     def place_order(
         self,
@@ -242,10 +254,14 @@ class OKXClient:
         side: "buy" = 롱 진입, "sell" = 숏 진입
         """
         try:
-            # 1) 레버리지 설정
-            self.set_leverage(symbol, CFG.LEVERAGE)
+            # 1) 가변 레버리지 결정: min(설정값, 거래소 정책 최대치)
+            policy_max = self.get_market_max_leverage(symbol)
+            applied_leverage = min(CFG.LEVERAGE, policy_max)
+            
+            # 2) 레버리지 설정 실행
+            self.set_leverage(symbol, applied_leverage)
 
-            # 2) 현재가로 수량 계산
+            # 3) 현재가로 수량 계산
             ticker = self.get_ticker(symbol)
             price = ticker.get("last", 0)
             if not price:
@@ -253,7 +269,9 @@ class OKXClient:
 
             market = self._markets.get(symbol, {})
             contract_size = market.get("contractSize", 1)
-            notional = margin_usdt * CFG.LEVERAGE
+            
+            # 실제 적용된 레버리지(applied_leverage)로 포지션 가치(Notional) 계산
+            notional = margin_usdt * applied_leverage
             amount = notional / (price * contract_size)
 
             # ccxt precision 적용
