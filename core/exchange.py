@@ -122,13 +122,38 @@ class OKXClient:
             trades = self.exchange.fetch_my_trades(symbol=symbol, limit=limit)
             result = []
             for t in trades:
+                info = t.get("info", {})
+                pos_side = info.get("posSide", "") # long, short
+                side = t.get("side", "")           # buy, sell
+                
+                # 구분 (Entry vs Exit)
+                # OKX: BUY&LONG=Entry, SELL&LONG=Exit, SELL&SHORT=Entry, BUY&SHORT=Exit
+                category = "진입"
+                if (side == "buy" and pos_side == "short") or (side == "sell" and pos_side == "long"):
+                    category = "청산"
+                
+                # 손익 (OKX V5 fillPnl)
+                pnl = float(info.get("fillPnl", 0) or 0)
+                cost = float(t.get("cost", 0) or 0)
+                
+                # 수익률 (%) - (손익 / 증거금) * 100. 증거금은 비용/레버리지로 추정
+                pnl_pct = 0.0
+                if category == "청산" and pnl != 0 and cost > 0:
+                    # 현재 설정 레버리지(CFG.LEVERAGE)를 기준으로 역산 (근사치)
+                    margin_est = cost / CFG.LEVERAGE
+                    if margin_est > 0:
+                        pnl_pct = (pnl / margin_est) * 100
+
                 result.append({
                     "timestamp": pd.to_datetime(t["timestamp"], unit="ms") + pd.Timedelta(hours=9),
                     "symbol": t["symbol"],
-                    "side": t["side"],
+                    "category": category,
+                    "side": side,
                     "price": round(t.get("price", 0), 6),
                     "amount": t.get("amount", 0),
-                    "cost": round(t.get("cost", 0), 4),
+                    "cost": round(cost, 4),
+                    "pnl": round(pnl, 4),
+                    "pnl_pct": round(pnl_pct, 2),
                     "fee": round((t.get("fee") or {}).get("cost", 0), 6),
                     "order_id": t.get("order"),
                 })

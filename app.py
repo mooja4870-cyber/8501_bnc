@@ -817,9 +817,30 @@ with tabs[2]:
         if history:
             df_hist = pd.DataFrame(history[::-1])
             df_hist["timestamp"] = df_hist["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
-            df_hist.columns = ["시각","종목","방향","체결가","수량","금액(USDT)","수수료","주문ID"]
-            df_hist["방향"] = df_hist["방향"].map({"buy":"🟢 BUY","sell":"🔴 SELL"}).fillna(df_hist["방향"])
-            st.dataframe(df_hist, use_container_width=True, hide_index=True, height=500)
+            # 컬럼 재구성
+            df_hist = df_hist[["timestamp", "symbol", "category", "side", "price", "amount", "cost", "pnl", "pnl_pct", "fee"]]
+            df_hist.columns = ["시각", "종목", "구분", "방향", "체결가", "수량", "금액(USDT)", "손익", "%", "수수료"]
+            
+            # 포맷팅
+            df_hist["구분"] = df_hist["구분"].map({"진입": "*진입", "청산": "청산"})
+            df_hist["방향"] = df_hist["방향"].map({"buy": "🟢 BUY", "sell": "🔴 SELL"}).fillna(df_hist["방향"])
+            
+            def style_history(row):
+                styles = [''] * len(row)
+                if row["구분"] == "청산":
+                    pnl_val = row["손익"]
+                    color = '#ef4444' if pnl_val >= 0 else '#3b82f6'
+                    # 손익과 % 컬럼(7, 8번 인덱스)에 색상 적용
+                    styles[7] = f'color: {color}; font-weight: bold;'
+                    styles[8] = f'color: {color}; font-weight: bold;'
+                return styles
+
+            st.dataframe(
+                df_hist.style.apply(style_history, axis=1),
+                use_container_width=True,
+                hide_index=True,
+                height=500
+            )
         else:
             # 자동매매 엔진 로그 표시
             if engine.trader:

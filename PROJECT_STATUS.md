@@ -35,7 +35,8 @@
 
 
 
-- **[v1.2.26] Metric UI Zoom:** Increased top metric font sizes by 133% and brightened labels to #cccccc for better terminal aesthetics.
+
+- **[v1.2.27] Enhanced Trade History:** Added 'Type' (Entry/Exit), 'PnL', and 'PnL %' fields with Red/Blue color styling for closed trades.
 
 
 
@@ -51,7 +52,8 @@
 
 
 
-- **[v1.2.26] Metric UI Zoom:** Increased top metric font sizes by 133% and brightened labels to #cccccc for better terminal aesthetics.
+
+- **[v1.2.27] Enhanced Trade History:** Added 'Type' (Entry/Exit), 'PnL', and 'PnL %' fields with Red/Blue color styling for closed trades.
 
 ## Active Issues
 - None.
@@ -164,3 +166,6 @@
 
 ## v1.2.26 (2026-05-15)
 - [UI] Enlarged top metrics (133%) and brightened labels. [Fix] Accurate PnL % calculation based on actual leverage.
+
+## v1.2.27 (2026-05-15)
+- [UI] Enhanced Trade History with Type, PnL, and PnL % fields and color styling.
