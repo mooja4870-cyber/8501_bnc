@@ -230,3 +230,6 @@
 
 ## v1.2.38 (2026-05-15)
 - [Core] Reset win rate and order count tracking to start from 2026-05-15.
+
+## v1.2.38 (2026-05-15)
+- [Core] Reset all trading statistics to start fresh from May 15.
