@@ -47,7 +47,8 @@
 
 
 
-- **[v1.2.38] Metric Start Reset:** Filtered 'Cumulative Win Rate' and 'Today's Orders' to only count trades after 2026-05-15 00:00 KST, ensuring consistency across all performance metrics.
+
+- **[v1.2.39] Timezone Alignment:** Switched Daily Avg ROI calculation from UTC to KST (Korean Standard Time) for accurate 24-hour performance tracking.
 
 
 
@@ -75,7 +76,8 @@
 
 
 
-- **[v1.2.38] Metric Start Reset:** Filtered 'Cumulative Win Rate' and 'Today's Orders' to only count trades after 2026-05-15 00:00 KST, ensuring consistency across all performance metrics.
+
+- **[v1.2.39] Timezone Alignment:** Switched Daily Avg ROI calculation from UTC to KST (Korean Standard Time) for accurate 24-hour performance tracking.
 
 ## Active Issues
 - None.
@@ -233,3 +235,6 @@
 
 ## v1.2.38 (2026-05-15)
 - [Core] Reset all trading statistics to start fresh from May 15.
+
+## v1.2.39 (2026-05-15)
+- [Core] Aligned Daily Avg ROI logic with KST timezone.
