@@ -42,7 +42,8 @@
 
 
 
-- **[v1.2.33] Strategy Summary Boxes:** Added fun, intuitive summary boxes with metaphors for Long/Short entry conditions in TAB 4.
+
+- **[v1.2.34] Summary Box Enhancement:** Enlarged font size to 155% (1.25rem), applied center alignment, and brightened borders for the entry condition summary boxes.
 
 
 
@@ -65,7 +66,8 @@
 
 
 
-- **[v1.2.33] Strategy Summary Boxes:** Added fun, intuitive summary boxes with metaphors for Long/Short entry conditions in TAB 4.
+
+- **[v1.2.34] Summary Box Enhancement:** Enlarged font size to 155% (1.25rem), applied center alignment, and brightened borders for the entry condition summary boxes.
 
 ## Active Issues
 - None.
@@ -199,3 +201,6 @@
 
 ## v1.2.33 (2026-05-15)
 - [UI] Added fun summary boxes for Entry Conditions with metaphors.
+
+## v1.2.34 (2026-05-15)
+- [UI] Enlarged (155%) and center-aligned Entry Condition summary boxes.

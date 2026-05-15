@@ -885,8 +885,8 @@ with tabs[3]:
         st.markdown("- **필터:** RSI < 60 (과매수 아님) <span style='color:#ffcc00;'>☞ 식당에 줄이 너무 길면 들어가기 힘들지? 사람들이 너무 많이 사서 지치기 전인지 확인해서, '아직 더 올라갈 자리가 넉넉하다'는 걸 체크하는 거야.</span>", unsafe_allow_html=True)
         st.markdown(
             """
-            <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; margin-top:10px;">
-                <p style="font-family:'Inter'; font-size:0.8rem; color:#ffcc00; margin:0; line-height:1.6;">
+            <div style="background:#0f0f0f; border:1px solid #444; padding:15px; margin-top:15px; border-radius:5px;">
+                <p style="font-family:'Inter'; font-size:1.25rem; color:#ffcc00; margin:0; line-height:1.5; text-align:center; font-weight:600;">
                 "🌊 큰 파도가 으쌰으쌰 밀어주고, ⚽ 바닥 찍고 팅겨오른 공이, 🚀 로켓 엔진까지 점화했는데, 🔋 아직 배터리 여유까지 빵빵할 때! 바로 이때가 인생 롱(LONG) 타이밍이야!"
                 </p>
             </div>
@@ -902,8 +902,8 @@ with tabs[3]:
         st.markdown("- **필터:** RSI > 40 (과매도 아님) <span style='color:#ffcc00;'>☞ 물건값이 너무 싸져서 다들 팔기 싫어하는 상태인지 보는 거야. '아직은 팔려는 사람들이 더 많고, 더 내려갈 힘이 있다'는 걸 확인하는 거지.</span>", unsafe_allow_html=True)
         st.markdown(
             """
-            <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; margin-top:10px;">
-                <p style="font-family:'Inter'; font-size:0.8rem; color:#ffcc00; margin:0; line-height:1.6;">
+            <div style="background:#0f0f0f; border:1px solid #444; padding:15px; margin-top:15px; border-radius:5px;">
+                <p style="font-family:'Inter'; font-size:1.25rem; color:#ffcc00; margin:0; line-height:1.5; text-align:center; font-weight:600;">
                 "📉 내리막길 경사가 아찔하고, 🤕 천장에 머리 콩 박고 내려오는데, 🌬 뒤에서 찬바람까지 쌩쌩 불고, 🧊 아직 꽁꽁 얼기 전이라 더 내려갈 수 있을 때! 그때가 바로 숏(SHORT) 칠 타이밍이지!"
                 </p>
             </div>
