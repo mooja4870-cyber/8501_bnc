@@ -59,7 +59,8 @@
 
 
 
-- **[v1.2.50] Layout Tightening:** Applied a -12px negative margin to the 'Close' button to minimize the gap between elapsed time and the button in position cards.
+
+- **[v1.2.51] Log Display Fix:** Resolved issue where system logs appeared in a single line. Added white-space: pre-wrap to CSS and implemented div-based line wrapping for all log entries.
 
 
 
@@ -99,7 +100,8 @@
 
 
 
-- **[v1.2.50] Layout Tightening:** Applied a -12px negative margin to the 'Close' button to minimize the gap between elapsed time and the button in position cards.
+
+- **[v1.2.51] Log Display Fix:** Resolved issue where system logs appeared in a single line. Added white-space: pre-wrap to CSS and implemented div-based line wrapping for all log entries.
 
 ## Active Issues
 - None.
@@ -298,3 +300,7 @@
 
 ## v1.2.50 (2026-05-15)
 - [UI] Applied negative margin to Close button for compact layout.
+
+## v1.2.51 (2026-05-15)
+- [Bugfix] Fixed system log line-break issue. 
+- [UI] Enhanced log readability with row borders.

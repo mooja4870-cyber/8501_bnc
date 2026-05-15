@@ -186,11 +186,12 @@ st.markdown(
         border-radius: 0px;
         padding: 10px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem; /* 상향: 14px+ */
-        color: #cccccc; /* Bright Grey */
+        font-size: 0.9rem;
+        color: #cccccc;
         height: 250px;
         overflow-y: auto;
         line-height: 1.5;
+        white-space: pre-wrap; /* 줄바꿈 보장 */
     }
     .log-latest {
         color: #ffffff !important;
@@ -618,9 +619,9 @@ with tabs[0]:
             
             if logs:
                 # 최신 로그(마지막 요소)에 특수 스타일 적용
-                latest_line = f'<span class="log-latest">{logs[-1]}</span>'
-                other_lines = "\n".join(reversed(logs[:-1])) if len(logs) > 1 else ""
-                log_html = f"{latest_line}\n{other_lines}" if other_lines else latest_line
+                latest_line = f'<div class="log-latest" style="margin-bottom:4px;">{logs[-1]}</div>'
+                other_lines = "".join([f'<div style="margin-bottom:4px; border-bottom:1px solid #1a1a1a;">{log}</div>' for log in reversed(logs[:-1])])
+                log_html = f"{latest_line}{other_lines}"
             else:
                 log_html = "로그 없음"
 
