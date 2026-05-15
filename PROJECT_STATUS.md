@@ -238,3 +238,6 @@
 
 ## v1.2.39 (2026-05-15)
 - [Core] Aligned Daily Avg ROI logic with KST timezone.
+
+## v1.2.39 (2026-05-15)
+- [Core] Synchronized ROI calculation to KST timezone.

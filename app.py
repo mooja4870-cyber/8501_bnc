@@ -643,11 +643,11 @@ with tabs[0]:
         # 24시간 변동률도 시드 대비 비율로 표시
         daily_pnl_pct = (daily_pnl / seed_money) * 100
         
-        # 일 평균 수익률 계산 (2026-05-15 00:00:00 KST 기준)
-        perf_start_dt_kst = datetime(2026, 5, 15, 0, 0, 0)
+        # [v1.2.39] 일 평균 수익률 계산 (2026-05-15 00:00:00 KST 기준)
+        perf_start_dt = datetime(2026, 5, 15, 0, 0, 0)
         now_kst = datetime.utcnow() + timedelta(hours=9)
-        elapsed_seconds = (now_kst - perf_start_dt_kst).total_seconds()
-        # 경과 일수 계산 (최소 1초로 제한하여 0 나누기 방지)
+        elapsed_seconds = (now_kst - perf_start_dt).total_seconds()
+        # 경과 일수 계산 (KST 기준, 최소 1초)
         elapsed_days = max(elapsed_seconds / 86400.0, 1/86400.0)
         daily_avg_roi = total_pnl_pct / elapsed_days
         
