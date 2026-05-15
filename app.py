@@ -535,8 +535,10 @@ with tabs[0]:
                             unsafe_allow_html=True,
                         )
                     with pc2:
-                        # 경과 시간 계산
+                        # 경과 시간 계산 및 스타일 결정
                         duration_str = "[00시간 00분]"
+                        duration_style = "font-family:'JetBrains Mono'; font-size:0.8rem; color:#666; text-align:center; margin-bottom:4px;"
+                        
                         if p.get("timestamp"):
                             entry_dt = datetime.utcfromtimestamp(p["timestamp"] / 1000)
                             diff = datetime.utcnow() - entry_dt
@@ -544,8 +546,11 @@ with tabs[0]:
                             mins = rem // 60
                             duration_str = f"[{hrs:02d}시간 {mins:02d}분]"
                             
+                            if hrs >= 3:
+                                duration_style = "font-family:'JetBrains Mono'; font-size:0.8rem; color:white; background:#ff3b30; text-align:center; margin-bottom:4px; font-weight:700;"
+                            
                         st.markdown(
-                            f'<div style="font-family:\'JetBrains Mono\';font-size:0.65rem;color:#666;text-align:center;margin-bottom:4px;">{duration_str}</div>',
+                            f'<div style="{duration_style}">{duration_str}</div>',
                             unsafe_allow_html=True
                         )
                         st.markdown('<div class="small-btn">', unsafe_allow_html=True)

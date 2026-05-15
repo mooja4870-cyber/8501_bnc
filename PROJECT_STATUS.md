@@ -22,10 +22,12 @@
 
 
 
-- **[v1.2.13] Margin Metrics:** Added 'Used Margin' to the top metrics bar, separating it from 'Available Margin'.
+
+- **[v1.2.14] Duration Alert:** Enlarged duration font by 122% and added red background for positions active over 3 hours.
 
 
-- **[v1.2.13] Margin Metrics:** Added 'Used Margin' to the top metrics bar, separating it from 'Available Margin'.
+
+- **[v1.2.14] Duration Alert:** Enlarged duration font by 122% and added red background for positions active over 3 hours.
 
 ## Active Issues
 - None.
@@ -99,3 +101,6 @@
 
 ## v1.2.13 (2026-05-15)
 - [UI] Added 'Used Margin' metric to the dashboard header.
+
+## v1.2.14 (2026-05-15)
+- [UI] Enhanced position duration display with larger font and 3h+ red alert background.
