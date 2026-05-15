@@ -44,7 +44,8 @@
 
 
 
-- **[v1.2.35] Summary Box Reordering:** Moved entry condition summary boxes to appear immediately after the titles for better initial focus.
+
+- **[v1.2.36] Global Font Policy:** Standardized minimum font size to 14px (0.9rem) and text color to Bright Grey (#cccccc) across all UI elements, including labels, buttons, tabs, and logs.
 
 
 
@@ -69,7 +70,8 @@
 
 
 
-- **[v1.2.35] Summary Box Reordering:** Moved entry condition summary boxes to appear immediately after the titles for better initial focus.
+
+- **[v1.2.36] Global Font Policy:** Standardized minimum font size to 14px (0.9rem) and text color to Bright Grey (#cccccc) across all UI elements, including labels, buttons, tabs, and logs.
 
 ## Active Issues
 - None.
@@ -209,3 +211,6 @@
 
 ## v1.2.35 (2026-05-15)
 - [UI] Moved Entry Condition summary boxes above the detailed list.
+
+## v1.2.36 (2026-05-15)
+- [UI] Applied global font policy (Min 14px, Bright Grey) to all UI elements.

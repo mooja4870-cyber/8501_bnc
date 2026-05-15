@@ -75,9 +75,9 @@ st.markdown(
     }
     [data-testid="stMetricLabel"] {
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 0.65rem !important;
+        font-size: 0.9rem !important; /* 상향: 14px+ */
         letter-spacing: 0.1em !important;
-        color: var(--terminal-dim) !important;
+        color: #cccccc !important; /* Bright Grey */
         text-transform: uppercase !important;
     }
 
@@ -89,7 +89,7 @@ st.markdown(
         border-radius: 0px !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-weight: 600 !important;
-        font-size: 0.75rem !important;
+        font-size: 0.9rem !important; /* 상향: 14px+ */
         transition: all 0.2s;
     }
     .stButton > button:hover {
@@ -115,9 +115,9 @@ st.markdown(
         padding: 2px;
     }
     .stTabs [data-baseweb="tab"] {
-        color: var(--terminal-dim) !important;
+        color: #cccccc !important; /* Bright Grey */
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.7rem;
+        font-size: 0.9rem !important; /* 상향: 14px+ */
         padding: 8px 16px;
     }
     .stTabs [aria-selected="true"] {
@@ -133,7 +133,7 @@ st.markdown(
         color: var(--terminal-text) !important;
         font-family: 'JetBrains Mono', monospace !important;
         border-radius: 0px !important;
-        font-size: 0.8rem !important;
+        font-size: 0.9rem !important;
     }
 
     /* 데이터프레임 */
@@ -144,14 +144,14 @@ st.markdown(
     /* 로고 */
     .quantum-logo {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 1rem;
+        font-size: 1.1rem;
         font-weight: 700;
         color: var(--terminal-accent);
         border-bottom: 2px solid var(--terminal-accent);
         padding-bottom: 5px;
         margin-bottom: 20px;
     }
-    .quantum-logo span { color: var(--terminal-dim); font-weight: 400; }
+    .quantum-logo span { color: #cccccc; font-weight: 400; }
 
     /* 상태 뱃지 */
     .badge-live {
@@ -160,7 +160,7 @@ st.markdown(
         border: 1px solid var(--terminal-green);
         padding: 4px 12px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.65rem;
+        font-size: 0.9rem;
         font-weight: 700;
         color: var(--terminal-green);
     }
@@ -175,7 +175,7 @@ st.markdown(
         border: 1px solid var(--terminal-red);
         padding: 4px 12px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.65rem;
+        font-size: 0.9rem;
         color: var(--terminal-red);
     }
 
@@ -186,8 +186,8 @@ st.markdown(
         border-radius: 0px;
         padding: 10px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.7rem;
-        color: var(--terminal-dim);
+        font-size: 0.9rem; /* 상향: 14px+ */
+        color: #cccccc; /* Bright Grey */
         height: 250px;
         overflow-y: auto;
         line-height: 1.5;
@@ -218,8 +218,8 @@ st.markdown(
     .terminal-metric-item:last-child { border-right: none; }
     .terminal-metric-label {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.55rem;
-        color: #555;
+        font-size: 0.9rem; /* 상향: 14px+ */
+        color: #cccccc; /* Bright Grey */
         text-transform: uppercase;
         margin-bottom: 2px;
     }
@@ -232,23 +232,22 @@ st.markdown(
     }
     .terminal-metric-sub {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.55rem;
+        font-size: 0.85rem; /* 상향 */
         margin-top: 2px;
         display: flex;
         align-items: center;
         gap: 2px;
     }
 
-    /* 청산 버튼 특화 (Extreme Small & Sharp - 66% of original) */
-    /* Streamlit의 마크다운-위젯 간격 및 구조를 고려한 형제 셀렉터 적용 */
+    /* 청산 버튼 특화 (상향 조정: 최소 14px 준수) */
     .small-btn-marker + div.stButton button,
     .small-btn-marker + div[data-testid="stButton"] button,
     div.small-btn-marker ~ div.stButton button {
-        font-size: 9px !important;
-        height: 16px !important;
-        min-height: 16px !important;
+        font-size: 14px !important; /* 최소 14px */
+        height: 26px !important;
+        min-height: 26px !important;
         line-height: 1 !important;
-        padding: 0 5px !important;
+        padding: 0 8px !important;
         border-color: var(--terminal-red) !important;
         color: var(--terminal-red) !important;
         border-radius: 0px !important;
@@ -364,7 +363,7 @@ with st.sidebar:
     )
     st.markdown("---")
     st.markdown(
-        '<p style="font-family:IBM Plex Mono;font-size:0.65rem;color:#555;letter-spacing:0.08em;">API 연결 설정</p>',
+        '<p style="font-family:IBM Plex Mono;font-size:0.9rem;color:#cccccc;letter-spacing:0.08em;">API 연결 설정</p>',
         unsafe_allow_html=True,
     )
 
@@ -391,7 +390,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown(
-        '<p style="font-family:IBM Plex Mono;font-size:0.65rem;color:#555;letter-spacing:0.08em;">매매 제어</p>',
+        '<p style="font-family:IBM Plex Mono;font-size:0.9rem;color:#cccccc;letter-spacing:0.08em;">매매 제어</p>',
         unsafe_allow_html=True,
     )
 
@@ -415,9 +414,8 @@ with st.sidebar:
         engine.trader.allow_long = longs
         engine.trader.allow_short = shorts
 
-    st.markdown("---")
     st.markdown(
-        f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.65rem;color:#444;">
+        f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.9rem;color:#cccccc;line-height:1.6;">
         레버리지: {CFG.LEVERAGE}x ISOLATED<br>
         1회 증거금: {CFG.MARGIN_USDT} USDT<br>
         최대 포지션: {CFG.MAX_POSITIONS}개<br>
@@ -442,7 +440,7 @@ with col_logo:
 with col_time:
     now_kst = datetime.utcnow() + timedelta(hours=9)
     st.markdown(
-        f'<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#555;margin-top:6px;">'
+        f'<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;margin-top:6px;">'
         f'{now_kst.strftime("%Y-%m-%d %H:%M:%S")} KST</p>',
         unsafe_allow_html=True,
     )
@@ -501,12 +499,12 @@ with tabs[0]:
             if delta is not None:
                 d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
                 d_color = "#ef4444" if d_num >= 0 else "#3b82f6"
-                delta_html = f'<div style="color:{d_color}; font-size:0.8rem; margin-top:2px;">{delta}</div>'
+                delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px;">{delta}</div>'
                 
             st.markdown(
                 f"""
-                <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:0px; height:100px;">
-                    <div style="color:#cccccc; font-size:0.73rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
+                <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:0px; height:105px;">
+                    <div style="color:#cccccc; font-size:0.9rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
                     <div style="color:{color}; font-size:1.46rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
                     {delta_html}
                 </div>
@@ -536,7 +534,7 @@ with tabs[0]:
             col_title, col_bulk = st.columns([1, 1])
             with col_title:
                 st.markdown(
-                    '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">ACTIVE POSITIONS</p>',
+                    '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">ACTIVE POSITIONS</p>',
                     unsafe_allow_html=True,
                 )
             with col_bulk:
@@ -567,12 +565,12 @@ with tabs[0]:
                             <div style="background:#161616;border:1px solid rgba(255,255,255,0.07);
                                         border-radius:8px;padding:12px 14px;margin-bottom:8px;">
                               <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                                <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;">{p['symbol']}</span>
-                                <span style="font-family:'IBM Plex Mono';font-size:0.85rem;font-weight:600;color:{pnl_color};">
+                                <span style="font-family:'IBM Plex Mono';font-size:0.95rem;font-weight:600;">{p['symbol']}</span>
+                                <span style="font-family:'IBM Plex Mono';font-size:0.95rem;font-weight:600;color:{pnl_color};">
                                   {p['pnl_usdt']:+.4f} USDT ({p['pnl_pct']:+.1f}%)
                                 </span>
                               </div>
-                              <div style="font-family:'IBM Plex Mono';font-size:0.77rem;color:#cccccc;display:flex;gap:16px;">
+                              <div style="font-family:'IBM Plex Mono';font-size:0.9rem;color:#cccccc;display:flex;gap:16px;">
                                 <span>{side_badge}</span>
                                 <span>진입가 ${p['entry_price']:,.4f}</span>
                                 <span>현재가 ${p['mark_price']:,.4f}</span>
@@ -611,7 +609,7 @@ with tabs[0]:
 
         with col_log:
             st.markdown(
-                '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">SYSTEM LOG</p>',
+                '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">SYSTEM LOG</p>',
                 unsafe_allow_html=True,
             )
             engine: QuantumEngine = st.session_state.engine
@@ -872,7 +870,7 @@ with tabs[2]:
 
 with tabs[3]:
     st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">ENTRY CONDITIONS</p>',
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">ENTRY CONDITIONS</p>',
         unsafe_allow_html=True,
     )
 
@@ -961,7 +959,7 @@ with tabs[3]:
 
 with tabs[4]:
     st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">STRATEGY PARAMETERS</p>',
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">STRATEGY PARAMETERS</p>',
         unsafe_allow_html=True,
     )
 
