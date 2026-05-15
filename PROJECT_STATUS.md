@@ -28,7 +28,8 @@
 
 
 
-- **[v1.2.19] Duration Zoom:** Increased position duration font size to 0.98rem (additional 122% scale) for maximum prominence.
+
+- **[v1.2.20] PnL Color Scheme:** Reversed PnL colors to align with Korean standard (Profit: Red, Loss: Blue).
 
 
 
@@ -37,7 +38,8 @@
 
 
 
-- **[v1.2.19] Duration Zoom:** Increased position duration font size to 0.98rem (additional 122% scale) for maximum prominence.
+
+- **[v1.2.20] PnL Color Scheme:** Reversed PnL colors to align with Korean standard (Profit: Red, Loss: Blue).
 
 ## Active Issues
 - None.
@@ -129,3 +131,6 @@
 
 ## v1.2.19 (2026-05-15)
 - [UI] Further enlarged position duration text to 0.98rem.
+
+## v1.2.20 (2026-05-15)
+- [UI] Switched PnL color scheme to Profit: Red / Loss: Blue.

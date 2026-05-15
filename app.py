@@ -518,7 +518,7 @@ with tabs[0]:
                 )
             else:
                 for p in positions:
-                    pnl_color = "#22c55e" if p["pnl_usdt"] >= 0 else "#ef4444"
+                    pnl_color = "#ef4444" if p["pnl_usdt"] >= 0 else "#3b82f6"
                     side_badge = (
                         "🟢 LONG" if p["side"] == "long" else "🔴 SHORT"
                     )
@@ -611,9 +611,9 @@ with tabs[0]:
         losses = _st.get("total_losses", 0)
         orders_today = _st.get("orders_today", 0)
         
-        pnl_color = "#ef4444" if total_pnl < 0 else "#22c55e"
-        daily_color = "#ef4444" if daily_pnl < 0 else "#22c55e"
-        daily_arrow = "↓" if daily_pnl < 0 else "↑"
+        pnl_color = "#ef4444" if total_pnl >= 0 else "#3b82f6"
+        daily_color = "#ef4444" if daily_pnl >= 0 else "#3b82f6"
+        daily_arrow = "↑" if daily_pnl >= 0 else "↓"
         
         st.markdown(
             f"""
