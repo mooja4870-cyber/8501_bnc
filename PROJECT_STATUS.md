@@ -21,9 +21,11 @@
 - **Implemented Test Harness (`harness.py`):** Independent verification environment for core trading logic without UI dependency.
 
 
-- **[v1.2.12] Position Duration:** Displayed elapsed time since entry above the liquidation button.
 
-- **[v1.2.12] Position Duration:** Displayed elapsed time since entry above the liquidation button.
+- **[v1.2.13] Margin Metrics:** Added 'Used Margin' to the top metrics bar, separating it from 'Available Margin'.
+
+
+- **[v1.2.13] Margin Metrics:** Added 'Used Margin' to the top metrics bar, separating it from 'Available Margin'.
 
 ## Active Issues
 - None.
@@ -94,3 +96,6 @@
 
 ## v1.2.12 (2026-05-15)
 - [UI] Added position duration display ([00시간 00분]) above the 'Close Now' button.
+
+## v1.2.13 (2026-05-15)
+- [UI] Added 'Used Margin' metric to the dashboard header.

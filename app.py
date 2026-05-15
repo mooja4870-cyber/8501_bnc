@@ -464,7 +464,7 @@ with tabs[0]:
         positions = dash.get("positions", [])
 
         # ── 상단 지표 ──────────────────────────────
-        m1, m2, m3, m4 = st.columns(4)
+        m1, m2, m3, m4, m5 = st.columns(5)
         with m1:
             st.metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
         with m2:
@@ -474,6 +474,8 @@ with tabs[0]:
             dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
             st.metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}")
         with m4:
+            st.metric("사용 중 증거금", f"${dash['used_margin']:,.2f}")
+        with m5:
             st.metric("가용 증거금", f"${dash['free_margin']:,.2f}")
 
         st.markdown("---")

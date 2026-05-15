@@ -85,6 +85,7 @@ class QuantumEngine:
         return {
             "total_balance": balance.get("total", 0),
             "free_margin": balance.get("free", 0),
+            "used_margin": balance.get("used", 0),
             "realized_pnl": balance.get("pnl", 0),
             "positions": positions,
             "is_scanning": self.scanner.is_running if self.scanner else False,
