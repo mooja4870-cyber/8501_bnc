@@ -633,19 +633,24 @@ with tabs[0]:
         # ── 고밀도 터미널 메트릭 바 (Image 1 Style) ──────────
         _st = stats_store.load_stats()
         
+        # 설정된 기본 자산 및 시작일
+        BASE_CAPITAL = 40.43
+        START_TIME = datetime(2026, 5, 15, 0, 0, 0)
+        now_kst = datetime.utcnow() + timedelta(hours=9)
+        
         # 데이터 계산
-        total_pnl = _st.get("total_pnl_usdt", 0.0)
+        total_balance = dash['total_balance']
         daily_pnl = _st.get("daily_pnl_usdt", 0.0)
         
-        # 수익률 계산 (사용자 지정 기준: $40.43)
-        BASE_CAPITAL = 40.43
-        total_pnl_pct = ((dash['total_balance'] - BASE_CAPITAL) / BASE_CAPITAL) * 100
-        daily_pnl_pct = (daily_pnl / BASE_CAPITAL) * 100
+        # 누적 수익률 (%) = (현재잔고 / 기본자산 - 1) * 100
+        total_pnl_pct = ((total_balance / BASE_CAPITAL) - 1) * 100
         
-        # 일 평균 수익률 계산 (2026-05-15 00:00:00 기준)
-        start_date = datetime(2026, 5, 15, 0, 0, 0)
-        elapsed_days = max((datetime.utcnow() - start_date).total_seconds() / 86400.0, 0.01) # 최소 0.01일 보정
-        daily_avg_roi = total_pnl_pct / elapsed_days
+        # 일 평균 수익률 (%) = 누적 수익률 / 경과 일수
+        elapsed_days = max((now_kst - START_TIME).total_seconds() / 86400.0, 0.01) # 최소 0.01일
+        avg_daily_return = total_pnl_pct / elapsed_days
+        
+        # 24h 변동률 (간접 계산)
+        daily_pnl_pct = (daily_pnl / total_balance) * 100 if total_balance > 0 else 0.0
         
         win_rate = stats_store.get_win_rate()
         wins = _st.get("total_wins", 0)
@@ -655,11 +660,9 @@ with tabs[0]:
         # 수익률 색상 결정 (수익: 빨강, 손실: 파랑)
         total_color = "#ef4444" if total_pnl_pct >= 0 else "#3b82f6"
         daily_color = "#ef4444" if daily_pnl >= 0 else "#3b82f6"
-        daily_avg_color = "#ef4444" if daily_avg_roi >= 0 else "#3b82f6"
-        
+        avg_color = "#ef4444" if avg_daily_return >= 0 else "#3b82f6"
         daily_arrow = "↑" if daily_pnl >= 0 else "↓"
         total_arrow = "↑" if total_pnl_pct >= 0 else "↓"
-        avg_arrow = "↑" if daily_avg_roi >= 0 else "↓"
         
         st.markdown(
             f"""
@@ -675,9 +678,9 @@ with tabs[0]:
                 <!-- 일 평균 수익률 -->
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">일 평균 수익률</div>
-                    <div class="terminal-metric-value" style="color:{daily_avg_color};">{daily_avg_roi:+.2f}%</div>
+                    <div class="terminal-metric-value" style="color:{avg_color};">{avg_daily_return:+.2f}%</div>
                     <div class="terminal-metric-sub" style="color:#ef4444;">
-                        {avg_arrow} 2026.05.15 ~
+                        {total_arrow} Avg / Day
                     </div>
                 </div>
                 <!-- 누적 승률 -->

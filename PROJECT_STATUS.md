@@ -219,3 +219,6 @@
 
 ## v1.2.37 (2026-05-15)
 - [Core] Refined ROI calculation with .43 base capital and Daily Avg ROI logic.
+
+## v1.2.37 (2026-05-15)
+- [UI] Updated bottom metrics: Base capital .43, added Daily Average Return.
