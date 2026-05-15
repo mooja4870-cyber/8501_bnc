@@ -836,7 +836,12 @@ with tabs[2]:
                 return styles
 
             st.dataframe(
-                df_hist.style.apply(style_history, axis=1),
+                df_hist.style.apply(style_history, axis=1).format({
+                    "수량": "{:,.2f}",
+                    "금액(USDT)": "{:,.2f}",
+                    "손익": "{:,.2f}",
+                    "%": "{:,.2f}"
+                }),
                 use_container_width=True,
                 hide_index=True,
                 height=500

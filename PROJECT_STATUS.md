@@ -36,7 +36,8 @@
 
 
 
-- **[v1.2.27] Enhanced Trade History:** Added 'Type' (Entry/Exit), 'PnL', and 'PnL %' fields with Red/Blue color styling for closed trades.
+
+- **[v1.2.28] Data Formatting:** Standardized trade history numerical formats to x,xxx.xx for quantity, cost, pnl, and percentage.
 
 
 
@@ -53,7 +54,8 @@
 
 
 
-- **[v1.2.27] Enhanced Trade History:** Added 'Type' (Entry/Exit), 'PnL', and 'PnL %' fields with Red/Blue color styling for closed trades.
+
+- **[v1.2.28] Data Formatting:** Standardized trade history numerical formats to x,xxx.xx for quantity, cost, pnl, and percentage.
 
 ## Active Issues
 - None.
@@ -169,3 +171,6 @@
 
 ## v1.2.27 (2026-05-15)
 - [UI] Enhanced Trade History with Type, PnL, and PnL % fields and color styling.
+
+## v1.2.28 (2026-05-15)
+- [UI] Applied standard numerical formatting (comma + 2 decimal places) to Trade History.
