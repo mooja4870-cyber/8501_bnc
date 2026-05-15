@@ -39,7 +39,8 @@
 
 
 
-- **[v1.2.30] Settings Reorganization:** Reordered strategy parameters: Scan Interval moved to s1, and Stop Loss moved below Take Profit in s2.
+
+- **[v1.2.31] Settings Summary Zoom:** Increased font size by 122% and brightened text to #cccccc for the strategy summary footer.
 
 
 
@@ -59,7 +60,8 @@
 
 
 
-- **[v1.2.30] Settings Reorganization:** Reordered strategy parameters: Scan Interval moved to s1, and Stop Loss moved below Take Profit in s2.
+
+- **[v1.2.31] Settings Summary Zoom:** Increased font size by 122% and brightened text to #cccccc for the strategy summary footer.
 
 ## Active Issues
 - None.
@@ -184,3 +186,6 @@
 
 ## v1.2.30 (2026-05-15)
 - [UI] Reorganized setting items for better usability.
+
+## v1.2.31 (2026-05-15)
+- [UI] Enlarged and brightened the strategy summary text in Settings.

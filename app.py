@@ -962,7 +962,7 @@ with tabs[4]:
 
     st.markdown("---")
     st.markdown(
-        f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:#555;line-height:2;">
+        f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.92rem;color:#cccccc;line-height:2;">
         손익비: 1 : {CFG.TAKE_PROFIT_PCT / CFG.STOP_LOSS_PCT:.1f} &nbsp;|&nbsp;
         증거금/종목: ${CFG.MARGIN_USDT:.2f} USDT &nbsp;|&nbsp;
         최대 노출: ${CFG.MARGIN_USDT * CFG.LEVERAGE * CFG.MAX_POSITIONS:.2f} USDT
