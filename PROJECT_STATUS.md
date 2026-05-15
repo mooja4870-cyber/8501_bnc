@@ -60,7 +60,8 @@
 
 
 
-- **[v1.2.51] Log Display Fix:** Resolved issue where system logs appeared in a single line. Added white-space: pre-wrap to CSS and implemented div-based line wrapping for all log entries.
+
+- **[v1.2.52] Anti-Ghosting Logic:** Implemented an immediate-hide cache and dual filtering system. Positions with < .1 value or those recently closed via UI are strictly hidden until API sync is confirmed.
 
 
 
@@ -101,7 +102,8 @@
 
 
 
-- **[v1.2.51] Log Display Fix:** Resolved issue where system logs appeared in a single line. Added white-space: pre-wrap to CSS and implemented div-based line wrapping for all log entries.
+
+- **[v1.2.52] Anti-Ghosting Logic:** Implemented an immediate-hide cache and dual filtering system. Positions with < .1 value or those recently closed via UI are strictly hidden until API sync is confirmed.
 
 ## Active Issues
 - None.
@@ -304,3 +306,6 @@
 ## v1.2.51 (2026-05-15)
 - [Bugfix] Fixed system log line-break issue. 
 - [UI] Enhanced log readability with row borders.
+
+## v1.2.52 (2026-05-15)
+- [Core] Implemented session-based immediate hide for closed positions to prevent ghosting.

@@ -1,9 +1,9 @@
 {
   "today_date": "2026-05-15",
-  "orders_today": 0,
-  "daily_pnl_usdt": 0.0,
-  "total_pnl_usdt": 0.0,
-  "total_trades": 0,
-  "total_wins": 0,
-  "total_losses": 0
+  "orders_today": 2,
+  "daily_pnl_usdt": 0.063,
+  "total_pnl_usdt": 0.063,
+  "total_trades": 2,
+  "total_wins": 1,
+  "total_losses": 1
 }

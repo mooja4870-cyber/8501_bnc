@@ -306,6 +306,7 @@ def init_session():
         "allow_long": True,
         "allow_short": True,
         "active_preset": "기본 (Stable)",
+        "closing_symbols": set(), # [v1.2.52] 잔상 방지용 청산 대기 목록
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -484,7 +485,22 @@ with tabs[0]:
     else:
         # ── 데이터 통합 조회 ──────────────────────────
         dash = engine.get_dashboard_data()
-        positions = dash.get("positions", [])
+        raw_positions = dash.get("positions", [])
+        
+        # [v1.2.52] 포지션 데이터 취득 및 잔상 방지 필터링
+        # 1. 수량이 0이거나 먼지 잔고($0.1 미만)인 경우 원천 차단
+        # 2. 방금 청산 버튼을 누른 종목(closing_symbols) 즉시 은폐 로직
+        positions = [
+            p for p in raw_positions 
+            if p.get('amount_usdt', 0) > 0.1 
+            and p.get('symbol') not in st.session_state.closing_symbols
+        ]
+        
+        # 3. 거래소 데이터와 동기화: 거래소에서 실제로 사라진 종목은 은폐 목록에서 제거
+        current_exchange_symbols = {p['symbol'] for p in raw_positions}
+        st.session_state.closing_symbols = {
+            s for s in st.session_state.closing_symbols if s in current_exchange_symbols
+        }
 
         # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
         m1, m2, m3, m4, m5 = st.columns(5)
@@ -604,10 +620,16 @@ with tabs[0]:
                         )
                         st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
                         if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
+                            # [v1.2.52] 버튼 클릭 즉시 세션 캐시에 추가하여 화면에서 지움
+                            st.session_state.closing_symbols.add(p['symbol'])
                             if engine.client.close_position(p["symbol"], p["side"]):
                                 st.toast(f"✅ {p['symbol']} 청산 완료")
-                                time.sleep(1)
+                                time.sleep(0.5)
                                 st.rerun()
+                            else:
+                                # 실패 시에는 다시 목록에서 제거 (보여줘야 하므로)
+                                st.session_state.closing_symbols.discard(p['symbol'])
+                                st.error(f"❌ {p['symbol']} 청산 실패")
 
         with col_log:
             st.markdown(
