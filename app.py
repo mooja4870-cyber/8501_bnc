@@ -241,16 +241,26 @@ st.markdown(
     }
 
     /* 청산 버튼 특화 (Extreme Small & Sharp - 66% of original) */
-    .small-btn button {
-        font-size: 0.4rem !important;
+    /* Streamlit의 마크다운-위젯 간격 및 구조를 고려한 형제 셀렉터 적용 */
+    .small-btn-marker + div.stButton button,
+    .small-btn-marker + div[data-testid="stButton"] button,
+    div.small-btn-marker ~ div.stButton button {
+        font-size: 9px !important;
         height: 16px !important;
+        min-height: 16px !important;
+        line-height: 1 !important;
         padding: 0 5px !important;
         border-color: var(--terminal-red) !important;
         color: var(--terminal-red) !important;
         border-radius: 0px !important;
-        min-height: 16px !important;
+        background: transparent !important;
+        margin-top: 0px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
-    .small-btn button:hover {
+    .small-btn-marker + div.stButton button:hover,
+    .small-btn-marker + div[data-testid="stButton"] button:hover {
         background: var(--terminal-red) !important;
         color: white !important;
     }
@@ -493,14 +503,13 @@ with tabs[0]:
                 )
             with col_bulk:
                 if positions:
-                    st.markdown('<div class="small-btn">', unsafe_allow_html=True)
+                    st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
                     if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
                         count = engine.client.close_all_positions()
                         if count > 0:
                             st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
                             time.sleep(1)
                             st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
 
             if not positions:
                 st.markdown(
@@ -555,13 +564,12 @@ with tabs[0]:
                             f'<div style="{duration_style}">{duration_str}</div>',
                             unsafe_allow_html=True
                         )
-                        st.markdown('<div class="small-btn">', unsafe_allow_html=True)
+                        st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
                         if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
                             if engine.client.close_position(p["symbol"], p["side"]):
                                 st.toast(f"✅ {p['symbol']} 청산 완료")
                                 time.sleep(1)
                                 st.rerun()
-                        st.markdown('</div>', unsafe_allow_html=True)
 
         with col_log:
             st.markdown(

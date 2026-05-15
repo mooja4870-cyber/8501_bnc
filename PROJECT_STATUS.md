@@ -25,13 +25,15 @@
 
 
 
-- **[v1.2.16] Button Optimization:** Reduced liquidation buttons (bulk and individual) to 66% of their original size for higher density.
+
+- **[v1.2.17] CSS Reliability:** Switched to marker-based sibling selector for liquidation buttons to ensure styles apply correctly in Streamlit's shadow DOM.
 
 
 
 
 
-- **[v1.2.16] Button Optimization:** Reduced liquidation buttons (bulk and individual) to 66% of their original size for higher density.
+
+- **[v1.2.17] CSS Reliability:** Switched to marker-based sibling selector for liquidation buttons to ensure styles apply correctly in Streamlit's shadow DOM.
 
 ## Active Issues
 - None.
@@ -114,3 +116,6 @@
 
 ## v1.2.16 (2026-05-15)
 - [UI] Minimized liquidation buttons and font sizes to 66% of previous scale.
+
+## v1.2.17 (2026-05-15)
+- [Fix] Enhanced CSS selector specificity for liquidation buttons using marker div technique.
