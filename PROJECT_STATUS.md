@@ -27,7 +27,8 @@
 
 
 
-- **[v1.2.18] Text Visibility:** Increased position detail font size to 110% and changed color to Bright Grey (#cccccc) for better contrast against dark background.
+
+- **[v1.2.19] Duration Zoom:** Increased position duration font size to 0.98rem (additional 122% scale) for maximum prominence.
 
 
 
@@ -35,7 +36,8 @@
 
 
 
-- **[v1.2.18] Text Visibility:** Increased position detail font size to 110% and changed color to Bright Grey (#cccccc) for better contrast against dark background.
+
+- **[v1.2.19] Duration Zoom:** Increased position duration font size to 0.98rem (additional 122% scale) for maximum prominence.
 
 ## Active Issues
 - None.
@@ -124,3 +126,6 @@
 
 ## v1.2.18 (2026-05-15)
 - [UI] Enhanced visibility of position details with larger, brighter font.
+
+## v1.2.19 (2026-05-15)
+- [UI] Further enlarged position duration text to 0.98rem.
