@@ -37,7 +37,8 @@
 
 
 
-- **[v1.2.28] Data Formatting:** Standardized trade history numerical formats to x,xxx.xx for quantity, cost, pnl, and percentage.
+
+- **[v1.2.29] Entry Highlighting:** Styled *진입 rows with bold yellow font and hid PnL/Percentage fields for clarity.
 
 
 
@@ -55,7 +56,8 @@
 
 
 
-- **[v1.2.28] Data Formatting:** Standardized trade history numerical formats to x,xxx.xx for quantity, cost, pnl, and percentage.
+
+- **[v1.2.29] Entry Highlighting:** Styled *진입 rows with bold yellow font and hid PnL/Percentage fields for clarity.
 
 ## Active Issues
 - None.
@@ -174,3 +176,6 @@
 
 ## v1.2.28 (2026-05-15)
 - [UI] Applied standard numerical formatting (comma + 2 decimal places) to Trade History.
+
+## v1.2.29 (2026-05-15)
+- [UI] Styled *진입 rows with bold yellow and hid PnL fields.

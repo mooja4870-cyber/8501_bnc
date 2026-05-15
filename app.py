@@ -825,22 +825,28 @@ with tabs[2]:
             df_hist["구분"] = df_hist["구분"].map({"진입": "*진입", "청산": "청산"})
             df_hist["방향"] = df_hist["방향"].map({"buy": "🟢 BUY", "sell": "🔴 SELL"}).fillna(df_hist["방향"])
             
+            # 진입 시 손익/% 데이터 제거 (표시 안 함)
+            df_hist.loc[df_hist["구분"] == "*진입", ["손익", "%"]] = np.nan
+            
             def style_history(row):
                 styles = [''] * len(row)
                 if row["구분"] == "청산":
                     pnl_val = row["손익"]
                     color = '#ef4444' if pnl_val >= 0 else '#3b82f6'
-                    # 손익과 % 컬럼(7, 8번 인덱스)에 색상 적용
                     styles[7] = f'color: {color}; font-weight: bold;'
                     styles[8] = f'color: {color}; font-weight: bold;'
+                elif row["구분"] == "*진입":
+                    # 진입 행 전체 노란색 볼드 강조
+                    for i in range(len(styles)):
+                        styles[i] = 'color: #ffcc00; font-weight: bold;'
                 return styles
 
             st.dataframe(
                 df_hist.style.apply(style_history, axis=1).format({
                     "수량": "{:,.2f}",
                     "금액(USDT)": "{:,.2f}",
-                    "손익": "{:,.2f}",
-                    "%": "{:,.2f}"
+                    "손익": lambda x: "{:,.2f}".format(x) if pd.notnull(x) else "-",
+                    "%": lambda x: "{:,.2f}".format(x) if pd.notnull(x) else "-"
                 }),
                 use_container_width=True,
                 hide_index=True,
