@@ -45,7 +45,8 @@
 
 
 
-- **[v1.2.36] Global Font Policy:** Standardized minimum font size to 14px (0.9rem) and text color to Bright Grey (#cccccc) across all UI elements, including labels, buttons, tabs, and logs.
+
+- **[v1.2.37] ROI Logic Refinement:** Fixed base capital to .43 for cumulative ROI and replaced 'Annual ROI' with 'Daily Average ROI' starting from 2026-05-15.
 
 
 
@@ -71,7 +72,8 @@
 
 
 
-- **[v1.2.36] Global Font Policy:** Standardized minimum font size to 14px (0.9rem) and text color to Bright Grey (#cccccc) across all UI elements, including labels, buttons, tabs, and logs.
+
+- **[v1.2.37] ROI Logic Refinement:** Fixed base capital to .43 for cumulative ROI and replaced 'Annual ROI' with 'Daily Average ROI' starting from 2026-05-15.
 
 ## Active Issues
 - None.
@@ -214,3 +216,6 @@
 
 ## v1.2.36 (2026-05-15)
 - [UI] Applied global font policy (Min 14px, Bright Grey) to all UI elements.
+
+## v1.2.37 (2026-05-15)
+- [Core] Refined ROI calculation with .43 base capital and Daily Avg ROI logic.

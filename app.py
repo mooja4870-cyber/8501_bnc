@@ -637,10 +637,15 @@ with tabs[0]:
         total_pnl = _st.get("total_pnl_usdt", 0.0)
         daily_pnl = _st.get("daily_pnl_usdt", 0.0)
         
-        # 수익률 계산 (기본 자산 1000 USDT 가정 또는 잔고 기준)
-        base_equity = max(dash['total_balance'] - total_pnl, 1000)
-        total_pnl_pct = (total_pnl / base_equity) * 100
-        daily_pnl_pct = (daily_pnl / base_equity) * 100
+        # 수익률 계산 (사용자 지정 기준: $40.43)
+        BASE_CAPITAL = 40.43
+        total_pnl_pct = ((dash['total_balance'] - BASE_CAPITAL) / BASE_CAPITAL) * 100
+        daily_pnl_pct = (daily_pnl / BASE_CAPITAL) * 100
+        
+        # 일 평균 수익률 계산 (2026-05-15 00:00:00 기준)
+        start_date = datetime(2026, 5, 15, 0, 0, 0)
+        elapsed_days = max((datetime.utcnow() - start_date).total_seconds() / 86400.0, 0.01) # 최소 0.01일 보정
+        daily_avg_roi = total_pnl_pct / elapsed_days
         
         win_rate = stats_store.get_win_rate()
         wins = _st.get("total_wins", 0)
@@ -648,10 +653,13 @@ with tabs[0]:
         orders_today = _st.get("orders_today", 0)
         
         # 수익률 색상 결정 (수익: 빨강, 손실: 파랑)
-        total_color = "#ef4444" if total_pnl >= 0 else "#3b82f6"
+        total_color = "#ef4444" if total_pnl_pct >= 0 else "#3b82f6"
         daily_color = "#ef4444" if daily_pnl >= 0 else "#3b82f6"
+        daily_avg_color = "#ef4444" if daily_avg_roi >= 0 else "#3b82f6"
+        
         daily_arrow = "↑" if daily_pnl >= 0 else "↓"
-        total_arrow = "↑" if total_pnl >= 0 else "↓"
+        total_arrow = "↑" if total_pnl_pct >= 0 else "↓"
+        avg_arrow = "↑" if daily_avg_roi >= 0 else "↓"
         
         st.markdown(
             f"""
@@ -664,12 +672,12 @@ with tabs[0]:
                         <span>{daily_arrow}</span> {abs(daily_pnl_pct):.2f}% (24h)
                     </div>
                 </div>
-                <!-- 연 평균 수익률 -->
+                <!-- 일 평균 수익률 -->
                 <div class="terminal-metric-item">
-                    <div class="terminal-metric-label">연 평균 수익률</div>
-                    <div class="terminal-metric-value" style="color:{total_color};">{total_pnl_pct:+.2f}%</div>
+                    <div class="terminal-metric-label">일 평균 수익률</div>
+                    <div class="terminal-metric-value" style="color:{daily_avg_color};">{daily_avg_roi:+.2f}%</div>
                     <div class="terminal-metric-sub" style="color:#ef4444;">
-                        {total_arrow} 2026.05.14 ~
+                        {avg_arrow} 2026.05.15 ~
                     </div>
                 </div>
                 <!-- 누적 승률 -->
