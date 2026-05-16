@@ -370,7 +370,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.3.21</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.3.22</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -609,8 +609,13 @@ with tabs[0]:
 
         st_data = stats_store.load_stats()
         total_pnl = st_data.get("total_pnl_usdt", 0.0)
-        initial_cap = 100.0 
-        cum_roi = (total_pnl / initial_cap) * 100 if initial_cap > 0 else 0.0
+        
+        # [v1.3.22] 수익률 계산 근거 고도화: (누적손익 / 시작자본) * 100
+        # 시작자본 = 현재 총 잔고 - 누적 실현 손익
+        total_balance = dash.get("total_balance", 0.0)
+        initial_cap = total_balance - total_pnl
+        cum_roi = (total_pnl / initial_cap * 100) if initial_cap > 0 else 0.0
+        
         win_rate = stats_store.get_win_rate()
         wins = st_data.get("total_wins", 0)
         losses = st_data.get("total_losses", 0)
@@ -644,7 +649,7 @@ with tabs[0]:
         st.markdown(
             f"""
             <div class="ws-metric-row">
-                {get_ws_metric_card("누적 수익률", f"{cum_roi:+.2f}%", "↑ 0.00% (24h)")}
+                {get_ws_metric_card("누적 수익률", f"{cum_roi:+.2f}%", f"(${total_pnl:+.2f})")}
                 {get_ws_metric_card("일 평균 수익률", f"{avg_roi:+.2f}%", f"↓ {start_date_str} ~")}
                 {get_ws_metric_card("누적 승률", f"{win_rate}%", f"↓ {wins}W / {losses}L")}
                 {get_ws_metric_card("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "↓ Max Risk")}
