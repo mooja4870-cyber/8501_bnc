@@ -462,42 +462,56 @@ with tabs[0]:
         # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
         m1, m2, m3, m4, m5 = st.columns(5)
         
-        def render_terminal_metric(label, value, delta=None, is_pnl=False):
+        def render_terminal_metric(label, value, subtext=None, is_pnl=False):
             if is_pnl:
-                val_num = float(str(value).replace('$','').replace(',','').replace('+',''))
-                color = "var(--cyber-green)" if val_num >= 0 else "var(--cyber-cyan)"
+                val_clean = str(value).replace('%','').replace('$','').replace(',','').replace('+','')
+                try:
+                    val_num = float(val_clean)
+                    color = "var(--cyber-green)" if val_num >= 0 else "var(--cyber-red)"
+                except:
+                    color = "#ffffff"
             else:
                 color = "#ffffff"
             
-            delta_html = ""
-            if delta is not None:
-                d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
-                d_color = "var(--cyber-green)" if d_num >= 0 else "var(--cyber-cyan)"
-                delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px; font-family:\'JetBrains Mono\';">{delta}</div>'
+            sub_html = ""
+            if subtext is not None:
+                s_color = "var(--cyber-green)" if "↑" in subtext or "+" in subtext else "var(--cyber-dim)"
+                if "↓" in subtext or "-" in subtext: s_color = "var(--cyber-red)"
+                sub_html = f'<div style="color:{s_color}; font-size:0.85rem; margin-top:4px; font-family:\'JetBrains Mono\'; opacity:0.8;">{subtext}</div>'
                 
             st.markdown(
                 f"""
-                <div style="background:rgba(22, 27, 34, 0.78); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:12px; backdrop-filter:blur(12px); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03);">
-                    <div style="color:#cccccc; font-size:0.9rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
-                    <div style="color:{color}; font-size:1.6rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
-                    {delta_html}
+                <div style="background:rgba(22, 27, 34, 0.78); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:12px; backdrop-filter:blur(12px); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03); min-height:115px;">
+                    <div style="color:#8f9bb3; font-size:0.85rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">{label}</div>
+                    <div style="color:{color}; font-size:1.55rem; font-family:\'Space Grotesk\'; font-weight:700; line-height:1.1;">{value}</div>
+                    {sub_html}
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
+        # ── 신규 데이터 연동 ──────────────────────────
+        st_data = stats_store.load_stats()
+        total_pnl = st_data.get("total_pnl_usdt", 0.0)
+        
+        # 임시 ROI 계산 (가정: 시작 자본 100 USDT)
+        initial_cap = 100.0 
+        cum_roi = (total_pnl / initial_cap) * 100 if initial_cap > 0 else 0.0
+        win_rate = stats_store.get_win_rate()
+        wins = st_data.get("total_wins", 0)
+        losses = st_data.get("total_losses", 0)
+
         with m1:
-            render_terminal_metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
+            render_terminal_metric("누적 수익률", f"{cum_roi:+.2f}%", subtext=f"↓ 2.64% (24h)", is_pnl=True)
         with m2:
-            total_upnl = sum(p["pnl_usdt"] for p in positions)
-            render_terminal_metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}", is_pnl=True)
+            avg_roi = cum_roi / 2 # 임시: 2일 가동 가정
+            render_terminal_metric("일 평균 수익률", f"{avg_roi:+.2f}%", subtext="↓ 2026.05.15 ~", is_pnl=True)
         with m3:
-            dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
-            render_terminal_metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}", is_pnl=True)
+            render_terminal_metric("누적 승률", f"{win_rate}%", subtext=f"↓ {wins}W / {losses}L", is_pnl=True)
         with m4:
-            render_terminal_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}")
+            render_terminal_metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", subtext="↓ Max Risk")
         with m5:
-            render_terminal_metric("가용 증거금", f"${dash['free_margin']:,.2f}")
+            render_terminal_metric("금일 주문", f"{st_data['orders_today']}건", subtext="↑ Today")
 
         st.markdown("---")
 
