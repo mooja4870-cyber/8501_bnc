@@ -24,243 +24,180 @@ load_dotenv(override=True)
 
 # ── 페이지 설정 ───────────────────────────────────────
 st.set_page_config(
-    page_title="AI QUANTUM · OKX Trader",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="collapsed",
-)
-
-# ── Wall Street Professional Terminal CSS ─────────────────────────────
+    page# ── Stitch Cyber-Quantum UI CSS (v1.3.00) ─────────────────────────────
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
     :root {
-        --terminal-bg: #050505;
-        --terminal-surface: #0f0f0f;
-        --terminal-border: #262626;
-        --terminal-text: #e0e0e0;
-        --terminal-dim: #666666;
-        --terminal-accent: #ff9900; /* Bloomberg Orange */
-        --terminal-green: #00ff00;
-        --terminal-red: #ff3b30;
+        --cyber-bg: #0a0c10;
+        --cyber-surface: #161b22;
+        --cyber-text: #e2e2e8;
+        --cyber-dim: #8f9bb3;
+        --cyber-green: #00ff41;
+        --cyber-cyan: #00e5ff;
+        --cyber-red: #ff3b30;
+        --cyber-border: rgba(132, 150, 126, 0.2);
     }
 
     html, body, [data-testid="stAppViewContainer"] {
-        background-color: var(--terminal-bg) !important;
-        color: var(--terminal-text) !important;
+        background-color: var(--cyber-bg) !important;
+        color: var(--cyber-text) !important;
         font-family: 'Inter', sans-serif !important;
     }
 
     [data-testid="stHeader"] { background: transparent !important; }
 
     [data-testid="stSidebar"] {
-        background-color: var(--terminal-surface) !important;
-        border-right: 1px solid var(--terminal-border) !important;
+        background: rgba(22, 27, 34, 0.82) !important;
+        border-right: 1px solid var(--cyber-border) !important;
+        backdrop-filter: blur(12px) !important;
     }
 
-    /* 메트릭 카드: 각진 모서리, 그리드 스타일 */
+    /* 메트릭 카드: 글래스모피즘 */
     [data-testid="metric-container"] {
-        background: var(--terminal-surface) !important;
-        border: 1px solid var(--terminal-border) !important;
-        border-radius: 0px !important;
-        padding: 10px 15px !important;
+        background: rgba(22, 27, 34, 0.78) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        border-radius: 12px !important;
+        backdrop-filter: blur(12px) !important;
+        padding: 15px !important;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
     }
     [data-testid="stMetricValue"] {
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 1.4rem !important;
+        font-size: 1.8rem !important;
         font-weight: 700 !important;
-        color: var(--terminal-text) !important;
     }
     [data-testid="stMetricLabel"] {
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 0.9rem !important; /* 상향: 14px+ */
-        letter-spacing: 0.1em !important;
-        color: #cccccc !important; /* Bright Grey */
-        text-transform: uppercase !important;
+        color: #f0f0f0 !important;
+        font-size: 14px !important;
     }
 
-    /* 버튼: 전문 터미널 감성 */
+    /* 버튼: 네온 그린 & 사이버 스타일 */
     .stButton > button {
-        background: var(--terminal-surface) !important;
-        color: var(--terminal-accent) !important;
-        border: 1px solid var(--terminal-accent) !important;
-        border-radius: 0px !important;
+        background: var(--cyber-green) !important;
+        color: #0c110d !important;
+        border: 1px solid rgba(0,255,65,0.32) !important;
+        border-radius: 8px !important;
         font-family: 'JetBrains Mono', monospace !important;
-        font-weight: 600 !important;
-        font-size: 0.9rem !important; /* 상향: 14px+ */
-        transition: all 0.2s;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        box-shadow: 0 0 10px rgba(0,255,65,0.16) !important;
+        transition: all 0.3s;
     }
     .stButton > button:hover {
-        background: var(--terminal-accent) !important;
-        color: var(--terminal-bg) !important;
+        opacity: 0.9 !important;
+        box-shadow: 0 0 20px rgba(0,255,65,0.4) !important;
+        transform: translateY(-1px);
     }
 
-    /* 특수 버튼 (새로고침 등) */
+    /* 새로고침 버튼 (Cyan) */
     .refresh-btn button {
-        border-color: #5de1ff !important;
-        color: #5de1ff !important;
+        background: rgba(9, 18, 28, 0.9) !important;
+        color: var(--cyber-cyan) !important;
+        border: 1px solid rgba(0,229,255,0.62) !important;
+        border-radius: 12px !important;
+        box-shadow: inset 0 0 0 1px rgba(0,229,255,0.18), 0 0 11px rgba(0,229,255,0.2) !important;
     }
     .refresh-btn button:hover {
-        background: #5de1ff !important;
-        color: #000 !important;
+        box-shadow: inset 0 0 0 1px rgba(0,229,255,0.42), 0 0 25px rgba(0,229,255,0.5) !important;
     }
 
-    /* 탭 */
+    /* 탭 디자인 */
     .stTabs [data-baseweb="tab-list"] {
-        background: var(--terminal-surface);
-        border: 1px solid var(--terminal-border);
-        border-radius: 0px;
-        padding: 2px;
+        background: rgba(22, 27, 34, 0.82);
+        border: 1px solid var(--cyber-border);
+        border-radius: 10px;
+        padding: 4px;
     }
     .stTabs [data-baseweb="tab"] {
-        color: #cccccc !important; /* Bright Grey */
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem !important; /* 상향: 14px+ */
-        padding: 8px 16px;
+        color: #f0f0f0 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 15px !important;
     }
     .stTabs [aria-selected="true"] {
-        background: var(--terminal-accent) !important;
-        color: var(--terminal-bg) !important;
-        border-radius: 0px !important;
+        background: var(--cyber-green) !important;
+        color: #0a0c10 !important;
+        border-radius: 8px !important;
     }
 
-    /* 인풋 필드 */
+    /* 입력 필드 */
     .stTextInput input, .stSelectbox select, .stNumberInput input {
-        background: #000000 !important;
-        border: 1px solid var(--terminal-border) !important;
-        color: var(--terminal-text) !important;
-        font-family: 'JetBrains Mono', monospace !important;
-        border-radius: 0px !important;
-        font-size: 0.9rem !important;
+        background: rgba(10, 12, 16, 0.8) !important;
+        border: 1px solid var(--cyber-border) !important;
+        color: #fff !important;
+        border-radius: 8px !important;
     }
 
-    /* 데이터프레임 */
-    [data-testid="stDataFrame"] {
-        border: 1px solid var(--terminal-border) !important;
-    }
-
-    /* 로고 */
+    /* 로고 스타일 */
     .quantum-logo {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: var(--terminal-accent);
-        border-bottom: 2px solid var(--terminal-accent);
-        padding-bottom: 5px;
-        margin-bottom: 20px;
+        font-family: 'Space Grotesk', sans-serif !important;
+        font-weight: 700 !important;
+        color: #f0f0f0 !important;
+        font-size: 20px !important;
+        letter-spacing: -0.02em !important;
     }
-    .quantum-logo span { color: #cccccc; font-weight: 400; }
+    .quantum-logo span {
+        color: var(--cyber-green) !important;
+        font-size: 12px !important;
+        letter-spacing: 0.1em !important;
+        display: block;
+        margin-top: 4px;
+    }
 
-    /* 상태 뱃지 */
+    /* 상태 뱃지 (Stitch Style) */
     .badge-live {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: #003300;
-        border: 1px solid var(--terminal-green);
-        padding: 4px 12px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: var(--terminal-green);
+        display: inline-flex; align-items: center; gap: 10px;
+        background: rgba(18, 26, 34, 0.82) !important;
+        border: 1px solid rgba(126, 244, 90, 0.26) !important;
+        border-radius: 999px !important;
+        padding: 6px 16px;
+        color: #7ef45a !important;
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600;
+        box-shadow: inset 0 0 0 1px rgba(126, 244, 90, 0.08), 0 0 15px rgba(126, 244, 90, 0.15) !important;
     }
     .badge-live .dot {
-        width: 8px; height: 8px;
-        background: var(--terminal-green);
-        border-radius: 0%; /* Sharp dot */
+        width: 10px; height: 10px;
+        background: #7ef45a;
+        border-radius: 50%;
+        box-shadow: 0 0 12px rgba(126, 244, 90, 0.9) !important;
     }
     .badge-stopped {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: #330000;
-        border: 1px solid var(--terminal-red);
-        padding: 4px 12px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem;
-        color: var(--terminal-red);
+        display: inline-flex; align-items: center; gap: 10px;
+        background: rgba(34, 18, 18, 0.82) !important;
+        border: 1px solid rgba(255, 59, 48, 0.26) !important;
+        border-radius: 999px !important;
+        padding: 6px 16px;
+        color: var(--cyber-red) !important;
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 600;
     }
 
-    /* 시스템 로그 박스 */
+    /* 로그 박스 */
     .log-box {
-        background: #000000;
-        border: 1px solid var(--terminal-border);
-        border-radius: 0px;
-        padding: 10px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem;
-        color: #cccccc;
-        height: 250px;
+        background: rgba(10, 12, 16, 0.86) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        border-radius: 12px !important;
+        padding: 15px;
+        font-family: 'JetBrains Mono', monospace !important;
+        color: #e2e2e8 !important;
+        height: 280px;
         overflow-y: auto;
-        line-height: 1.5;
-        white-space: pre-wrap; /* 줄바꿈 보장 */
     }
     .log-latest {
-        color: #ffffff !important;
-        background: #222;
-        padding: 0 4px;
+        color: var(--cyber-green) !important;
+        font-weight: 600;
     }
 
-    /* 구분선 */
-    hr { border-color: var(--terminal-border) !important; margin: 15px 0 !important; }
+    hr { border-color: var(--cyber-border) !important; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-    /* Wall Street Metric Bar */
-    .metric-bar-container {
-        display: flex;
-        justify-content: space-between;
-        background: #050505;
-        border: 1px solid var(--terminal-border);
-        padding: 12px 0;
-        margin-bottom: 20px;
-    }
-    .terminal-metric-item {
-        flex: 1;
-        border-right: 1px solid #1a1a1a;
-        padding: 0 20px;
-    }
-    .terminal-metric-item:last-child { border-right: none; }
-    .terminal-metric-label {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem; /* 상향: 14px+ */
-        color: #cccccc; /* Bright Grey */
-        text-transform: uppercase;
-        margin-bottom: 2px;
-    }
-    .terminal-metric-value {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #fff;
-        line-height: 1.1;
-    }
-    .terminal-metric-sub {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.85rem; /* 상향 */
-        margin-top: 2px;
-        display: flex;
-        align-items: center;
-        gap: 2px;
-    }
-
-    /* 청산 버튼 특화 (상향 조정: 최소 14px 준수) */
-    .small-btn-marker + div.stButton button,
-    .small-btn-marker + div[data-testid="stButton"] button,
-    div.small-btn-marker ~ div.stButton button {
-        font-size: 14px !important; /* 최소 14px */
-        height: 26px !important;
-        min-height: 26px !important;
-        line-height: 1 !important;
-        padding: 0 8px !important;
-        border-color: var(--terminal-red) !important;
-        color: var(--terminal-red) !important;
-        border-radius: 0px !important;
-        background: transparent !important;
-        margin-top: -12px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    .small-btn-marker + div.stButton button:hover,
-    .small-btn-marker + div[data-testid="stButton"] button:hover {
-        background: var(--terminal-red) !important;
         color: white !important;
     }
 
@@ -370,7 +307,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.2.98</span></div>',
+        '<div class="quantum-logo">MACD-BB-EMA<span>v1.3.00</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -557,21 +494,21 @@ with tabs[0]:
         def render_terminal_metric(label, value, delta=None, is_pnl=False):
             if is_pnl:
                 val_num = float(str(value).replace('$','').replace(',','').replace('+',''))
-                color = "#ef4444" if val_num >= 0 else "#3b82f6"
+                color = "var(--cyber-green)" if val_num >= 0 else "var(--cyber-cyan)"
             else:
-                color = "#ffffff" # 일반 지표는 중립 색상(White) 적용
+                color = "#ffffff"
             
             delta_html = ""
             if delta is not None:
                 d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
-                d_color = "#ef4444" if d_num >= 0 else "#3b82f6"
-                delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px;">{delta}</div>'
+                d_color = "var(--cyber-green)" if d_num >= 0 else "var(--cyber-cyan)"
+                delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px; font-family:\'JetBrains Mono\';">{delta}</div>'
                 
             st.markdown(
                 f"""
-                <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:0px; height:105px;">
+                <div style="background:rgba(22, 27, 34, 0.78); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:12px; backdrop-filter:blur(12px); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03);">
                     <div style="color:#cccccc; font-size:0.9rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
-                    <div style="color:{color}; font-size:1.46rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
+                    <div style="color:{color}; font-size:1.6rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
                     {delta_html}
                 </div>
                 """,
