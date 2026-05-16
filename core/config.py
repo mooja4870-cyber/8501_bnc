@@ -17,7 +17,6 @@ class TradingConfig:
     MARGIN_MODE: str = "isolated"          # 격리 마진
     MARGIN_USDT: float = 5.0               # 1회 진입 증거금 (USDT)
     MAX_POSITIONS: int = 5                # 최대 동시 보유 종목 수
-    MAX_HOLDING_HOURS: float = 3.0        # 강제 청산 타임아웃 (3시간)
     ALLOW_LONG: bool = True
     ALLOW_SHORT: bool = True
 
@@ -32,7 +31,8 @@ class TradingConfig:
     INITIAL_CAPITAL: float = 22.06
     BASELINE_DATE: str = "2026-05-16 23:57"
     
-    # ── [v1.2.90] 신규 파라미터 ────────────────────────
+    # ── 리스크 한도 ────────────────────────────────────
+    MAX_DRAWDOWN_PCT: float = 0.10        # 최대 낙폭 10% 초과 시 전략 중단
     MAX_HOLDING_HOURS: int = 12         # 최대 보유 시간 (초과 시 자동청산)
     DAILY_LOSS_LIMIT_USDT: float = 25.0  # 일일 손실 한도 (5회 진입분)
     MAX_DAILY_TRADES: int = 20            # 일일 최대 거래 횟수
