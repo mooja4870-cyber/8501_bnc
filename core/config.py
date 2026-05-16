@@ -17,17 +17,23 @@ class TradingConfig:
     MARGIN_MODE: str = "isolated"          # 격리 마진
     MARGIN_USDT: float = 5.0               # 1회 진입 증거금 (USDT)
     MAX_POSITIONS: int = 5                # 최대 동시 보유 종목 수
+    MAX_HOLDING_HOURS: float = 3.0        # 강제 청산 타임아웃 (3시간)
     ALLOW_LONG: bool = True
     ALLOW_SHORT: bool = True
 
+
     # ── 손익 설정 ──────────────────────────────────────
-    STOP_LOSS_PCT: float = 0.015          # 손절 1.5%
-    TAKE_PROFIT_PCT: float = 0.02         # 익절 2.0%
-    PROFIT_FACTOR_MIN: float = 2.0        # Profit Factor 최소 기준
+    STOP_LOSS_PCT: float = 0.02           # 손절 2.0% (사용자 요청)
+    TAKE_PROFIT_PCT: float = 0.02          # 익절 2.0% (사용자 요청)
+    TRAILING_STOP_PCT: float = 0.01        # 추적 손절 (1.0%)
+    PROFIT_FACTOR_MIN: float = 1.0        # Profit Factor 최소 기준 (1:1)
 
     # ── 리스크 한도 ────────────────────────────────────
-    MAX_DRAWDOWN_PCT: float = 0.15        # 최대 낙폭 15% 초과 시 전략 중단
-    DAILY_LOSS_LIMIT_USDT: float = 30.0  # 일일 손실 한도
+    MAX_DRAWDOWN_PCT: float = 0.10        # 최대 낙폭 10% 초과 시 전략 중단
+    DAILY_LOSS_LIMIT_USDT: float = 25.0  # 일일 손실 한도 (5회 진입분)
+    MAX_DAILY_TRADES: int = 20            # 일일 최대 거래 횟수
+    VOLATILITY_FILTER: bool = True        # 변동성 필터 활성화
+
 
     # ── 스캐너 설정 ────────────────────────────────────
     SCAN_INTERVAL_SEC: int = 30           # 스캔 주기(초)

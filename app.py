@@ -334,6 +334,16 @@ def connect_api(api_key, secret_key, passphrase):
 
 init_session()
 
+# ── [v1.2.90] 파라미터 동기화 엔진 (Sidebar <-> Main Tab) ──
+def sync_p(src_key: str, dst_key: str, cfg_attr: str, is_pct: bool = False):
+    """위젯 간 값 동기화 및 CFG 반영"""
+    val = st.session_state[src_key]
+    st.session_state[dst_key] = val
+    if is_pct:
+        setattr(CFG, cfg_attr, val / 100.0)
+    else:
+        setattr(CFG, cfg_attr, val)
+
 if not st.session_state.api_connected:
     ak = os.getenv("OKX_API_KEY", "")
     sk = os.getenv("OKX_SECRET_KEY", "")
@@ -360,9 +370,10 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.1.28</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.2.98</span></div>',
         unsafe_allow_html=True,
     )
+
     st.markdown("---")
     st.markdown(
         '<p style="font-family:IBM Plex Mono;font-size:0.9rem;color:#cccccc;letter-spacing:0.08em;">API 연결 설정</p>',
@@ -416,46 +427,84 @@ with st.sidebar:
         engine.trader.allow_long = longs
         engine.trader.allow_short = shorts
 
-    st.markdown(
-        f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.9rem;color:#cccccc;line-height:1.6;">
-        레버리지: {CFG.LEVERAGE}x ISOLATED<br>
-        1회 증거금: {CFG.MARGIN_USDT} USDT<br>
-        최대 포지션: {CFG.MAX_POSITIONS}개<br>
-        SL: {CFG.STOP_LOSS_PCT*100:.0f}% / TP: {CFG.TAKE_PROFIT_PCT*100:.0f}%
-        </div>""",
-        unsafe_allow_html=True,
-    )
+    # [v1.2.90] 인터랙티브 프로 트레이딩 컨트롤러 (동기화 로직 적용)
+    st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#ff9900; letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">[ STRATEGY ENGINE ]</p>', unsafe_allow_html=True)
+    
+    with st.expander("📊 지표 및 스캐너 설정", expanded=False):
+        st.number_input("EMA 기간", 10, 500, CFG.EMA_PERIOD, step=10, key="sb_ema_period", 
+                        on_change=sync_p, args=("sb_ema_period", "main_ema_period", "EMA_PERIOD"))
+        col_bb1, col_bb2 = st.columns(2)
+        with col_bb1:
+            st.number_input("BB 기간", 5, 100, CFG.BB_PERIOD, key="sb_bb_period",
+                            on_change=sync_p, args=("sb_bb_period", "main_bb_period", "BB_PERIOD"))
+        with col_bb2:
+            st.number_input("BB 편차", 1.0, 5.0, CFG.BB_STD, step=0.1, key="sb_bb_std",
+                            on_change=sync_p, args=("sb_bb_std", "main_bb_std", "BB_STD"))
+        
+        col_m1, col_m2, col_m3 = st.columns(3)
+        with col_m1:
+            st.number_input("MACD 단기", 5, 50, CFG.MACD_FAST, key="sb_macd_fast",
+                            on_change=sync_p, args=("sb_macd_fast", "main_macd_fast", "MACD_FAST"))
+        with col_m2:
+            st.number_input("MACD 장기", 10, 100, CFG.MACD_SLOW, key="sb_macd_slow",
+                            on_change=sync_p, args=("sb_macd_slow", "main_macd_slow", "MACD_SLOW"))
+        with col_m3:
+            st.number_input("MACD 시그널", 2, 20, CFG.MACD_SIGNAL, key="sb_macd_signal",
+                            on_change=sync_p, args=("sb_macd_signal", "main_macd_signal", "MACD_SIGNAL"))
+
+    with st.expander("⚡ 운용 및 포지션 설정", expanded=True):
+        st.number_input("레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="sb_leverage",
+                        on_change=sync_p, args=("sb_leverage", "main_leverage", "LEVERAGE"))
+        st.number_input("1회 진입 증거금 (USDT)", 1.0, 100.0, CFG.MARGIN_USDT, step=0.5, key="sb_margin",
+                        on_change=sync_p, args=("sb_margin", "main_margin", "MARGIN_USDT"))
+        st.number_input("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="sb_max_pos",
+                        on_change=sync_p, args=("sb_max_pos", "main_max_pos", "MAX_POSITIONS"))
+        st.number_input("타임아웃 (시간)", 0.5, 24.0, float(CFG.MAX_HOLDING_HOURS), step=0.5, key="sb_timeout",
+                        on_change=sync_p, args=("sb_timeout", "main_timeout", "MAX_HOLDING_HOURS"))
+
+    with st.expander("🛡️ 리스크 및 한도 설정", expanded=True):
+        st.number_input("익절 (%)", 1.0, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="sb_tp",
+                        on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True))
+        st.number_input("손절 (%)", 1.0, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
+                        on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True))
+        st.number_input("MDD 한도 (%)", 5.0, 50.0, float(CFG.MAX_DRAWDOWN_PCT * 100), step=1.0, key="sb_mdd",
+                        on_change=sync_p, args=("sb_mdd", "main_mdd", "MAX_DRAWDOWN_PCT", True))
+        st.number_input("일일 손실 한도 (USDT)", 5.0, 500.0, CFG.DAILY_LOSS_LIMIT_USDT, key="sb_daily_loss",
+                        on_change=sync_p, args=("sb_daily_loss", "main_daily_loss", "DAILY_LOSS_LIMIT_USDT"))
+
+
+    st.markdown('<div style="margin-bottom:20px;"></div>', unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════
-# 메인 헤더
+# 메인 헤더 (한 줄 배치)
 # ══════════════════════════════════════════════════════
 
-col_logo, col_time, col_status = st.columns([3, 2, 1])
-
-with col_logo:
-    st.markdown(
-        '',
-        unsafe_allow_html=True,
-    )
+# [v1.2.98] 시간, 상태, 버튼을 한 줄에 배치 (균등 간격)
+col_time, col_status, col_refresh = st.columns([2, 1.2, 1])
 
 with col_time:
     now_kst = datetime.utcnow() + timedelta(hours=9)
     st.markdown(
-        f'<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;margin-top:6px;">'
+        f'<p style="font-family:\'JetBrains Mono\',monospace; font-size:0.95rem; color:#cccccc; margin-top:14px; margin-bottom:0px;">'
         f'{now_kst.strftime("%Y-%m-%d %H:%M:%S")} KST</p>',
         unsafe_allow_html=True,
     )
 
 with col_status:
+    # 수직 중앙 정렬을 위한 여백 추가
+    st.markdown('<div style="margin-top:8px;"></div>', unsafe_allow_html=True)
     if st.session_state.auto_trading:
-        st.markdown('<div class="badge-live" style="margin-bottom:8px;"><span class="dot"></span><span>LIVE CONNECTION</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="badge-live"><span class="dot"></span><span>LIVE CONNECTION</span></div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="badge-stopped" style="margin-bottom:8px;">● STOPPED</div>', unsafe_allow_html=True)
-    st.markdown('<div class="refresh-btn">', unsafe_allow_html=True)
+        st.markdown('<div class="badge-stopped">● STOPPED</div>', unsafe_allow_html=True)
+
+with col_refresh:
+    st.markdown('<div class="refresh-btn" style="margin-top:6px;">', unsafe_allow_html=True)
     if st.button("⟳ REFRESH", key="global_refresh", use_container_width=True):
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
+
 
 st.markdown('<hr style="margin: 8px 0 16px;">', unsafe_allow_html=True)
 
@@ -1006,14 +1055,20 @@ with tabs[3]:
 
     p1, p2, p3 = st.columns(3)
     with p1:
-        CFG.EMA_PERIOD = st.number_input("EMA 기간", 10, 500, CFG.EMA_PERIOD, step=10)
+        st.number_input("EMA 기간", 10, 500, CFG.EMA_PERIOD, step=10, key="main_ema_period",
+                        on_change=sync_p, args=("main_ema_period", "sb_ema_period", "EMA_PERIOD"))
     with p2:
-        CFG.BB_PERIOD = st.number_input("BB 기간", 5, 100, CFG.BB_PERIOD, step=5)
-        CFG.BB_STD = st.number_input("BB 편차 (x)", 1.0, 5.0, float(CFG.BB_STD), step=0.1)
+        st.number_input("BB 기간", 5, 100, CFG.BB_PERIOD, step=5, key="main_bb_period",
+                        on_change=sync_p, args=("main_bb_period", "sb_bb_period", "BB_PERIOD"))
+        st.number_input("BB 편차 (x)", 1.0, 5.0, float(CFG.BB_STD), step=0.1, key="main_bb_std",
+                        on_change=sync_p, args=("main_bb_std", "sb_bb_std", "BB_STD"))
     with p3:
-        CFG.MACD_FAST = st.number_input("MACD 단기", 1, 50, CFG.MACD_FAST, step=1)
-        CFG.MACD_SLOW = st.number_input("MACD 장기", 1, 100, CFG.MACD_SLOW, step=1)
-        CFG.MACD_SIGNAL = st.number_input("MACD 시그널", 1, 50, CFG.MACD_SIGNAL, step=1)
+        st.number_input("MACD 단기", 1, 50, CFG.MACD_FAST, step=1, key="main_macd_fast",
+                        on_change=sync_p, args=("main_macd_fast", "sb_macd_fast", "MACD_FAST"))
+        st.number_input("MACD 장기", 1, 100, CFG.MACD_SLOW, step=1, key="main_macd_slow",
+                        on_change=sync_p, args=("main_macd_slow", "sb_macd_slow", "MACD_SLOW"))
+        st.number_input("MACD 시그널", 1, 50, CFG.MACD_SIGNAL, step=1, key="main_macd_signal",
+                        on_change=sync_p, args=("main_macd_signal", "sb_macd_signal", "MACD_SIGNAL"))
 
 # TAB 5: 설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1026,18 +1081,28 @@ with tabs[4]:
 
     s1, s2 = st.columns(2)
     with s1:
-        CFG.LEVERAGE = st.slider("레버리지 (x)", 1, 20, CFG.LEVERAGE)
-        CFG.MARGIN_USDT = st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0)
-        CFG.MAX_POSITIONS = st.slider("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS)
-        CFG.SCAN_INTERVAL_SEC = st.slider("스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10)
+        st.number_input("레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="main_leverage",
+                        on_change=sync_p, args=("main_leverage", "sb_leverage", "LEVERAGE"))
+        st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0, key="main_margin",
+                        on_change=sync_p, args=("main_margin", "sb_margin", "MARGIN_USDT"))
+        st.number_input("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="main_max_pos",
+                        on_change=sync_p, args=("main_max_pos", "sb_max_pos", "MAX_POSITIONS"))
+        st.number_input("*** 스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10, key="main_scan_interval",
+                        on_change=sync_p, args=("main_scan_interval", "sb_scan_interval", "SCAN_INTERVAL_SEC"))
+        st.number_input("강제 청산 타임아웃 (시간)", 0.5, 24.0, float(CFG.MAX_HOLDING_HOURS), step=0.5, key="main_timeout",
+                        on_change=sync_p, args=("main_timeout", "sb_timeout", "MAX_HOLDING_HOURS"))
+
     with s2:
-        tp_val = st.slider("익절 (%)", 1.0, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.5)
-        CFG.TAKE_PROFIT_PCT = tp_val / 100.0
-        sl_val = st.slider("손절 (%)", 1.0, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.5)
-        CFG.STOP_LOSS_PCT = sl_val / 100.0
-        CFG.MIN_VOLUME_USDT = st.number_input("최소 거래대금 (USDT)", 1_000_000.0, 50_000_000.0, float(CFG.MIN_VOLUME_USDT), step=1_000_000.0)
-        mdd_val = st.slider("MDD 한도 (%)", 5.0, 50.0, float(CFG.MAX_DRAWDOWN_PCT * 100), step=1.0)
-        CFG.MAX_DRAWDOWN_PCT = mdd_val / 100.0
+        st.number_input("익절 (%)", 1.0, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",
+                        on_change=sync_p, args=("main_tp", "sb_tp", "TAKE_PROFIT_PCT", True))
+        st.number_input("손절 (%)", 1.0, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
+                        on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True))
+        st.number_input("*** 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
+                        on_change=sync_p, args=("main_min_vol", "sb_min_vol", "MIN_VOLUME_USDT"))
+        st.number_input("MDD 한도 (%)", 5.0, 50.0, float(CFG.MAX_DRAWDOWN_PCT * 100), step=1.0, key="main_mdd",
+                        on_change=sync_p, args=("main_mdd", "sb_mdd", "MAX_DRAWDOWN_PCT", True))
+        st.number_input("일일 손실 한도 (USDT)", 5.0, 500.0, float(CFG.DAILY_LOSS_LIMIT_USDT), key="main_daily_loss",
+                        on_change=sync_p, args=("main_daily_loss", "sb_daily_loss", "DAILY_LOSS_LIMIT_USDT"))
 
     st.markdown("---")
     st.markdown(

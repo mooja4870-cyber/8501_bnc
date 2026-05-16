@@ -109,11 +109,12 @@ class QuantumEngine:
     # ── 청산 감지 & 승패 기록 ──────────────────────────
 
     def _check_closed_positions(self):
-        """스캔 완료 시마다 호출 — 청산된 포지션 감지 후 승/패 기록"""
+        """스캔 완료 시마다 호출 — 청산된 포지션 감지 및 타임아웃 체크"""
         if not self.is_ready:
             return
         try:
-            current = {p["symbol"] for p in self.client.get_positions()}
+            raw_positions = self.client.get_positions()
+            current = {p["symbol"] for p in raw_positions}
             closed = self._prev_position_symbols - current  # 사라진 심볼 = 청산됨
 
             if closed:
@@ -132,6 +133,21 @@ class QuantumEngine:
                         f" -> {'WIN' if pnl >= 0 else 'LOSS'} 기록"
                     )
 
+            # [v1.2.90] 강제 청산 타임아웃 체크 (Holding Time Timeout)
+            if self.cfg.MAX_HOLDING_HOURS > 0:
+                import time as time_mod
+                now_ms = time_mod.time() * 1000
+                timeout_ms = self.cfg.MAX_HOLDING_HOURS * 3600 * 1000
+                
+                for p in raw_positions:
+                    entry_ts = p.get("timestamp")
+                    if entry_ts and (now_ms - entry_ts) > timeout_ms:
+                        sym = p["symbol"]
+                        side = p["side"]
+                        logger.warning(f"[TIMEOUT] {sym} {side} - {self.cfg.MAX_HOLDING_HOURS}시간 초과 강제청산 실행")
+                        self.client.close_position(sym, side)
+
             self._prev_position_symbols = current
+
         except Exception as e:
             logger.error(f"청산 감지 오류: {e}")
