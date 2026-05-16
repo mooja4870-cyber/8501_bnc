@@ -464,12 +464,68 @@ with tabs[0]:
         losses = st_data.get("total_losses", 0)
         avg_roi = cum_roi / 2
 
-        def get_metric_html(label, value, subtext):
+        # [v1.3.13] 초강력 가로 배열 강제 시스템 (Stitch Cyber Style)
+        st.markdown(
+            """
+            <style>
+                .force-horizontal-row {
+                    display: flex !important;
+                    flex-direction: row !important;
+                    flex-wrap: nowrap !important;
+                    justify-content: space-between !important;
+                    align-items: stretch !important;
+                    width: 100% !important;
+                    gap: 8px !important;
+                    margin-bottom: 20px !important;
+                }
+                .metric-card-stitch {
+                    flex: 1 !important;
+                    width: 18% !important; /* 5개 항목 균등 분할 */
+                    background: rgba(22, 27, 34, 0.85) !important;
+                    border: 1px solid rgba(0, 255, 65, 0.2) !important;
+                    border-radius: 12px !important;
+                    padding: 12px 8px !important;
+                    backdrop-filter: blur(10px) !important;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+                    text-align: center !important;
+                    min-width: 0 !important;
+                }
+                .metric-label-stitch {
+                    color: #8f9bb3 !important;
+                    font-size: 0.7rem !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                    text-transform: uppercase !important;
+                    letter-spacing: 0.05em !important;
+                    margin-bottom: 4px !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                }
+                .metric-value-stitch {
+                    font-size: 1.25rem !important;
+                    font-family: 'Space Grotesk', sans-serif !important;
+                    font-weight: 700 !important;
+                    line-height: 1.1 !important;
+                    margin: 4px 0 !important;
+                    white-space: nowrap !important;
+                }
+                .metric-sub-stitch {
+                    font-size: 0.72rem !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                    opacity: 0.8 !important;
+                    white-space: nowrap !important;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        def get_metric_card(label, value, subtext):
             val_clean = str(value).replace('%','').replace('$','').replace(',','').replace('+','')
-            color = "#ffffff"
+            v_color = "#ffffff"
             try:
-                if float(val_clean) > 0: color = "var(--cyber-green)"
-                elif float(val_clean) < 0: color = "var(--cyber-red)"
+                num = float(val_clean)
+                if num > 0: v_color = "var(--cyber-green)"
+                elif num < 0: v_color = "var(--cyber-red)"
             except: pass
 
             s_color = "var(--cyber-dim)"
@@ -477,28 +533,28 @@ with tabs[0]:
             elif "↓" in subtext or "-" in subtext: s_color = "var(--cyber-red)"
 
             return f"""
-            <div style="flex: 1; background:rgba(22, 27, 34, 0.78); border:1px solid rgba(255,255,255,0.08); padding:12px; border-radius:12px; backdrop-filter:blur(12px); margin: 0 4px; min-width: 140px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03);">
-                <div style="color:#8f9bb3; font-size:0.75rem; font-family:'JetBrains Mono'; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{label}</div>
-                <div style="color:{color}; font-size:1.35rem; font-family:'Space Grotesk'; font-weight:700; line-height:1.1; white-space: nowrap;">{value}</div>
-                <div style="color:{s_color}; font-size:0.75rem; margin-top:2px; font-family:'JetBrains Mono'; opacity:0.8; white-space: nowrap;">{subtext}</div>
+            <div class="metric-card-stitch">
+                <div class="metric-label-stitch">{label}</div>
+                <div class="metric-value-stitch" style="color: {v_color};">{value}</div>
+                <div class="metric-sub-stitch" style="color: {s_color};">{subtext}</div>
             </div>
             """
 
-        # [v1.3.12] 가로 배열 강제 Flex Row
         st.markdown(
             f"""
-            <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; width: 100%; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;">
-                {get_metric_html("누적 수익률", f"{cum_roi:+.2f}%", "↓ 2.64% (24h)")}
-                {get_metric_html("일 평균 수익률", f"{avg_roi:+.2f}%", "↓ 2026.05.15 ~")}
-                {get_metric_html("누적 승률", f"{win_rate}%", f"↓ {wins}W / {losses}L")}
-                {get_metric_html("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "↓ Max Risk")}
-                {get_metric_html("금일 주문", f"{st_data['orders_today']}건", "↑ Today")}
+            <div class="force-horizontal-row">
+                {get_metric_card("누적 수익률", f"{cum_roi:+.2f}%", "↓ 2.64% (24h)")}
+                {get_metric_card("일 평균 수익률", f"{avg_roi:+.2f}%", "↓ 2026.05.15 ~")}
+                {get_metric_card("누적 승률", f"{win_rate}%", f"↓ {wins}W / {losses}L")}
+                {get_metric_card("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "↓ Max Risk")}
+                {get_metric_card("금일 주문", f"{st_data['orders_today']}건", "↑ Today")}
             </div>
             """,
             unsafe_allow_html=True
         )
 
         st.markdown("---")
+
 
 
         # ── 포지션 / 로그 ──────────────────────────
