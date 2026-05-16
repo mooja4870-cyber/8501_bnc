@@ -204,41 +204,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-        color: white !important;
-    }
-
-    /* 깜빡임 애니메이션 (터미널 스타일) */
-    @keyframes terminal-blink {
-        0% { opacity: 1; }
-        50% { opacity: 0.4; }
-        100% { opacity: 1; }
-    }
-    .badge-pink-blink, .badge-green-blink, .badge-red-blink {
-        border-radius: 0px !important;
-        animation: terminal-blink 1s infinite steps(1);
-    /* Streamlit Metric Delta Color Override (Profit: Red, Loss: Blue) */
-    [data-testid="stMetricDelta"] > div {
-        color: #ef4444 !important;
-    }
-    [data-testid="stMetricDelta"] > div:has(svg[data-testid="stMetricDeltaIconDown"]) {
-        color: #3b82f6 !important;
-    }
-    /* Fallback for browsers not supporting :has */
-    [data-testid="stMetricDelta"] > div[style*="color: rgb(9, 171,  green)"],
-    [data-testid="stMetricDelta"] > div[style*="color: #09ab3b"] {
-        color: #ef4444 !important;
-    }
-    [data-testid="stMetricDelta"] > div[style*="color: rgb(255, 43, 43)"],
-    [data-testid="stMetricDelta"] > div[style*="color: #ff2b2b"] {
-        color: #3b82f6 !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-
-
 # ── 세션 상태 초기화 ──────────────────────────────────
 
 def init_session():
@@ -313,7 +278,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo">MACD-BB-EMA<span>v1.3.00</span></div>',
+        '<div class="quantum-logo">MACD-BB-EMA<span>v1.3.02</span></div>',
         unsafe_allow_html=True,
     )
 
