@@ -416,7 +416,6 @@ with col_refresh:
 
 st.markdown('<hr style="margin: 8px 0 16px;">', unsafe_allow_html=True)
 
-
 # ══════════════════════════════════════════════════════
 # 탭 구성
 # ══════════════════════════════════════════════════════
@@ -444,76 +443,63 @@ with tabs[0]:
         dash = engine.get_dashboard_data()
         raw_positions = dash.get("positions", [])
         
-        # [v1.2.52] 포지션 데이터 취득 및 잔상 방지 필터링
-        # 1. 수량이 0이거나 먼지 잔고($0.1 미만)인 경우 원천 차단
-        # 2. 방금 청산 버튼을 누른 종목(closing_symbols) 즉시 은폐 로직
         positions = [
             p for p in raw_positions 
             if p.get('amount_usdt', 0) > 0.1 
             and p.get('symbol') not in st.session_state.closing_symbols
         ]
         
-        # 3. 거래소 데이터와 동기화: 거래소에서 실제로 사라진 종목은 은폐 목록에서 제거
         current_exchange_symbols = {p['symbol'] for p in raw_positions}
         st.session_state.closing_symbols = {
             s for s in st.session_state.closing_symbols if s in current_exchange_symbols
         }
 
-        # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
-        m1, m2, m3, m4, m5 = st.columns(5)
-        
-        def render_terminal_metric(label, value, subtext=None, is_pnl=False):
-            if is_pnl:
-                val_clean = str(value).replace('%','').replace('$','').replace(',','').replace('+','')
-                try:
-                    val_num = float(val_clean)
-                    color = "var(--cyber-green)" if val_num >= 0 else "var(--cyber-red)"
-                except:
-                    color = "#ffffff"
-            else:
-                color = "#ffffff"
-            
-            sub_html = ""
-            if subtext is not None:
-                s_color = "var(--cyber-green)" if "↑" in subtext or "+" in subtext else "var(--cyber-dim)"
-                if "↓" in subtext or "-" in subtext: s_color = "var(--cyber-red)"
-                sub_html = f'<div style="color:{s_color}; font-size:0.85rem; margin-top:4px; font-family:\'JetBrains Mono\'; opacity:0.8;">{subtext}</div>'
-                
-            st.markdown(
-                f"""
-                <div style="background:rgba(22, 27, 34, 0.78); border:1px solid rgba(255,255,255,0.08); padding:15px; border-radius:12px; backdrop-filter:blur(12px); box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03); min-height:115px;">
-                    <div style="color:#8f9bb3; font-size:0.85rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">{label}</div>
-                    <div style="color:{color}; font-size:1.55rem; font-family:\'Space Grotesk\'; font-weight:700; line-height:1.1;">{value}</div>
-                    {sub_html}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
         # ── 신규 데이터 연동 ──────────────────────────
         st_data = stats_store.load_stats()
         total_pnl = st_data.get("total_pnl_usdt", 0.0)
-        
-        # 임시 ROI 계산 (가정: 시작 자본 100 USDT)
         initial_cap = 100.0 
         cum_roi = (total_pnl / initial_cap) * 100 if initial_cap > 0 else 0.0
         win_rate = stats_store.get_win_rate()
         wins = st_data.get("total_wins", 0)
         losses = st_data.get("total_losses", 0)
+        avg_roi = cum_roi / 2
 
-        with m1:
-            render_terminal_metric("누적 수익률", f"{cum_roi:+.2f}%", subtext=f"↓ 2.64% (24h)", is_pnl=True)
-        with m2:
-            avg_roi = cum_roi / 2 # 임시: 2일 가동 가정
-            render_terminal_metric("일 평균 수익률", f"{avg_roi:+.2f}%", subtext="↓ 2026.05.15 ~", is_pnl=True)
-        with m3:
-            render_terminal_metric("누적 승률", f"{win_rate}%", subtext=f"↓ {wins}W / {losses}L", is_pnl=True)
-        with m4:
-            render_terminal_metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", subtext="↓ Max Risk")
-        with m5:
-            render_terminal_metric("금일 주문", f"{st_data['orders_today']}건", subtext="↑ Today")
+        def get_metric_html(label, value, subtext):
+            val_clean = str(value).replace('%','').replace('$','').replace(',','').replace('+','')
+            color = "#ffffff"
+            try:
+                if float(val_clean) > 0: color = "var(--cyber-green)"
+                elif float(val_clean) < 0: color = "var(--cyber-red)"
+            except: pass
+
+            s_color = "var(--cyber-dim)"
+            if "↑" in subtext or "+" in subtext: s_color = "var(--cyber-green)"
+            elif "↓" in subtext or "-" in subtext: s_color = "var(--cyber-red)"
+
+            return f"""
+            <div style="flex: 1; background:rgba(22, 27, 34, 0.78); border:1px solid rgba(255,255,255,0.08); padding:12px; border-radius:12px; backdrop-filter:blur(12px); margin: 0 4px; min-width: 140px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.03);">
+                <div style="color:#8f9bb3; font-size:0.75rem; font-family:'JetBrains Mono'; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{label}</div>
+                <div style="color:{color}; font-size:1.35rem; font-family:'Space Grotesk'; font-weight:700; line-height:1.1; white-space: nowrap;">{value}</div>
+                <div style="color:{s_color}; font-size:0.75rem; margin-top:2px; font-family:'JetBrains Mono'; opacity:0.8; white-space: nowrap;">{subtext}</div>
+            </div>
+            """
+
+        # [v1.3.12] 가로 배열 강제 Flex Row
+        st.markdown(
+            f"""
+            <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; width: 100%; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px;">
+                {get_metric_html("누적 수익률", f"{cum_roi:+.2f}%", "↓ 2.64% (24h)")}
+                {get_metric_html("일 평균 수익률", f"{avg_roi:+.2f}%", "↓ 2026.05.15 ~")}
+                {get_metric_html("누적 승률", f"{win_rate}%", f"↓ {wins}W / {losses}L")}
+                {get_metric_html("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "↓ Max Risk")}
+                {get_metric_html("금일 주문", f"{st_data['orders_today']}건", "↑ Today")}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         st.markdown("---")
+
 
         # ── 포지션 / 로그 ──────────────────────────
         col_pos, col_log = st.columns([1.2, 1])
