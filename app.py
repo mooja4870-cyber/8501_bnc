@@ -604,6 +604,36 @@ with tabs[0]:
         with m4:
             render_performance_metric("금일 주문", f"{st_data['orders_today']}건", subtext="↑ Today")
 
+        # [v1.3.17] 계좌 상태 지표 (Secondary Row)
+        st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
+        a1, a2, a3, a4 = st.columns(4)
+        
+        def render_account_metric(label, value, is_pnl=False):
+            color = "#ffffff"
+            if is_pnl:
+                val_num = float(str(value).replace('$','').replace(',','').replace('+',''))
+                color = "#ef4444" if val_num >= 0 else "#3b82f6"
+            
+            st.markdown(
+                f"""
+                <div style="background:#0a0a0a; border:1px solid #1a1a1a; padding:8px 12px; border-radius:0px;">
+                    <div style="color:#888888; font-size:0.75rem; font-family:'JetBrains Mono'; text-transform:uppercase;">{label}</div>
+                    <div style="color:{color}; font-size:1.1rem; font-family:'JetBrains Mono'; font-weight:600;">{value}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with a1:
+            render_account_metric("💰 TOTAL BALANCE", f"${dash['total_balance']:,.2f}")
+        with a2:
+            total_upnl = sum(p["pnl_usdt"] for p in positions)
+            render_account_metric("UNREALIZED PnL", f"${total_upnl:+.2f}", is_pnl=True)
+        with a3:
+            render_account_metric("USED MARGIN", f"${dash['used_margin']:,.2f}")
+        with a4:
+            render_account_metric("FREE MARGIN", f"${dash['free_margin']:,.2f}")
+
         st.markdown("---")
 
         # ── 포지션 / 로그 ──────────────────────────
