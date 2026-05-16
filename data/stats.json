@@ -1,10 +1,9 @@
 {
   "today_date": "2026-05-16",
   "orders_today": 0,
-  "daily_pnl_usdt": 0.0,
-  "total_pnl_usdt": 0.0,
-  "total_trades": 0,
-  "total_wins": 0,
-  "total_losses": 0,
-  "reset_timestamp": "2026-05-16 23:45:00"
+  "daily_pnl_usdt": -1.0693,
+  "total_pnl_usdt": -1.0063,
+  "total_trades": 2,
+  "total_wins": 1,
+  "total_losses": 6
 }
