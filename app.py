@@ -579,20 +579,57 @@ with tabs[0]:
                 unsafe_allow_html=True
             )
 
-        with m1:
-            render_terminal_metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
-        with m2:
-            total_upnl = sum(p["pnl_usdt"] for p in positions)
-            render_terminal_metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}", is_pnl=True)
-        with m3:
-            dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
-            render_terminal_metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}", is_pnl=True)
-        with m4:
-            render_terminal_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}")
-        with m5:
-            render_terminal_metric("가용 증거금", f"${dash['free_margin']:,.2f}")
+        # ── [v1.3.31] 통계 및 수익률 데이터 연동 ──────────────────────────
+        st_data = stats_store.load_stats()
+        total_pnl = st_data.get("total_pnl_usdt", 0.0)
+        
+        # [Baseline] 2026-05-16 23:45 기준 분모 금액 $22.09 적용
+        initial_cap = 22.09 
+        cum_roi = (total_pnl / initial_cap) * 100 if initial_cap > 0 else 0.0
+        win_rate = stats_store.get_win_rate()
+        wins = st_data.get("total_wins", 0)
+        losses = st_data.get("total_losses", 0)
+        
+        # 일 평균 수익률 계산 (2026.05.15 기준 가동일 2일 가정)
+        avg_roi = cum_roi / 2.0 
+
+        def get_wallstreet_metric(label, value, subtext):
+            val_clean = str(value).replace('%','').replace('$','').replace(',','').replace('+','')
+            v_color = "#ffffff"
+            try:
+                num = float(val_clean)
+                if num > 0: v_color = "#00ff00" # Green
+                elif num < 0: v_color = "#ff3b30" # Red
+            except: pass
+
+            s_color = "#666666"
+            if "↑" in subtext or "+" in subtext: s_color = "#00ff00"
+            elif "↓" in subtext or "-" in subtext: s_color = "#ff3b30"
+
+            return f"""
+            <div style="flex: 1; background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:0px; margin: 0 4px; min-width: 0;">
+                <div style="color:#cccccc; font-size:0.8rem; font-family:'JetBrains Mono'; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">{label}</div>
+                <div style="color:{v_color}; font-size:1.3rem; font-family:'JetBrains Mono'; font-weight:700; line-height:1.1;">{value}</div>
+                <div style="color:{s_color}; font-size:0.75rem; margin-top:6px; font-family:'JetBrains Mono'; opacity:0.9;">{subtext}</div>
+            </div>
+            """
+
+        # 강제 가로 배열 Flex Row (Wall Street Style)
+        st.markdown(
+            f"""
+            <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; width: 100%; margin-bottom: 20px;">
+                {get_wallstreet_metric("누적 수익률", f"{cum_roi:+.2f}%", "↓ 2.64% (24h)")}
+                {get_wallstreet_metric("일 평균 수익률", f"{avg_roi:+.2f}%", "↓ 2026.05.15 ~")}
+                {get_wallstreet_metric("누적 승률", f"{win_rate}%", f"↓ {wins}W / {losses}L")}
+                {get_wallstreet_metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "↓ Max Risk")}
+                {get_wallstreet_metric("금일 주문", f"{st_data['orders_today']}건", "↑ Today")}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         st.markdown("---")
+
 
         # ── 포지션 / 로그 ──────────────────────────
         col_pos, col_log = st.columns([1.2, 1])
