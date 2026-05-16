@@ -370,7 +370,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.3.50</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.3.60</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -551,31 +551,67 @@ with tabs[0]:
             s for s in st.session_state.closing_symbols if s in current_exchange_symbols
         }
 
-        # ── [v1.3.50] 성과 지표 초기화 (이미지 1 기준) ────────────────
-        st_data = stats_store.load_stats()
+        # ── 상단 지표 Row 1: 잔고 현황 (이미지 2 복구) ──────────────────────────
+        m1, m2, m3, m4, m5 = st.columns(5)
         
-        # [CRITICAL] 사용자 지정 초기화 데이터
-        INITIAL_CAPITAL = 22.05  # 초기 자본금 ($)
-        BASELINE_TIME = "2026-05-16 23:50"
+        def render_balance_metric(label, value, delta=None, is_pnl=False):
+            if is_pnl:
+                val_num = float(str(value).replace('$','').replace(',','').replace('+',''))
+                color = "#ef4444" if val_num >= 0 else "#3b82f6"
+            else:
+                color = "#ffffff"
+            
+            delta_html = ""
+            if delta is not None:
+                d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
+                d_color = "#ef4444" if d_num >= 0 else "#3b82f6"
+                delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px;">{delta}</div>'
+                
+            st.markdown(
+                f"""
+                <div style="background:#0f0f0f; border:1px solid #262626; padding:10px 15px; height:100px;">
+                    <div style="color:#cccccc; font-size:0.85rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
+                    <div style="color:{color}; font-size:1.4rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
+                    {delta_html}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        with m1:
+            render_balance_metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
+        with m2:
+            total_upnl = sum(p["pnl_usdt"] for p in positions)
+            render_balance_metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}", is_pnl=True)
+        with m3:
+            dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
+            render_balance_metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}", is_pnl=True)
+        with m4:
+            render_balance_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}")
+        with m5:
+            render_balance_metric("가용 증거금", f"${dash['free_margin']:,.2f}")
+
+        st.markdown('<div style="margin-top:10px;"></div>', unsafe_allow_html=True)
+
+        # ── 상단 지표 Row 2: 성과 지표 (이미지 1 추가) ──────────────────────────
+        # [v1.3.60] 사용자 지정 초기화 데이터 적용 ($22.05 / 23:50)
+        st_data = stats_store.load_stats()
+        INITIAL_CAPITAL = 22.05
+        BASELINE_TIME = "23:50"
         
         total_pnl = st_data.get("total_pnl_usdt", 0.0)
-        # 누적 수익률 계산 (사용자 요청 기준 자본금 대비)
         cum_roi = (total_pnl / INITIAL_CAPITAL) * 100 if INITIAL_CAPITAL > 0 else 0.0
-        
         win_rate = stats_store.get_win_rate()
         wins = st_data.get("total_wins", 0)
         losses = st_data.get("total_losses", 0)
         
-        # 일 평균 수익률 (초기화 시점이므로 현재는 누적과 동일하게 표시)
-        avg_roi = cum_roi 
-
-        def render_pro_metric(label, value, subtext):
+        def render_performance_metric(label, value, subtext):
             val_clean = str(value).replace('%','').replace('$','').replace(',','').replace('+','')
             color = "#ffffff"
             try:
                 num = float(val_clean)
-                if num > 0: color = "#ef4444" # Red (Profit)
-                elif num < 0: color = "#3b82f6" # Blue (Loss)
+                if num > 0: color = "#ef4444"
+                elif num < 0: color = "#3b82f6"
             except: pass
 
             s_color = "#888"
@@ -584,26 +620,26 @@ with tabs[0]:
 
             st.markdown(
                 f"""
-                <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:4px; height:110px;">
-                    <div style="color:#888; font-size:0.8rem; font-family:'JetBrains Mono'; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px;">{label}</div>
-                    <div style="color:{color}; font-size:1.45rem; font-family:'JetBrains Mono'; font-weight:700; line-height:1.1;">{value}</div>
-                    <div style="color:{s_color}; font-size:0.75rem; margin-top:4px; font-family:'JetBrains Mono'; opacity:0.9;">{subtext}</div>
+                <div style="background:#0f0f0f; border:1px solid #262626; padding:10px 15px; height:105px;">
+                    <div style="color:#888; font-size:0.8rem; font-family:'JetBrains Mono'; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">{label}</div>
+                    <div style="color:{color}; font-size:1.4rem; font-family:'JetBrains Mono'; font-weight:700; line-height:1.1;">{value}</div>
+                    <div style="color:{s_color}; font-size:0.7rem; margin-top:4px; font-family:'JetBrains Mono'; opacity:0.9;">{subtext}</div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-        m1, m2, m3, m4, m5 = st.columns(5)
-        with m1:
-            render_pro_metric("누적 수익률", f"{cum_roi:+.2f}%", f"↓ 2.64% (24h)")
-        with m2:
-            render_pro_metric("일 평균 수익률", f"{avg_roi:+.2f}%", f"↓ {BASELINE_TIME} ~")
-        with m3:
-            render_pro_metric("누적 승률", f"{win_rate}%", f"↓ {wins}W / {losses}L")
-        with m4:
-            render_pro_metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "↓ Max Risk")
-        with m5:
-            render_pro_metric("금일 주문", f"{st_data['orders_today']}건", "↑ Today")
+        p1, p2, p3, p4, p5 = st.columns(5)
+        with p1:
+            render_performance_metric("누적 수익률", f"{cum_roi:+.2f}%", "↓ 2.64% (24h)")
+        with p2:
+            render_performance_metric("일 평균 수익률", f"{cum_roi:+.2f}%", f"↓ {BASELINE_TIME} ~")
+        with p3:
+            render_performance_metric("누적 승률", f"{win_rate}%", f"↓ {wins}W / {losses}L")
+        with p4:
+            render_performance_metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "↓ Max Risk")
+        with p5:
+            render_performance_metric("금일 주문", f"{st_data['orders_today']}건", "↑ Today")
 
         st.markdown("---")
 
