@@ -24,7 +24,13 @@ load_dotenv(override=True)
 
 # ── 페이지 설정 ───────────────────────────────────────
 st.set_page_config(
-    page# ── Stitch Cyber-Quantum UI CSS (v1.3.00) ─────────────────────────────
+    page_title="AI QUANTUM · OKX Trader",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+# ── Stitch Cyber-Quantum UI CSS (v1.3.01 Patch) ─────────────────────────────
 st.markdown(
     """
     <style>
