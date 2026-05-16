@@ -370,7 +370,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.3.20</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.3.21</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -554,27 +554,79 @@ with tabs[0]:
         # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
         m1, m2, m3, m4, m5 = st.columns(5)
         
-        # ── [v1.3.15] 성과 지표 가로 배열 (Wall Street Terminal Style) ──
+        # ── [v1.3.21] 초강력 가로 배열 시스템 (Wall Street Terminal Edition) ──
+        st.markdown(
+            """
+            <style>
+                .ws-metric-row {
+                    display: flex !important;
+                    flex-direction: row !important;
+                    flex-wrap: nowrap !important;
+                    justify-content: space-between !important;
+                    align-items: stretch !important;
+                    width: 100% !important;
+                    gap: 6px !important;
+                    margin-bottom: 20px !important;
+                }
+                .ws-metric-card {
+                    flex: 1 !important;
+                    width: 19% !important;
+                    background: #0f0f0f !important;
+                    border: 1px solid #262626 !important;
+                    padding: 10px 6px !important;
+                    text-align: center !important;
+                    min-width: 0 !important;
+                    border-radius: 0px !important; /* Sharp corners for Wall Street style */
+                }
+                .ws-label {
+                    color: #888888 !important;
+                    font-size: 0.7rem !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                    text-transform: uppercase !important;
+                    letter-spacing: 0.05em !important;
+                    margin-bottom: 4px !important;
+                    white-space: nowrap !important;
+                    overflow: hidden !important;
+                }
+                .ws-value {
+                    font-size: 1.2rem !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                    font-weight: 700 !important;
+                    line-height: 1.1 !important;
+                    margin: 4px 0 !important;
+                    white-space: nowrap !important;
+                }
+                .ws-sub {
+                    font-size: 0.68rem !important;
+                    font-family: 'JetBrains Mono', monospace !important;
+                    opacity: 0.8 !important;
+                    white-space: nowrap !important;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
         st_data = stats_store.load_stats()
         total_pnl = st_data.get("total_pnl_usdt", 0.0)
-        initial_cap = 100.0 # 시작 자본 (초기화 기준)
+        initial_cap = 100.0 
         cum_roi = (total_pnl / initial_cap) * 100 if initial_cap > 0 else 0.0
         win_rate = stats_store.get_win_rate()
         wins = st_data.get("total_wins", 0)
         losses = st_data.get("total_losses", 0)
         
-        # 일 평균 수익률 계산
-        start_date = datetime.strptime(st_data.get("today_date", "2026-05-16"), "%Y-%m-%d")
+        start_date_str = st_data.get("today_date", "2026-05-16")
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d")
         days_active = max((datetime.now() - start_date).days + 1, 1)
         avg_roi = cum_roi / days_active
 
-        def get_terminal_metric_html(label, value, subtext):
+        def get_ws_metric_card(label, value, subtext):
             val_clean = str(value).replace('%','').replace('$','').replace(',','').replace('+','')
-            color = "#ffffff"
+            v_color = "#ffffff"
             try:
                 num = float(val_clean)
-                if num > 0: color = "var(--terminal-green)"
-                elif num < 0: color = "var(--terminal-red)"
+                if num > 0: v_color = "var(--terminal-green)"
+                elif num < 0: v_color = "var(--terminal-red)"
             except: pass
 
             s_color = "var(--terminal-dim)"
@@ -582,27 +634,28 @@ with tabs[0]:
             elif "↓" in subtext or "-" in subtext: s_color = "var(--terminal-red)"
 
             return f"""
-            <div style="flex: 1; background:var(--terminal-surface); border:1px solid var(--terminal-border); padding:12px; margin: 0 4px; min-width: 0;">
-                <div style="color:var(--terminal-dim); font-size:0.75rem; font-family:'JetBrains Mono'; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{label}</div>
-                <div style="color:{color}; font-size:1.3rem; font-family:'JetBrains Mono'; font-weight:700; line-height:1.1; white-space: nowrap;">{value}</div>
-                <div style="color:{s_color}; font-size:0.7rem; margin-top:4px; font-family:'JetBrains Mono'; opacity:0.8; white-space: nowrap;">{subtext}</div>
+            <div class="ws-metric-card">
+                <div class="ws-label">{label}</div>
+                <div class="ws-value" style="color: {v_color};">{value}</div>
+                <div class="ws-sub" style="color: {s_color};">{subtext}</div>
             </div>
             """
 
         st.markdown(
             f"""
-            <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; width: 100%; margin-bottom: 20px;">
-                {get_terminal_metric_html("누적 수익률", f"{cum_roi:+.2f}%", "↑ 0.00% (24h)")}
-                {get_terminal_metric_html("일 평균 수익률", f"{avg_roi:+.2f}%", f"↓ {st_data['today_date']} ~")}
-                {get_terminal_metric_html("누적 승률", f"{win_rate}%", f"↓ {wins}W / {losses}L")}
-                {get_terminal_metric_html("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "↓ Max Risk")}
-                {get_terminal_metric_html("금일 주문", f"{st_data['orders_today']}건", "↑ Today")}
+            <div class="ws-metric-row">
+                {get_ws_metric_card("누적 수익률", f"{cum_roi:+.2f}%", "↑ 0.00% (24h)")}
+                {get_ws_metric_card("일 평균 수익률", f"{avg_roi:+.2f}%", f"↓ {start_date_str} ~")}
+                {get_ws_metric_card("누적 승률", f"{win_rate}%", f"↓ {wins}W / {losses}L")}
+                {get_ws_metric_card("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", "↓ Max Risk")}
+                {get_ws_metric_card("금일 주문", f"{st_data['orders_today']}건", "↑ Today")}
             </div>
             """,
             unsafe_allow_html=True
         )
 
         st.markdown("---")
+
 
 
         # ── 포지션 / 로그 ──────────────────────────
