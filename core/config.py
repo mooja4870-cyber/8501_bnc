@@ -28,8 +28,12 @@ class TradingConfig:
     TRAILING_STOP_PCT: float = 0.01        # 추적 손절 (1.0%)
     PROFIT_FACTOR_MIN: float = 1.0        # Profit Factor 최소 기준 (1:1)
 
-    # ── 리스크 한도 ────────────────────────────────────
-    MAX_DRAWDOWN_PCT: float = 0.10        # 최대 낙폭 10% 초과 시 전략 중단
+    # [v1.2.99] 투자 기준점 설정
+    INITIAL_CAPITAL: float = 22.06
+    BASELINE_DATE: str = "2026-05-16 23:57"
+    
+    # ── [v1.2.90] 신규 파라미터 ────────────────────────
+    MAX_HOLDING_HOURS: int = 12         # 최대 보유 시간 (초과 시 자동청산)
     DAILY_LOSS_LIMIT_USDT: float = 25.0  # 일일 손실 한도 (5회 진입분)
     MAX_DAILY_TRADES: int = 20            # 일일 최대 거래 횟수
     VOLATILITY_FILTER: bool = True        # 변동성 필터 활성화

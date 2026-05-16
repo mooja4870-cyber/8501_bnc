@@ -160,7 +160,7 @@ st.markdown(
         border: 1px solid var(--terminal-green);
         padding: 4px 12px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         font-weight: 700;
         color: var(--terminal-green);
     }
@@ -175,9 +175,19 @@ st.markdown(
         border: 1px solid var(--terminal-red);
         padding: 4px 12px;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         color: var(--terminal-red);
     }
+
+    /* [v1.2.99] 메트릭 서브텍스트 스타일 */
+    .metric-sub {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.75rem;
+        margin-top: 2px;
+        color: #888;
+    }
+    .metric-sub.up { color: var(--terminal-green); }
+    .metric-sub.down { color: var(--terminal-red); }
 
     /* 시스템 로그 박스 */
     .log-box {
@@ -370,7 +380,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.2.98</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.2.99</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -554,42 +564,58 @@ with tabs[0]:
         # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
         m1, m2, m3, m4, m5 = st.columns(5)
         
-        def render_terminal_metric(label, value, delta=None, is_pnl=False):
+        def render_terminal_metric(label, value, subtext=None, is_pnl=False):
             if is_pnl:
-                val_num = float(str(value).replace('$','').replace(',','').replace('+',''))
+                val_num = float(str(value).replace('%','').replace('$','').replace(',','').replace('+',''))
                 color = "#ef4444" if val_num >= 0 else "#3b82f6"
             else:
-                color = "#ffffff" # 일반 지표는 중립 색상(White) 적용
+                color = "#ffffff"
             
-            delta_html = ""
-            if delta is not None:
-                d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
-                d_color = "#ef4444" if d_num >= 0 else "#3b82f6"
-                delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px;">{delta}</div>'
+            sub_html = ""
+            if subtext is not None:
+                s_class = "metric-sub"
+                if "↑" in subtext or "+" in subtext: s_class += " up"
+                elif "↓" in subtext or "-" in subtext: s_class += " down"
+                sub_html = f'<div class="{s_class}">{subtext}</div>'
                 
             st.markdown(
                 f"""
-                <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:0px; height:105px;">
-                    <div style="color:#cccccc; font-size:0.9rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
-                    <div style="color:{color}; font-size:1.46rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
-                    {delta_html}
+                <div style="background:#0f0f0f; border:1px solid #262626; padding:10px 12px; border-radius:0px; min-height:95px;">
+                    <div style="color:#cccccc; font-size:0.75rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
+                    <div style="color:{color}; font-size:1.35rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:2px;">{value}</div>
+                    {sub_html}
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
+        # ── 기준 데이터 계산 ──────────────────────────
+        st_data = stats_store.load_stats()
+        total_pnl = st_data.get("total_pnl_usdt", 0.0)
+        
+        # [v1.2.99] 기준점 자본 $22.06 적용
+        init_cap = CFG.INITIAL_CAPITAL
+        total_assets = dash['total_balance'] # 현재 잔고
+        cum_roi = ((total_assets - init_cap) / init_cap) * 100 if init_cap > 0 else 0.0
+        
+        win_rate = stats_store.get_win_rate()
+        wins = st_data.get("total_wins", 0)
+        losses = st_data.get("total_losses", 0)
+
         with m1:
-            render_terminal_metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
+            render_terminal_metric("누적 수익률", f"{cum_roi:+.2f}%", subtext="↓ 2.64% (24h)", is_pnl=True)
         with m2:
-            total_upnl = sum(p["pnl_usdt"] for p in positions)
-            render_terminal_metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}", is_pnl=True)
+            # 경과 일수 계산
+            base_dt = datetime.strptime(CFG.BASELINE_DATE, "%Y-%m-%d %H:%M")
+            days_passed = max((datetime.now() - base_dt).days, 1)
+            avg_roi = cum_roi / days_passed
+            render_terminal_metric("일 평균 수익률", f"{avg_roi:+.2f}%", subtext=f"↓ {CFG.BASELINE_DATE.split(' ')[0]} ~", is_pnl=True)
         with m3:
-            dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
-            render_terminal_metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}", is_pnl=True)
+            render_terminal_metric("누적 승률", f"{win_rate}%", subtext=f"↓ {wins}W / {losses}L", is_pnl=True)
         with m4:
-            render_terminal_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}")
+            render_terminal_metric("MDD 한도", f"-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%", subtext="↓ Max Risk")
         with m5:
-            render_terminal_metric("가용 증거금", f"${dash['free_margin']:,.2f}")
+            render_terminal_metric("금일 주문", f"{st_data['orders_today']}건", subtext="↑ Today")
 
         st.markdown("---")
 
