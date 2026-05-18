@@ -178,10 +178,12 @@ class OKXClient:
     def get_ohlcv(
         self,
         symbol: str,
-        timeframe: str = CFG.TIMEFRAME,
+        timeframe: Optional[str] = None,
         limit: int = 300,
     ) -> pd.DataFrame:
         """OHLCV 캔들 데이터 조회"""
+        if timeframe is None:
+            timeframe = CFG.TIMEFRAME
         try:
             if limit <= 300:
                 raw = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)

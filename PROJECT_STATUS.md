@@ -1,13 +1,14 @@
-﻿# Project Status: AI QUANTUM OKX Auto-Trader
+# Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v1.3.02] Day Trading Optimization & Dynamic TIMEFRAME Widget:** Applied day trading optimized parameters (TIMEFRAME = 15m, SL = 0.8%, TP = 1.2%, MAX_HOLDING_HOURS = 4.0, BB_STD = 1.8, EMA_PERIOD = 100) to hit the daily 1%~2% return target. Added dynamic selectbox widgets in the sidebar and main entry tabs for remote timeframe adjustments.
 - Initialized Streamlit dashboard with OKX API integration.
 - Added auto-connect feature via `.env`.
 - Fixed SL/TP sliders display logic.
-- Fixed the empty keys bug that caused balance to show as 0 upon clicking "OKX ?곌껐".
+- Fixed empty keys bug that caused balance to show as 0 upon clicking "OKX 연결".
 - Fixed MDD Limit slider UI to show accurate percentage scale (5% ~ 50%).
-- Added "?렞 ?ъ???吏꾩엯" tab between "留ㅻℓ ?대젰" and "?ㅼ젙" to display and adjust MACD, BB, and EMA entry conditions.
-- Fixed an issue where `load_dotenv()` failed to hot-reload `.env` edits and UI inputs cached empty values.
+- Added "지표 진입 조건" tab between "매매 이력" and "설정" to display and adjust MACD, BB, and EMA entry conditions.
+- Fixed issue where `load_dotenv()` failed to hot-reload `.env` edits and UI inputs cached empty values.
 - Fixed scanner yielding empty results because OKX's `quoteVolume` returned None, by manually calculating `baseVolume * last_price`.
 - Fixed backtest "?곗씠???놁쓬" error by implementing pagination in `get_ohlcv` to fetch up to 1500+ candles and rewriting the backtest loop to be fully vectorized instead of losing history through sliced indicator calculations.
 - Wrote a comprehensive operational manual (`4ref.md`) detailing the Triple-Indicator strategy, risk management logic, and dashboard features.
@@ -309,3 +310,12 @@
 
 ## v1.2.52 (2026-05-15)
 - [Core] Implemented session-based immediate hide for closed positions to prevent ghosting.
+
+## v1.3.00 (2026-05-19)
+- [Architecture] Integrated background auto-scan with 'Auto-Trading ON' and completely removed the scanner tab.
+
+## v1.3.01 (2026-05-19)
+- [UI/UX] Restored the Scanner Monitoring tab without the manual Scan Start button to keep auto-trading integrity.
+
+## v1.3.02 (2026-05-19)
+- [Algorithm/UI] Optimized day trading parameters (15m TIMEFRAME, SL = 0.8%, TP = 1.2%, MAX_HOLDING_HOURS = 4.0, BB_STD = 1.8, EMA_PERIOD = 100) to target a daily 1%~2% return. Added dynamic selectbox widgets to both sidebar and main entry tabs for remote timeframe adjustments.

@@ -17,14 +17,14 @@ class TradingConfig:
     MARGIN_MODE: str = "isolated"          # 격리 마진
     MARGIN_USDT: float = 5.0               # 1회 진입 증거금 (USDT)
     MAX_POSITIONS: int = 5                # 최대 동시 보유 종목 수
-    MAX_HOLDING_HOURS: float = 3.0        # 강제 청산 타임아웃 (3시간)
+    MAX_HOLDING_HOURS: float = 4.0        # 강제 청산 타임아웃 (4시간 - 15m 봉 16개 분량)
     ALLOW_LONG: bool = True
     ALLOW_SHORT: bool = True
 
 
     # ── 손익 설정 ──────────────────────────────────────
-    STOP_LOSS_PCT: float = 0.02           # 손절 2.0% (사용자 요청)
-    TAKE_PROFIT_PCT: float = 0.02          # 익절 2.0% (사용자 요청)
+    STOP_LOSS_PCT: float = 0.008           # 손절 0.8% (10배 레버리지 기준 -8% ROI)
+    TAKE_PROFIT_PCT: float = 0.012          # 익절 1.2% (10배 레버리지 기준 +12% ROI)
     TRAILING_STOP_PCT: float = 0.01        # 추적 손절 (1.0%)
     PROFIT_FACTOR_MIN: float = 1.0        # Profit Factor 최소 기준 (1:1)
 
@@ -42,13 +42,13 @@ class TradingConfig:
     MARKET_TYPE: str = "swap"             # 선물(영구 계약)
 
     # ── 지표 파라미터 ──────────────────────────────────
-    EMA_PERIOD: int = 200
+    EMA_PERIOD: int = 100
     BB_PERIOD: int = 20
-    BB_STD: float = 2.0
+    BB_STD: float = 1.8
     MACD_FAST: int = 12
     MACD_SLOW: int = 26
     MACD_SIGNAL: int = 9
-    TIMEFRAME: str = "1h"                 # 캔들 타임프레임
+    TIMEFRAME: str = "15m"                 # 캔들 타임프레임 (사용자 조정 가능)
 
     # ── 백테스트 설정 ──────────────────────────────────
     BT_COMMISSION: float = 0.0005         # 수수료 0.05%

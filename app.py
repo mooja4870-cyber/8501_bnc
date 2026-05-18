@@ -193,10 +193,18 @@ st.markdown(
         line-height: 1.5;
         white-space: pre-wrap; /* 줄바꿈 보장 */
     }
+    @keyframes log-yellow-blink {
+        0% { opacity: 1; }
+        50% { opacity: 0.4; }
+        100% { opacity: 1; }
+    }
     .log-latest {
-        color: #ffffff !important;
-        background: #222;
-        padding: 0 4px;
+        color: #ffcc00 !important;
+        font-weight: bold;
+        background: #1e1e0a !important; /* Subtle dark warm background */
+        border-left: 3px solid #ffcc00;
+        padding: 2px 8px;
+        animation: log-yellow-blink 1.5s infinite ease-in-out;
     }
 
     /* 구분선 */
@@ -273,6 +281,7 @@ st.markdown(
     .badge-pink-blink, .badge-green-blink, .badge-red-blink {
         border-radius: 0px !important;
         animation: terminal-blink 1s infinite steps(1);
+    }
     /* Streamlit Metric Delta Color Override (Profit: Red, Loss: Blue) */
     [data-testid="stMetricDelta"] > div {
         color: #ef4444 !important;
@@ -370,7 +379,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.2.98</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.3.01</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -423,6 +432,13 @@ with st.sidebar:
                 engine.disable_trading()
                 engine.stop_scanner()
 
+    # 자동매매 상태 동기화 및 강력 자동시작 보장 로직 (API 연결 후 즉시 스캔/매매 기동 보장)
+    if engine.is_ready and st.session_state.auto_trading:
+        if engine.trader and not engine.trader.enabled:
+            engine.enable_trading()
+        if engine.scanner and not engine.scanner.is_running:
+            engine.start_scanner()
+
     if engine.is_ready and engine.trader:
         engine.trader.allow_long = longs
         engine.trader.allow_short = shorts
@@ -433,6 +449,10 @@ with st.sidebar:
     with st.expander("📊 지표 및 스캐너 설정", expanded=False):
         st.number_input("EMA 기간", 10, 500, CFG.EMA_PERIOD, step=10, key="sb_ema_period", 
                         on_change=sync_p, args=("sb_ema_period", "main_ema_period", "EMA_PERIOD"))
+        # [v1.3.02] 타임프레임 원격 제어 추가
+        tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
+        st.selectbox("타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="sb_timeframe",
+                     on_change=sync_p, args=("sb_timeframe", "main_timeframe", "TIMEFRAME"))
         col_bb1, col_bb2 = st.columns(2)
         with col_bb1:
             st.number_input("BB 기간", 5, 100, CFG.BB_PERIOD, key="sb_bb_period",
@@ -480,24 +500,24 @@ with st.sidebar:
 # 메인 헤더 (한 줄 배치)
 # ══════════════════════════════════════════════════════
 
-# [v1.2.98] 시간, 상태, 버튼을 한 줄에 배치 (균등 간격)
-col_time, col_status, col_refresh = st.columns([2, 1.2, 1])
+# [v1.2.98] 시간, 상태, 버튼을 우측 정렬 및 균등 배치
+col_empty, col_time, col_status, col_refresh = st.columns([5, 2.2, 1.4, 1.2])
 
 with col_time:
     now_kst = datetime.utcnow() + timedelta(hours=9)
     st.markdown(
-        f'<p style="font-family:\'JetBrains Mono\',monospace; font-size:0.95rem; color:#cccccc; margin-top:14px; margin-bottom:0px;">'
+        f'<p style="font-family:\'JetBrains Mono\',monospace; font-size:0.95rem; color:#cccccc; margin-top:14px; margin-bottom:0px; text-align:right;">'
         f'{now_kst.strftime("%Y-%m-%d %H:%M:%S")} KST</p>',
         unsafe_allow_html=True,
     )
 
 with col_status:
-    # 수직 중앙 정렬을 위한 여백 추가
+    # 수직 중앙 정렬 및 우측 정렬을 위한 컨테이너 구성
     st.markdown('<div style="margin-top:8px;"></div>', unsafe_allow_html=True)
     if st.session_state.auto_trading:
-        st.markdown('<div class="badge-live"><span class="dot"></span><span>LIVE CONNECTION</span></div>', unsafe_allow_html=True)
+        st.markdown('<div style="display:flex; justify-content:flex-end;"><div class="badge-live"><span class="dot"></span><span>LIVE CONNECTION</span></div></div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="badge-stopped">● STOPPED</div>', unsafe_allow_html=True)
+        st.markdown('<div style="display:flex; justify-content:flex-end;"><div class="badge-stopped">● STOPPED</div></div>', unsafe_allow_html=True)
 
 with col_refresh:
     st.markdown('<div class="refresh-btn" style="margin-top:6px;">', unsafe_allow_html=True)
@@ -613,72 +633,74 @@ with tabs[0]:
                             time.sleep(1)
                             st.rerun()
 
-            if not positions:
-                st.markdown(
-                    '<p style="color:#444;font-family:\'IBM Plex Mono\',monospace;font-size:0.8rem;">포지션 없음</p>',
-                    unsafe_allow_html=True,
-                )
-            else:
-                for p in positions:
-                    pnl_color = "#ef4444" if p["pnl_usdt"] >= 0 else "#3b82f6"
-                    side_badge = (
-                        "🟢 LONG" if p["side"] == "long" else "🔴 SHORT"
+            pos_placeholder = st.empty()
+            with pos_placeholder.container():
+                if not positions:
+                    st.markdown(
+                        '<p style="color:#444;font-family:\'IBM Plex Mono\',monospace;font-size:0.8rem;">포지션 없음</p>',
+                        unsafe_allow_html=True,
                     )
-                    pc1, pc2 = st.columns([3.5, 1])
-                    with pc1:
-                        st.markdown(
-                            f"""
-                            <div style="background:#161616;border:1px solid rgba(255,255,255,0.07);
-                                        border-radius:8px;padding:12px 14px;margin-bottom:8px;">
-                              <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                                <span style="font-family:'IBM Plex Mono';font-size:0.95rem;font-weight:600;">{p['symbol']}</span>
-                                <span style="font-family:'IBM Plex Mono';font-size:0.95rem;font-weight:600;color:{pnl_color};">
-                                  {p['pnl_usdt']:+.4f} USDT ({p['pnl_pct']:+.1f}%)
-                                </span>
-                              </div>
-                              <div style="font-family:'IBM Plex Mono';font-size:0.9rem;color:#cccccc;display:flex;gap:16px;">
-                                <span>{side_badge}</span>
-                                <span>진입가 ${p['entry_price']:,.4f}</span>
-                                <span>현재가 ${p['mark_price']:,.4f}</span>
-                                <span>{p['leverage']}x LEV</span>
-                                <span>Amount ${p['amount_usdt']:,.2f}</span>
-                              </div>
-                            </div>
-                            """,
-                            unsafe_allow_html=True,
+                else:
+                    for p in positions:
+                        pnl_color = "#ef4444" if p["pnl_usdt"] >= 0 else "#3b82f6"
+                        side_badge = (
+                            "🟢 LONG" if p["side"] == "long" else "🔴 SHORT"
                         )
-                    with pc2:
-                        # 경과 시간 계산 및 스타일 결정
-                        duration_str = "[00시간 00분]"
-                        duration_style = "font-family:'JetBrains Mono'; font-size:0.98rem; color:#cccccc; text-align:center; margin-bottom:0px;"
-                        
-                        if p.get("timestamp"):
-                            import datetime as dt_mod
-                            entry_dt = dt_mod.datetime.fromtimestamp(p["timestamp"] / 1000, tz=dt_mod.timezone.utc)
-                            diff = dt_mod.datetime.now(dt_mod.timezone.utc) - entry_dt
-                            hrs, rem = divmod(int(diff.total_seconds()), 3600)
-                            mins = rem // 60
-                            duration_str = f"[{hrs:02d}시간 {mins:02d}분]"
+                        pc1, pc2 = st.columns([3.5, 1])
+                        with pc1:
+                            st.markdown(
+                                f"""
+                                <div style="background:#161616;border:1px solid rgba(255,255,255,0.07);
+                                            border-radius:8px;padding:12px 14px;margin-bottom:8px;">
+                                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                                    <span style="font-family:'IBM Plex Mono';font-size:0.95rem;font-weight:600;">{p['symbol']}</span>
+                                    <span style="font-family:'IBM Plex Mono';font-size:0.95rem;font-weight:600;color:{pnl_color};">
+                                      {p['pnl_usdt']:+.4f} USDT ({p['pnl_pct']:+.1f}%)
+                                    </span>
+                                  </div>
+                                  <div style="font-family:'IBM Plex Mono';font-size:0.9rem;color:#cccccc;display:flex;gap:16px;">
+                                    <span>{side_badge}</span>
+                                    <span>진입가 ${p['entry_price']:,.4f}</span>
+                                    <span>현재가 ${p['mark_price']:,.4f}</span>
+                                    <span>{p['leverage']}x LEV</span>
+                                    <span>Amount ${p['amount_usdt']:,.2f}</span>
+                                  </div>
+                                </div>
+                                """,
+                                unsafe_allow_html=True,
+                            )
+                        with pc2:
+                            # 경과 시간 계산 및 스타일 결정
+                            duration_str = "[00시간 00분]"
+                            duration_style = "font-family:'JetBrains Mono'; font-size:0.98rem; color:#cccccc; text-align:center; margin-bottom:0px;"
                             
-                            if hrs >= 3:
-                                duration_style = "font-family:'JetBrains Mono'; font-size:0.98rem; color:white; background:#ff3b30; text-align:center; margin-bottom:0px; font-weight:700;"
-                            
-                        st.markdown(
-                            f'<div style="{duration_style}">{duration_str}</div>',
-                            unsafe_allow_html=True
-                        )
-                        st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
-                        if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
-                            # [v1.2.52] 버튼 클릭 즉시 세션 캐시에 추가하여 화면에서 지움
-                            st.session_state.closing_symbols.add(p['symbol'])
-                            if engine.client.close_position(p["symbol"], p["side"]):
-                                st.toast(f"✅ {p['symbol']} 청산 완료")
-                                time.sleep(0.5)
-                                st.rerun()
-                            else:
-                                # 실패 시에는 다시 목록에서 제거 (보여줘야 하므로)
-                                st.session_state.closing_symbols.discard(p['symbol'])
-                                st.error(f"❌ {p['symbol']} 청산 실패")
+                            if p.get("timestamp"):
+                                import datetime as dt_mod
+                                entry_dt = dt_mod.datetime.fromtimestamp(p["timestamp"] / 1000, tz=dt_mod.timezone.utc)
+                                diff = dt_mod.datetime.now(dt_mod.timezone.utc) - entry_dt
+                                hrs, rem = divmod(int(diff.total_seconds()), 3600)
+                                mins = rem // 60
+                                duration_str = f"[{hrs:02d}시간 {mins:02d}분]"
+                                
+                                if hrs >= 3:
+                                    duration_style = "font-family:'JetBrains Mono'; font-size:0.98rem; color:white; background:#ff3b30; text-align:center; margin-bottom:0px; font-weight:700;"
+                                
+                            st.markdown(
+                                f'<div style="{duration_style}">{duration_str}</div>',
+                                unsafe_allow_html=True
+                            )
+                            st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
+                            if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
+                                # [v1.2.52] 버튼 클릭 즉시 세션 캐시에 추가하여 화면에서 지움
+                                st.session_state.closing_symbols.add(p['symbol'])
+                                if engine.client.close_position(p["symbol"], p["side"]):
+                                    st.toast(f"✅ {p['symbol']} 청산 완료")
+                                    time.sleep(0.5)
+                                    st.rerun()
+                                else:
+                                    # 실패 시에는 다시 목록에서 제거 (보여줘야 하므로)
+                                    st.session_state.closing_symbols.discard(p['symbol'])
+                                    st.error(f"❌ {p['symbol']} 청산 실패")
 
         with col_log:
             st.markdown(
@@ -710,14 +732,19 @@ with tabs[0]:
         total_pnl = _st.get("total_pnl_usdt", 0.0)
         daily_pnl = _st.get("daily_pnl_usdt", 0.0)
         
-        # [v1.2.37] 수익률 계산 기준 업데이트
-        seed_money = 40.43 # 기준 자산
-        total_pnl_pct = ((dash['total_balance'] / seed_money) - 1) * 100
+        # [v1.2.37] 수익률 계산 기준 업데이트 (stats.json 로드)
+        seed_money = _st.get("seed_money", 40.43) # 기준 자산 (동적 로드)
+        total_pnl_pct = ((dash['total_balance'] / seed_money) - 1) * 100 if seed_money > 0 else 0.0
         # 24시간 변동률도 시드 대비 비율로 표시
-        daily_pnl_pct = (daily_pnl / seed_money) * 100
+        daily_pnl_pct = (daily_pnl / seed_money) * 100 if seed_money > 0 else 0.0
         
         # [v1.2.40] 일 평균 수익률 계산 보정 (최소 1일 기준 - 뻥튀기 방지)
-        perf_start_dt = datetime(2026, 5, 15, 0, 0, 0)
+        perf_start_str = _st.get("perf_start_time", "2026-05-15 00:00:00")
+        try:
+            perf_start_dt = datetime.strptime(perf_start_str, "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            perf_start_dt = datetime(2026, 5, 15, 0, 0, 0)
+            
         now_kst = datetime.utcnow() + timedelta(hours=9)
         elapsed_seconds = (now_kst - perf_start_dt).total_seconds()
         # 경과 일수 계산 (보수적 접근: 최소 1.0일로 나누어 첫날 과장 방지)
@@ -726,13 +753,23 @@ with tabs[0]:
         
         # [v1.2.44] 매매 이력 기반 실시간 승률 계산 (분할 체결 통합 로직)
         all_trades = engine.get_trade_history(limit=100)
-        today_str = "2026-05-15"
         
-        # 오늘자 '청산' 거래만 필터링 (필드명 category, timestamp 주의)
-        today_exits = [
-            t for t in all_trades 
-            if t.get('category') == '청산' and str(t.get('timestamp', '')).startswith(today_str)
-        ]
+        # 성과 측정 시작 시각(perf_start_dt) 이후의 '청산' 거래만 필터링
+        today_exits = []
+        for t in all_trades:
+            if t.get('category') == '청산':
+                t_time = t.get('timestamp')
+                if isinstance(t_time, datetime):
+                    t_time_naive = t_time.replace(tzinfo=None)
+                    if t_time_naive >= perf_start_dt:
+                        today_exits.append(t)
+                else:
+                    try:
+                        t_dt = pd.to_datetime(t_time).replace(tzinfo=None)
+                        if t_dt >= perf_start_dt:
+                            today_exits.append(t)
+                    except Exception:
+                        pass
         
         # 주문 번호(order_id)별로 그룹화하여 분할 체결 건을 1건으로 통합
         order_results = {}
@@ -779,7 +816,7 @@ with tabs[0]:
                     <div class="terminal-metric-label">일 평균 수익률</div>
                     <div class="terminal-metric-value" style="color:{avg_color};">{daily_avg_roi:+.2f}%</div>
                     <div class="terminal-metric-sub" style="color:#cccccc;">
-                        {avg_arrow} 2026.05.15 ~
+                        {avg_arrow} {perf_start_dt.strftime("%Y.%m.%d")} ~
                     </div>
                 </div>
                 <!-- 누적 승률 -->
@@ -822,40 +859,37 @@ with tabs[1]:
     if not st.session_state.api_connected or not engine.is_ready:
         st.info("사이드바에서 OKX API를 연결하세요.")
     else:
-        sc1, sc2, sc3 = st.columns([2, 1, 1])
-
-        with sc1:
-            if st.button("▶  스캔 시작", use_container_width=True):
-                engine.start_scanner()
+        # 상태 배지 및 마지막 스캔 시각 표시 영역
+        last = engine.scanner.last_scan_time if engine.scanner else None
+        last_scan_str = f"마지막 스캔: {last.strftime('%H:%M:%S')}" if last else "마지막 스캔: 대기 중"
         
-        with sc2:
-            if st.button("⏹  스캔 중지", use_container_width=True):
-                engine.stop_scanner()
-
-        with sc3:
-            last = engine.scanner.last_scan_time if engine.scanner else None
-            if last:
+        c_status, c_time = st.columns([2, 1])
+        with c_status:
+            if engine.scanner and engine.scanner.is_running:
+                preset = st.session_state.active_preset
+                badge_class = "badge-green-blink"
+                if "1차" in preset:
+                    badge_class = "badge-pink-blink"
+                elif "2차" in preset:
+                    badge_class = "badge-red-blink"
+                    
                 st.markdown(
-                    f'<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;">마지막 스캔: {last.strftime("%H:%M:%S")}</p>',
-                    unsafe_allow_html=True,
+                    f'<div class="{badge_class}">📡 {preset} 스캐너 백그라운드 가동 중</div>',
+                    unsafe_allow_html=True
                 )
-
-        # 상태 표시 배지 (상황별 색상 연동)
-        if engine.scanner and engine.scanner.is_running:
-            preset = st.session_state.active_preset
-            badge_class = "badge-green-blink"
-            if "1차" in preset:
-                badge_class = "badge-pink-blink"
-            elif "2차" in preset:
-                badge_class = "badge-red-blink"
-                
+            else:
+                st.markdown(
+                    '<p style="color:#666;font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;margin-top:5px;">⏹ 스캐너 중지 상태 (자동매매 ON 시 시작)</p>',
+                    unsafe_allow_html=True
+                )
+        with c_time:
             st.markdown(
-                f'<div style="text-align:center; margin-bottom: 20px;">'
-                f'<div class="{badge_class}">📡 {preset} 스캐너 가동 중</div>'
-                f'</div>',
-                unsafe_allow_html=True
+                f'<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.85rem;color:#888;text-align:right;margin-top:5px;">{last_scan_str}</p>',
+                unsafe_allow_html=True,
             )
 
+        st.markdown("<div style='margin-bottom:15px;'></div>", unsafe_allow_html=True)
+        
         results = engine.get_scan_results()
 
         if results:
@@ -866,6 +900,7 @@ with tabs[1]:
                 "신호 필터",
                 ["전체", "LONG 신호", "SHORT 신호", "신호 없음"],
                 label_visibility="collapsed",
+                key="scanner_signal_filter"
             )
             if signal_filter == "LONG 신호":
                 df_scan = df_scan[df_scan["signal"] == "long"]
@@ -894,13 +929,12 @@ with tabs[1]:
             )
         else:
             st.markdown(
-                '<p style="color:#555;font-family:\'IBM Plex Mono\',monospace;">스캔 결과 없음 — 스캔 시작 버튼을 누르세요.</p>',
+                '<p style="color:#555;font-family:\'IBM Plex Mono\',monospace;">스캔 결과 없음 — 자동매매가 시작되면 결과가 이곳에 표시됩니다.</p>',
                 unsafe_allow_html=True,
             )
 
 
-
-
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # TAB 3: 매매 이력
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1057,6 +1091,10 @@ with tabs[3]:
     with p1:
         st.number_input("EMA 기간", 10, 500, CFG.EMA_PERIOD, step=10, key="main_ema_period",
                         on_change=sync_p, args=("main_ema_period", "sb_ema_period", "EMA_PERIOD"))
+        # [v1.3.02] 타임프레임 원격 제어 추가
+        tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
+        st.selectbox("타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="main_timeframe",
+                     on_change=sync_p, args=("main_timeframe", "sb_timeframe", "TIMEFRAME"))
     with p2:
         st.number_input("BB 기간", 5, 100, CFG.BB_PERIOD, step=5, key="main_bb_period",
                         on_change=sync_p, args=("main_bb_period", "sb_bb_period", "BB_PERIOD"))
@@ -1113,6 +1151,22 @@ with tabs[4]:
         </div>""",
         unsafe_allow_html=True,
     )
+
+    st.markdown("---")
+    st.markdown(
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">SYSTEM UTILITIES</p>',
+        unsafe_allow_html=True,
+    )
+    
+    if st.button("📊  누적 데이터 및 통계 초기화", use_container_width=True):
+        d_data = engine.get_dashboard_data()
+        current_bal = d_data.get("total_balance", 40.43)
+        if current_bal <= 0:
+            current_bal = 40.43
+        stats_store.reset_stats(current_bal)
+        st.toast("✅ 누적 수익률, 승률, 주문수 등 모든 통계 데이터가 현재 시간 기준으로 초기화되었습니다.")
+        time.sleep(0.5)
+        st.rerun()
 
 # ── 자동 새로고침 ─────────────────────────────────
 if st.session_state.auto_trading:
