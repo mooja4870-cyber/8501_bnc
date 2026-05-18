@@ -483,9 +483,9 @@ with st.sidebar:
                         on_change=sync_p, args=("sb_timeout", "main_timeout", "MAX_HOLDING_HOURS"))
 
     with st.expander("🛡️ 리스크 및 한도 설정", expanded=True):
-        st.number_input("익절 (%)", 1.0, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="sb_tp",
+        st.number_input("익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="sb_tp",
                         on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True))
-        st.number_input("손절 (%)", 1.0, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
+        st.number_input("손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
                         on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True))
         st.number_input("MDD 한도 (%)", 5.0, 50.0, float(CFG.MAX_DRAWDOWN_PCT * 100), step=1.0, key="sb_mdd",
                         on_change=sync_p, args=("sb_mdd", "main_mdd", "MAX_DRAWDOWN_PCT", True))
@@ -1131,9 +1131,9 @@ with tabs[4]:
                         on_change=sync_p, args=("main_timeout", "sb_timeout", "MAX_HOLDING_HOURS"))
 
     with s2:
-        st.number_input("익절 (%)", 1.0, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",
+        st.number_input("익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",
                         on_change=sync_p, args=("main_tp", "sb_tp", "TAKE_PROFIT_PCT", True))
-        st.number_input("손절 (%)", 1.0, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
+        st.number_input("손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
                         on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True))
         st.number_input("*** 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
                         on_change=sync_p, args=("main_min_vol", "sb_min_vol", "MIN_VOLUME_USDT"))

@@ -1,6 +1,7 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v1.3.03] Streamlit Min-Value Hotfix:** Decreased the minimum allowed value for "익절 (%)" and "손절 (%)" number inputs to `0.1%` in all sidebar and settings widgets. This resolves the `StreamlitValueBelowMinError` crash when running fine-tuned day trading configurations.
 - **[v1.3.02] Day Trading Optimization & Dynamic TIMEFRAME Widget:** Applied day trading optimized parameters (TIMEFRAME = 15m, SL = 0.8%, TP = 1.2%, MAX_HOLDING_HOURS = 4.0, BB_STD = 1.8, EMA_PERIOD = 100) to hit the daily 1%~2% return target. Added dynamic selectbox widgets in the sidebar and main entry tabs for remote timeframe adjustments.
 - Initialized Streamlit dashboard with OKX API integration.
 - Added auto-connect feature via `.env`.
@@ -319,3 +320,6 @@
 
 ## v1.3.02 (2026-05-19)
 - [Algorithm/UI] Optimized day trading parameters (15m TIMEFRAME, SL = 0.8%, TP = 1.2%, MAX_HOLDING_HOURS = 4.0, BB_STD = 1.8, EMA_PERIOD = 100) to target a daily 1%~2% return. Added dynamic selectbox widgets to both sidebar and main entry tabs for remote timeframe adjustments.
+
+## v1.3.03 (2026-05-19)
+- [Bugfix] Fixed `StreamlitValueBelowMinError` by lowering the minimum value for "익절 (%)" and "손절 (%)" number input widgets to `0.1%` in the sidebar and settings tabs.
