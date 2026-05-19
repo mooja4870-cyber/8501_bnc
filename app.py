@@ -496,6 +496,15 @@ with st.sidebar:
         st.number_input("일일 손실 한도 (USDT)", 5.0, 500.0, CFG.DAILY_LOSS_LIMIT_USDT, key="sb_daily_loss",
                         on_change=sync_p, args=("sb_daily_loss", "main_daily_loss", "DAILY_LOSS_LIMIT_USDT"))
 
+    with st.expander("🔄 포지션 로테이션 설정", expanded=False):
+        st.toggle("로테이션 활성화", value=CFG.ROTATION_ENABLED, key="sb_rotation_enabled",
+                  on_change=sync_p, args=("sb_rotation_enabled", "main_rotation_enabled", "ROTATION_ENABLED"))
+        st.number_input("로테이션 최소 대기 신호 수", 1, 10, CFG.ROTATION_MIN_SIGNALS, step=1, key="sb_rotation_min_signals",
+                        on_change=sync_p, args=("sb_rotation_min_signals", "main_rotation_min_signals", "ROTATION_MIN_SIGNALS"))
+        st.number_input("정체 판단 시간 (시간)", 0.5, 24.0, float(CFG.ROTATION_STALE_HOURS), step=0.5, key="sb_rotation_stale_hours",
+                        on_change=sync_p, args=("sb_rotation_stale_hours", "main_rotation_stale_hours", "ROTATION_STALE_HOURS"))
+        st.selectbox("흐름 판단 기준", ["momentum", "flat", "time"], index=["momentum", "flat", "time"].index(CFG.ROTATION_FLOW_CHECK), key="sb_rotation_flow_check",
+                     on_change=sync_p, args=("sb_rotation_flow_check", "main_rotation_flow_check", "ROTATION_FLOW_CHECK"))
 
 # ══════════════════════════════════════════════════════
 # 메인 헤더 (한 줄 배치)
@@ -1303,6 +1312,23 @@ with tabs[6]:
                         on_change=sync_p, args=("main_mdd", "sb_mdd", "MAX_DRAWDOWN_PCT", True))
         st.number_input("일일 손실 한도 (USDT)", 5.0, 500.0, float(CFG.DAILY_LOSS_LIMIT_USDT), key="main_daily_loss",
                         on_change=sync_p, args=("main_daily_loss", "sb_daily_loss", "DAILY_LOSS_LIMIT_USDT"))
+
+    st.markdown("---")
+    st.markdown(
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">🔄 PORTFOLIO ROTATION PARAMETERS</p>',
+        unsafe_allow_html=True,
+    )
+    s3, s4 = st.columns(2)
+    with s3:
+        st.toggle("정체 포지션 로테이션 활성화", value=CFG.ROTATION_ENABLED, key="main_rotation_enabled",
+                  on_change=sync_p, args=("main_rotation_enabled", "sb_rotation_enabled", "ROTATION_ENABLED"))
+        st.number_input("로테이션 최소 대기 신호 수", 1, 10, CFG.ROTATION_MIN_SIGNALS, step=1, key="main_rotation_min_signals",
+                        on_change=sync_p, args=("main_rotation_min_signals", "sb_rotation_min_signals", "ROTATION_MIN_SIGNALS"))
+    with s4:
+        st.number_input("정체 판단 시간 (시간)", 0.5, 24.0, float(CFG.ROTATION_STALE_HOURS), step=0.5, key="main_rotation_stale_hours",
+                        on_change=sync_p, args=("main_rotation_stale_hours", "sb_rotation_stale_hours", "ROTATION_STALE_HOURS"))
+        st.selectbox("흐름 판단 기준", ["momentum", "flat", "time"], index=["momentum", "flat", "time"].index(CFG.ROTATION_FLOW_CHECK), key="main_rotation_flow_check",
+                     on_change=sync_p, args=("main_rotation_flow_check", "sb_rotation_flow_check", "ROTATION_FLOW_CHECK"))
 
     st.markdown("---")
     st.markdown(

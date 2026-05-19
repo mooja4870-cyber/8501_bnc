@@ -1,3 +1,4 @@
+| v1.4.04 | 2026-05-19 | [Feature/Strategy] 정체 포지션 로테이션(Stale Position Rotation) 기능 및 설정 UI 추가 (1안 기술적 모멘텀 역전 기본 적용) | Core/Strategy/UI |
 | v1.4.03 | 2026-05-19 | [Config/UI] 실시간 오토피팅(Auto-Tuning) 및 시작시 자동매매 ON 기본 활성화, 통계 메트릭 시각 정보 표기 개선 | Config/UI |
 | v1.4.02 | 2026-05-19 | [Feature/UI] 자동 피팅 이력 영구 기록(`autotune_history.csv`) 및 대시보드 7단 탭 레이아웃 재배치 | Feature/UI |
 | v1.4.01 | 2026-05-19 | [Bugfix/Risk] SL/TP Stop-Market OCO 통합 주문(`attachAlgoOrds`) 적용 및 저유동성 스프레드 필터 추가 | Core/Risk |

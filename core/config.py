@@ -34,6 +34,12 @@ class TradingConfig:
     DAILY_LOSS_LIMIT_USDT: float = 25.0  # 일일 손실 한도 (5회 진입분)
     MAX_DAILY_TRADES: int = 20            # 일일 최대 거래 횟수
     VOLATILITY_FILTER: bool = True        # 변동성 필터 활성화
+    
+    # ── 포지션 로테이션 (Stale Position Rotation) 설정 ──
+    ROTATION_ENABLED: bool = True          # 정체 포지션 로테이션 활성화
+    ROTATION_MIN_SIGNALS: int = 3          # 교체 진입을 위한 스캐너 최소 대기 신호 수
+    ROTATION_STALE_HOURS: float = 1.5      # 정체 판단 시간 (시간 단위)
+    ROTATION_FLOW_CHECK: str = "momentum"  # 흐름 판단 기준 ('momentum', 'flat', 'time')
 
 
     # ── 스캐너 설정 ────────────────────────────────────
