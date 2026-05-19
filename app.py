@@ -383,7 +383,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.4.06</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.4.08</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -685,9 +685,9 @@ with tabs[0]:
                                 unsafe_allow_html=True,
                             )
                             
-                            # [v1.4.06] 보유 티커 최하단 15분봉 24시간 가격/거래량 추이 그래프 추가
+                            # [v1.4.06] 보유 티커 최하단 5분봉 24시간 가격/거래량 추이 그래프 추가 (Popover 방식)
                             try:
-                                df_chart = engine.client.get_ohlcv(p["symbol"], timeframe="15m", limit=96)
+                                df_chart = engine.client.get_ohlcv(p["symbol"], timeframe="5m", limit=288)
                                 if df_chart is not None and not df_chart.empty:
                                     fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
                                                         vertical_spacing=0.03, row_heights=[0.7, 0.3])
@@ -721,7 +721,8 @@ with tabs[0]:
                                     fig.update_xaxes(showgrid=False, visible=False, row=2, col=1)
                                     fig.update_yaxes(showgrid=True, gridcolor='rgba(255,255,255,0.05)', tickfont=dict(color='#888', size=10))
                                     
-                                    st.plotly_chart(fig, use_container_width=True, key=f"chart_{p['symbol']}")
+                                    with st.popover(f"📈 {p['symbol']} 24시간 추세차트 (5m)", use_container_width=True):
+                                        st.plotly_chart(fig, use_container_width=True, key=f"chart_{p['symbol']}")
                             except Exception as e:
                                 st.caption(f"차트 렌더링 실패: {e}")
                         with pc2:
