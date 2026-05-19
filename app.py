@@ -681,9 +681,9 @@ with tabs[0]:
                                     <span>Amount ${p['amount_usdt']:,.2f}</span>
                                   </div>
                                 </div>
-                            except Exception as e:
-                                st.caption(f"차트 렌더링 실패: {e}")
-                                
+                                """,
+                                unsafe_allow_html=True,
+                            )
                         with pc2:
                             # 경과 시간 계산 및 스타일 결정
                             duration_str = "[00시간 00분]"
@@ -717,14 +717,13 @@ with tabs[0]:
                                     st.session_state.closing_symbols.discard(p['symbol'])
                                     st.error(f"❌ {p['symbol']} 청산 실패")
 
-                        # [v1.4.09] 보유 티커 하단 5분봉 24시간 추이 그래프 (전체 가로폭 100% 사용)
+                        # [v1.4.09] 보유 티커 하단 5분봉 24시간 추이 그래프 (전체 가로폭 Popover)
                         try:
-                            df_chart = engine.client.get_ohlcv(p["symbol"], timeframe="5m", limit=288)
+                            sym = p["symbol"]
+                            df_chart = engine.client.get_ohlcv(sym, timeframe="5m", limit=288)
                             if df_chart is not None and not df_chart.empty:
-                                fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                                fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
                                                     vertical_spacing=0.03, row_heights=[0.7, 0.3])
-                                
-                                # 캔들스틱 (가격)
                                 fig.add_trace(go.Candlestick(
                                     x=df_chart.index,
                                     open=df_chart['open'], high=df_chart['high'],
@@ -732,15 +731,11 @@ with tabs[0]:
                                     name='Price',
                                     increasing_line_color='#26a69a', decreasing_line_color='#ef5350'
                                 ), row=1, col=1)
-                                
-                                # 바 차트 (거래량)
                                 colors = ['#26a69a' if row['close'] >= row['open'] else '#ef5350' for _, row in df_chart.iterrows()]
                                 fig.add_trace(go.Bar(
                                     x=df_chart.index, y=df_chart['volume'],
                                     marker_color=colors, name='Volume'
                                 ), row=2, col=1)
-                                
-                                # 레이아웃 간소화 (Sparkline 스타일)
                                 fig.update_layout(
                                     margin=dict(l=10, r=10, t=10, b=10),
                                     height=180,
@@ -752,11 +747,11 @@ with tabs[0]:
                                 fig.update_xaxes(showgrid=False, visible=False, row=1, col=1)
                                 fig.update_xaxes(showgrid=False, visible=False, row=2, col=1)
                                 fig.update_yaxes(showgrid=True, gridcolor='rgba(255,255,255,0.05)', tickfont=dict(color='#888', size=10))
-                                
-                                with st.popover(f"📈 {p['symbol']} 24시간 추세차트 (5m)", use_container_width=True):
-                                    st.plotly_chart(fig, use_container_width=True, key=f"chart_{p['symbol']}")
-                        except Exception as e:
-                            st.caption(f"차트 렌더링 실패: {e}")
+                                popover_label = "📈 " + sym + " 24시간 추세차트 (5m)"
+                                with st.popover(popover_label, use_container_width=True):
+                                    st.plotly_chart(fig, use_container_width=True, key="chart_" + sym)
+                        except Exception:
+                            pass
 
         with col_log:
             st.markdown(
