@@ -1,6 +1,7 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v1.3.04] Agent Skills Configured:** Applied top 3 latest agentic coding skills via `.antigravityrules`. Configured Artifact-based verification guidelines, MCP local tool integration protocol, and Semantic Codebase Sanitization constraints to ensure safe, stable agent collaboration and hallucination prevention.
 - **[v1.3.03] Streamlit Min-Value Hotfix:** Decreased the minimum allowed value for "익절 (%)" and "손절 (%)" number inputs to `0.1%` in all sidebar and settings widgets. This resolves the `StreamlitValueBelowMinError` crash when running fine-tuned day trading configurations.
 - **[v1.3.02] Day Trading Optimization & Dynamic TIMEFRAME Widget:** Applied day trading optimized parameters (TIMEFRAME = 15m, SL = 0.8%, TP = 1.2%, MAX_HOLDING_HOURS = 4.0, BB_STD = 1.8, EMA_PERIOD = 100) to hit the daily 1%~2% return target. Added dynamic selectbox widgets in the sidebar and main entry tabs for remote timeframe adjustments.
 - Initialized Streamlit dashboard with OKX API integration.
