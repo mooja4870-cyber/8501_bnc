@@ -383,7 +383,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.4.04</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.4.06</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -499,7 +499,7 @@ with st.sidebar:
     with st.expander("🔄 포지션 로테이션 설정", expanded=False):
         st.toggle("로테이션 활성화", value=CFG.ROTATION_ENABLED, key="sb_rotation_enabled",
                   on_change=sync_p, args=("sb_rotation_enabled", "main_rotation_enabled", "ROTATION_ENABLED"))
-        st.number_input("로테이션 최소 대기 신호 수", 1, 10, CFG.ROTATION_MIN_SIGNALS, step=1, key="sb_rotation_min_signals",
+        st.number_input("갈아타기 대상 티커", 1, 10, CFG.ROTATION_MIN_SIGNALS, step=1, key="sb_rotation_min_signals",
                         on_change=sync_p, args=("sb_rotation_min_signals", "main_rotation_min_signals", "ROTATION_MIN_SIGNALS"),
                         help="'지금 들어가면 돈 벌 수 있을 것 같은 새로운 코인'이 최소 몇 개 이상 대기하고 있어야 기존 안 되는 포지션을 갈아탈지 정하는 숫자예요. 예를 들어 3이면, 스캐너가 유망 신호 3개 이상을 찾았을 때만 교체를 시도해요.")
         st.number_input("정체 판단 시간 (시간)", 0.5, 24.0, float(CFG.ROTATION_STALE_HOURS), step=0.5, key="sb_rotation_stale_hours",
@@ -684,6 +684,46 @@ with tabs[0]:
                                 """,
                                 unsafe_allow_html=True,
                             )
+                            
+                            # [v1.4.06] 보유 티커 최하단 15분봉 24시간 가격/거래량 추이 그래프 추가
+                            try:
+                                df_chart = engine.client.get_ohlcv(p["symbol"], timeframe="15m", limit=96)
+                                if df_chart is not None and not df_chart.empty:
+                                    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                                                        vertical_spacing=0.03, row_heights=[0.7, 0.3])
+                                    
+                                    # 캔들스틱 (가격)
+                                    fig.add_trace(go.Candlestick(
+                                        x=df_chart.index,
+                                        open=df_chart['open'], high=df_chart['high'],
+                                        low=df_chart['low'], close=df_chart['close'],
+                                        name='Price',
+                                        increasing_line_color='#26a69a', decreasing_line_color='#ef5350'
+                                    ), row=1, col=1)
+                                    
+                                    # 바 차트 (거래량)
+                                    colors = ['#26a69a' if row['close'] >= row['open'] else '#ef5350' for _, row in df_chart.iterrows()]
+                                    fig.add_trace(go.Bar(
+                                        x=df_chart.index, y=df_chart['volume'],
+                                        marker_color=colors, name='Volume'
+                                    ), row=2, col=1)
+                                    
+                                    # 레이아웃 간소화 (Sparkline 스타일)
+                                    fig.update_layout(
+                                        margin=dict(l=10, r=10, t=10, b=10),
+                                        height=180,
+                                        paper_bgcolor='rgba(0,0,0,0)',
+                                        plot_bgcolor='rgba(0,0,0,0)',
+                                        showlegend=False,
+                                        xaxis_rangeslider_visible=False,
+                                    )
+                                    fig.update_xaxes(showgrid=False, visible=False, row=1, col=1)
+                                    fig.update_xaxes(showgrid=False, visible=False, row=2, col=1)
+                                    fig.update_yaxes(showgrid=True, gridcolor='rgba(255,255,255,0.05)', tickfont=dict(color='#888', size=10))
+                                    
+                                    st.plotly_chart(fig, use_container_width=True, key=f"chart_{p['symbol']}")
+                            except Exception as e:
+                                st.caption(f"차트 렌더링 실패: {e}")
                         with pc2:
                             # 경과 시간 계산 및 스타일 결정
                             duration_str = "[00시간 00분]"
@@ -1325,7 +1365,7 @@ with tabs[6]:
     with s3:
         st.toggle("정체 포지션 로테이션 활성화", value=CFG.ROTATION_ENABLED, key="main_rotation_enabled",
                   on_change=sync_p, args=("main_rotation_enabled", "sb_rotation_enabled", "ROTATION_ENABLED"))
-        st.number_input("로테이션 최소 대기 신호 수", 1, 10, CFG.ROTATION_MIN_SIGNALS, step=1, key="main_rotation_min_signals",
+        st.number_input("갈아타기 대상 티커", 1, 10, CFG.ROTATION_MIN_SIGNALS, step=1, key="main_rotation_min_signals",
                         on_change=sync_p, args=("main_rotation_min_signals", "sb_rotation_min_signals", "ROTATION_MIN_SIGNALS"),
                         help="'지금 들어가면 돈 벌 수 있을 것 같은 새로운 코인'이 최소 몇 개 이상 대기하고 있어야 기존 안 되는 포지션을 갈아탈지 정하는 숫자예요. 예를 들어 3이면, 스캐너가 유망 신호 3개 이상을 찾았을 때만 교체를 시도해요.")
     with s4:
