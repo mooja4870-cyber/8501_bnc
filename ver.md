@@ -1,3 +1,7 @@
+| v1.4.03 | 2026-05-19 | [Config/UI] 실시간 오토피팅(Auto-Tuning) 및 시작시 자동매매 ON 기본 활성화, 통계 메트릭 시각 정보 표기 개선 | Config/UI |
+| v1.4.02 | 2026-05-19 | [Feature/UI] 자동 피팅 이력 영구 기록(`autotune_history.csv`) 및 대시보드 7단 탭 레이아웃 재배치 | Feature/UI |
+| v1.4.01 | 2026-05-19 | [Bugfix/Risk] SL/TP Stop-Market OCO 통합 주문(`attachAlgoOrds`) 적용 및 저유동성 스프레드 필터 추가 | Core/Risk |
+| v1.4.00 | 2026-05-19 | [Architecture/Test] QuantumEngine v2 (FSM, Health Check, 백오프 자동 복구) 및 30개 단위 테스트 / Mock하네스 완성 | Core/Test |
 | v1.3.04 | 2026-05-19 | [Config] 최신 AI 에이전트 협업 스킬 3종(.antigravityrules) 적용 및 시맨틱 저장소 관리 규정 셋업 | Config |
 | v1.3.03 | 2026-05-19 | [Bugfix] 손/익절 최저 임계치 하향(0.1%)을 통한 StreamlitValueBelowMinError 에러 차단 | Bugfix |
 | v1.3.02 | 2026-05-19 | [Algorithm/UI] 일일 1~2% 수익 실현을 위한 데이 트레이딩(15m) 최적화 파라미터 적용 및 TIMEFRAME 원격 조정 위젯 추가 | Core/UI |

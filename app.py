@@ -311,7 +311,7 @@ def init_session():
     defaults = {
         "engine": QuantumEngine(),
         "api_connected": False,
-        "auto_trading": False,
+        "auto_trading": True,
         "allow_long": True,
         "allow_short": True,
         "active_preset": "기본 (Stable)",
@@ -338,6 +338,10 @@ def connect_api(api_key, secret_key, passphrase):
     
     if success:
         st.session_state.api_connected = True
+        try:
+            engine.sync_trades_to_csv()
+        except Exception:
+            pass
         return True, msg
     return False, msg
 
@@ -493,9 +497,6 @@ with st.sidebar:
                         on_change=sync_p, args=("sb_daily_loss", "main_daily_loss", "DAILY_LOSS_LIMIT_USDT"))
 
 
-    st.markdown('<div style="margin-bottom:20px;"></div>', unsafe_allow_html=True)
-
-
 # ══════════════════════════════════════════════════════
 # 메인 헤더 (한 줄 배치)
 # ══════════════════════════════════════════════════════
@@ -538,6 +539,8 @@ tabs = st.tabs([
     "🔍  스캐너",
     "📋  매매 이력",
     "🎯  포지션 진입",
+    "🚀  TP/SL 최적화기",
+    "📈  오토피팅 이력",
     "⚙️  설정",
 ])
 
@@ -733,7 +736,7 @@ with tabs[0]:
         daily_pnl = _st.get("daily_pnl_usdt", 0.0)
         
         # [v1.2.37] 수익률 계산 기준 업데이트 (stats.json 로드)
-        seed_money = _st.get("seed_money", 40.43) # 기준 자산 (동적 로드)
+        seed_money = _st.get("seed_money", 30.0) # 기준 자산 (동적 로드)
         total_pnl_pct = ((dash['total_balance'] / seed_money) - 1) * 100 if seed_money > 0 else 0.0
         # 24시간 변동률도 시드 대비 비율로 표시
         daily_pnl_pct = (daily_pnl / seed_money) * 100 if seed_money > 0 else 0.0
@@ -816,7 +819,7 @@ with tabs[0]:
                     <div class="terminal-metric-label">일 평균 수익률</div>
                     <div class="terminal-metric-value" style="color:{avg_color};">{daily_avg_roi:+.2f}%</div>
                     <div class="terminal-metric-sub" style="color:#cccccc;">
-                        {avg_arrow} {perf_start_dt.strftime("%Y.%m.%d")} ~
+                        {avg_arrow} {perf_start_dt.strftime("%Y.%m.%d %H:%M")} ~
                     </div>
                 </div>
                 <!-- 누적 승률 -->
@@ -965,7 +968,35 @@ with tabs[2]:
             
             # 포맷팅
             df_hist["구분"] = df_hist["구분"].map({"진입": "*진입", "청산": "청산"})
-            df_hist["방향"] = df_hist["방향"].map({"buy": "🟢 BUY", "sell": "🔴 SELL"}).fillna(df_hist["방향"])
+            
+            def map_direction(row):
+                side = str(row["방향"]).lower()
+                cat = row["구분"]
+                if side in ("long", "l"):
+                    return "🟢 LONG"
+                if side in ("short", "s"):
+                    return "🔴 SHORT"
+                
+                # buy/sell인 경우 진입/청산 구분에 따라 포지션 방향(LONG/SHORT) 판별
+                if cat in ("*진입", "진입"):
+                    if side == "buy":
+                        return "🟢 LONG"
+                    elif side == "sell":
+                        return "🔴 SHORT"
+                elif cat == "청산":
+                    if side == "sell":
+                        return "🟢 LONG"
+                    elif side == "buy":
+                        return "🔴 SHORT"
+                
+                # fallback
+                if side == "buy":
+                    return "🟢 LONG"
+                elif side == "sell":
+                    return "🔴 SHORT"
+                return row["방향"]
+
+            df_hist["방향"] = df_hist.apply(map_direction, axis=1)
             
             # 진입 시 손익/% 데이터 제거 (표시 안 함)
             df_hist.loc[df_hist["구분"] == "*진입", ["손익", "%"]] = np.nan
@@ -1108,10 +1139,141 @@ with tabs[3]:
         st.number_input("MACD 시그널", 1, 50, CFG.MACD_SIGNAL, step=1, key="main_macd_signal",
                         on_change=sync_p, args=("main_macd_signal", "sb_macd_signal", "MACD_SIGNAL"))
 
-# TAB 5: 설정
+# TAB 5: TP/SL 최적화기
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with tabs[4]:
+    st.markdown(
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">MAE/MFE TP/SL PARAMETER OPTIMIZER</p>',
+        unsafe_allow_html=True,
+    )
+    
+    st.write(
+        "로컬 CSV 매매 기록을 기반으로 진입~청산 기간의 1분봉 고밀도 데이터를 거래소에서 조회하여 "
+        "**최대 수익(MFE)** 및 **최대 낙폭(MAE)**을 계산하고 최적의 손절/익절 비율을 정밀 시뮬레이션합니다."
+    )
+    
+    if not st.session_state.api_connected or not engine.is_ready:
+        st.info("사이드바에서 OKX API를 연결하세요.")
+    else:
+        # 현재 로컬 CSV 거래 개수 확인
+        import os
+        from core.logger import LOG_FILE
+        trade_count = 0
+        if os.path.exists(LOG_FILE):
+            try:
+                temp_df = pd.read_csv(LOG_FILE, encoding="utf-8-sig")
+                # 진입/청산 매칭 쌍 개수 대략 추정
+                trade_count = len(temp_df[temp_df["유형"].str.contains("청산", na=False)])
+            except Exception:
+                pass
+                
+        # 자동 최적 피팅 토글
+        autotune = st.toggle("🤖 실시간 익절/손절 자동 피팅 (Auto-Tuning)", 
+                             value=CFG.AUTO_TUNE_SL_TP,
+                             help="포지션이 청산될 때마다 거래소 데이터를 분석하여 자동으로 최적의 손익비를 즉시 수정하여 live 적용합니다.")
+        if autotune != CFG.AUTO_TUNE_SL_TP:
+            CFG.AUTO_TUNE_SL_TP = autotune
+            st.toast(f"✅ 실시간 손익비 자동 피팅이 {'활성화' if autotune else '비활성화'} 되었습니다.")
+
+        st.metric("로컬 CSV에 저장된 매칭 완료 거래 수", f"{trade_count} 건")
+        
+        c_sync, c_opt = st.columns(2)
+        with c_sync:
+            if st.button("🔄 거래소 최근 100건 매매기록 로컬 동기화", 
+                         use_container_width=True,
+                         help="OKX 거래소의 최근 100개 체결 기록을 즉시 로컬 'trade_history.csv'에 오름차순으로 동기화(복구)합니다. 분석용 매매 기록이 누락되었거나 부족할 때 사용하세요."):
+                with st.spinner("거래소 역사적 거래 내역 동기화 중..."):
+                    engine.sync_trades_to_csv()
+                    st.success("거래소 거래 기록 로컬 CSV 동기화 완료!")
+                    time.sleep(0.5)
+                    st.rerun()
+                    
+        with c_opt:
+            run_sim = st.button("🔥 MAE/MFE 시뮬레이션 & 최적 파라미터 찾기", 
+                                use_container_width=True, 
+                                type="primary",
+                                help="로컬 CSV에 저장된 매매 기록을 로드하여 각 진입~청산 구간의 1분봉 고밀도 가격 데이터를 거래소에서 분석합니다. 이를 통해 최대 손실(MAE) 및 최대 이익(MFE) 구간을 계산하고, 가장 승률과 누적 수익이 높았던 최적의 익절/손절 값을 수학적으로 계산해 줍니다.")
+
+        if run_sim:
+            with st.spinner("거래소 1m OHLCV 캔들 조회 및 가상 손익비 시뮬레이션 중..."):
+                res = engine.run_optimization()
+                if res["status"] == "error":
+                    st.error(res["message"])
+                else:
+                    st.success(f"시뮬레이션 완료! 총 {res['analyzed_count']}개 거래 분석 완료.")
+                    
+                    st.markdown("### 💡 최적 파라미터 추천 결과")
+                    m_tp, m_sl, m_win = st.columns(3)
+                    with m_tp:
+                        st.metric("추천 익절 비율 (TP)", f"{res['optimal_tp']}%", 
+                                  help=f"현재 설정: {res['current_tp']}%")
+                    with m_sl:
+                        st.metric("추천 손절 비율 (SL)", f"{res['optimal_sl']}%", 
+                                  help=f"현재 설정: {res['current_sl']}%")
+                    with m_win:
+                        st.metric("예상 시뮬레이션 승률", f"{res['optimal_winrate']}%")
+                        
+                    st.info(f"✨ 해당 익절/손절 비율 적용 시 예상 가상 PnL: **{res['optimal_pnl']} USDT** (10배 레버리지 기준)")
+                    
+                    # 상세 표 표시
+                    st.subheader("📋 거래별 MAE / MFE 상세 분석")
+                    trade_df = pd.DataFrame(res["trades"])
+                    if not trade_df.empty:
+                        trade_df = trade_df[["symbol", "side", "entry_price", "exit_price", "pnl", "mae", "mfe"]]
+                        trade_df.columns = ["종목", "방향", "진입가", "청산가", "실제손익", "최대낙폭(MAE %)", "최대상승(MFE %)"]
+                        st.dataframe(
+                            trade_df.style.format({
+                                "진입가": "{:,.4f}",
+                                "청산가": "{:,.4f}",
+                                "실제손익": "{:+.4f}",
+                                "최대낙폭(MAE %)": "{:.2f}%",
+                                "최대상승(MFE %)": "{:.2f}%"
+                            }), 
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+# TAB 6: 오토피팅 이력
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+with tabs[5]:
+    st.markdown(
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">AUTO-TUNING HISTORY LOG</p>',
+        unsafe_allow_html=True,
+    )
+    st.write("실시간 손익비 자동 피팅(Auto-Tuning) 엔진이 계산하고 적용한 **모든 변동 내역의 역사적 히스토리**를 모니터링합니다.")
+
+    from core.logger import AUTOTUNE_LOG_FILE
+    if os.path.exists(AUTOTUNE_LOG_FILE):
+        try:
+            df_at = pd.read_csv(AUTOTUNE_LOG_FILE, encoding="utf-8-sig")
+            if not df_at.empty:
+                df_at = df_at.iloc[::-1]  # 최신순 정렬
+                st.dataframe(
+                    df_at.style.format({
+                        "이전_익절(%)": "{:.2f}%",
+                        "이전_손절(%)": "{:.2f}%",
+                        "변경_익절(%)": "{:.2f}%",
+                        "변경_손절(%)": "{:.2f}%",
+                        "예상승률(%)": "{:.1f}%",
+                        "예상수익(USDT)": "{:+.2f} USDT",
+                        "대상거래수": "{:d} 건"
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.markdown("<p style='color:#666;font-family:monospace;font-size:0.85rem;'>자동 피팅 이력 없음 — 자동 피팅 기능 활성화 후 포지션이 청산되면 이력이 여기에 실시간으로 쌓입니다.</p>", unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"이력 로드 실패: {e}")
+    else:
+        st.markdown("<p style='color:#666;font-family:monospace;font-size:0.85rem;'>자동 피팅 이력 없음 — 자동 피팅 기능 활성화 후 포지션이 청산되면 이력이 여기에 실시간으로 쌓입니다.</p>", unsafe_allow_html=True)
+
+# TAB 7: 설정
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+with tabs[6]:
     st.markdown(
         '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">STRATEGY PARAMETERS</p>',
         unsafe_allow_html=True,
@@ -1160,13 +1322,14 @@ with tabs[4]:
     
     if st.button("📊  누적 데이터 및 통계 초기화", use_container_width=True):
         d_data = engine.get_dashboard_data()
-        current_bal = d_data.get("total_balance", 40.43)
+        current_bal = d_data.get("total_balance", 30.0)
         if current_bal <= 0:
-            current_bal = 40.43
+            current_bal = 30.0
         stats_store.reset_stats(current_bal)
         st.toast("✅ 누적 수익률, 승률, 주문수 등 모든 통계 데이터가 현재 시간 기준으로 초기화되었습니다.")
         time.sleep(0.5)
         st.rerun()
+
 
 # ── 자동 새로고침 ─────────────────────────────────
 if st.session_state.auto_trading:

@@ -27,6 +27,7 @@ class TradingConfig:
     TAKE_PROFIT_PCT: float = 0.012          # 익절 1.2% (10배 레버리지 기준 +12% ROI)
     TRAILING_STOP_PCT: float = 0.01        # 추적 손절 (1.0%)
     PROFIT_FACTOR_MIN: float = 1.0        # Profit Factor 최소 기준 (1:1)
+    AUTO_TUNE_SL_TP: bool = True           # 최근 매매 기반 익절/손절 자동 피팅 활성화 (Auto-Tuning)
 
     # ── 리스크 한도 ────────────────────────────────────
     MAX_DRAWDOWN_PCT: float = 0.10        # 최대 낙폭 10% 초과 시 전략 중단
@@ -38,6 +39,7 @@ class TradingConfig:
     # ── 스캐너 설정 ────────────────────────────────────
     SCAN_INTERVAL_SEC: int = 30           # 스캔 주기(초)
     MIN_VOLUME_USDT: float = 1_000_000.0   # 최소 24h 거래대금 (1백만 USDT)
+    MAX_SPREAD_PCT: float = 0.3            # 최대 허용 스프레드 (%) — 초과 시 진입 스킵
     QUOTE_CURRENCY: str = "USDT"
     MARKET_TYPE: str = "swap"             # 선물(영구 계약)
 
