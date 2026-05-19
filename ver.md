@@ -1,3 +1,4 @@
+| v1.4.05 | 2026-05-19 | [UI/UX] 로테이션 설정 및 통계 초기화 버튼에 중딩 레벨 쉬운 한국어 툴팁 추가, 사이드바 버전 표기 v1.4.04로 업데이트 | UI/UX |
 | v1.4.04 | 2026-05-19 | [Feature/Strategy] 정체 포지션 로테이션(Stale Position Rotation) 기능 및 설정 UI 추가 (1안 기술적 모멘텀 역전 기본 적용) | Core/Strategy/UI |
 | v1.4.03 | 2026-05-19 | [Config/UI] 실시간 오토피팅(Auto-Tuning) 및 시작시 자동매매 ON 기본 활성화, 통계 메트릭 시각 정보 표기 개선 | Config/UI |
 | v1.4.02 | 2026-05-19 | [Feature/UI] 자동 피팅 이력 영구 기록(`autotune_history.csv`) 및 대시보드 7단 탭 레이아웃 재배치 | Feature/UI |

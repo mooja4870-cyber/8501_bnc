@@ -383,7 +383,7 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.3.01</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.4.04</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -500,11 +500,14 @@ with st.sidebar:
         st.toggle("로테이션 활성화", value=CFG.ROTATION_ENABLED, key="sb_rotation_enabled",
                   on_change=sync_p, args=("sb_rotation_enabled", "main_rotation_enabled", "ROTATION_ENABLED"))
         st.number_input("로테이션 최소 대기 신호 수", 1, 10, CFG.ROTATION_MIN_SIGNALS, step=1, key="sb_rotation_min_signals",
-                        on_change=sync_p, args=("sb_rotation_min_signals", "main_rotation_min_signals", "ROTATION_MIN_SIGNALS"))
+                        on_change=sync_p, args=("sb_rotation_min_signals", "main_rotation_min_signals", "ROTATION_MIN_SIGNALS"),
+                        help="'지금 들어가면 돈 벌 수 있을 것 같은 새로운 코인'이 최소 몇 개 이상 대기하고 있어야 기존 안 되는 포지션을 갈아탈지 정하는 숫자예요. 예를 들어 3이면, 스캐너가 유망 신호 3개 이상을 찾았을 때만 교체를 시도해요.")
         st.number_input("정체 판단 시간 (시간)", 0.5, 24.0, float(CFG.ROTATION_STALE_HOURS), step=0.5, key="sb_rotation_stale_hours",
-                        on_change=sync_p, args=("sb_rotation_stale_hours", "main_rotation_stale_hours", "ROTATION_STALE_HOURS"))
+                        on_change=sync_p, args=("sb_rotation_stale_hours", "main_rotation_stale_hours", "ROTATION_STALE_HOURS"),
+                        help="코인을 산 뒤 '이 시간'이 지나도 가격이 안 오르고 멍하니 있으면 '이 코인 흐름 안 좋네' 하고 판단하기 시작하는 시간이에요. 예를 들어 1.5시간이면, 1시간 반 동안 가격이 찔끔찔끔 움직이거나 오히려 내려가면 '이건 아닌가보다' 하고 체크해요.")
         st.selectbox("흐름 판단 기준", ["momentum", "flat", "time"], index=["momentum", "flat", "time"].index(CFG.ROTATION_FLOW_CHECK), key="sb_rotation_flow_check",
-                     on_change=sync_p, args=("sb_rotation_flow_check", "main_rotation_flow_check", "ROTATION_FLOW_CHECK"))
+                     on_change=sync_p, args=("sb_rotation_flow_check", "main_rotation_flow_check", "ROTATION_FLOW_CHECK"),
+                     help="정체 포지션이 '흐름이 나쁘다'를 어떤 기준으로 판단할지 고르는 거예요.\n\n• momentum: 15분봉 이동평균선(EMA20) 아래로 가격이 내려갔으면 '추세가 꺾였다'고 보고 교체 (추천!!)\n• flat: 가격이 거의 안 움직이고 멈춰있으면 '이 코인 죽었다'고 보고 교체\n• time: 일정 시간이 지났는데 수익이 거의 없으면 '시간 낭비'라고 보고 교체")
 
 # ══════════════════════════════════════════════════════
 # 메인 헤더 (한 줄 배치)
@@ -1323,12 +1326,15 @@ with tabs[6]:
         st.toggle("정체 포지션 로테이션 활성화", value=CFG.ROTATION_ENABLED, key="main_rotation_enabled",
                   on_change=sync_p, args=("main_rotation_enabled", "sb_rotation_enabled", "ROTATION_ENABLED"))
         st.number_input("로테이션 최소 대기 신호 수", 1, 10, CFG.ROTATION_MIN_SIGNALS, step=1, key="main_rotation_min_signals",
-                        on_change=sync_p, args=("main_rotation_min_signals", "sb_rotation_min_signals", "ROTATION_MIN_SIGNALS"))
+                        on_change=sync_p, args=("main_rotation_min_signals", "sb_rotation_min_signals", "ROTATION_MIN_SIGNALS"),
+                        help="'지금 들어가면 돈 벌 수 있을 것 같은 새로운 코인'이 최소 몇 개 이상 대기하고 있어야 기존 안 되는 포지션을 갈아탈지 정하는 숫자예요. 예를 들어 3이면, 스캐너가 유망 신호 3개 이상을 찾았을 때만 교체를 시도해요.")
     with s4:
         st.number_input("정체 판단 시간 (시간)", 0.5, 24.0, float(CFG.ROTATION_STALE_HOURS), step=0.5, key="main_rotation_stale_hours",
-                        on_change=sync_p, args=("main_rotation_stale_hours", "sb_rotation_stale_hours", "ROTATION_STALE_HOURS"))
+                        on_change=sync_p, args=("main_rotation_stale_hours", "sb_rotation_stale_hours", "ROTATION_STALE_HOURS"),
+                        help="코인을 산 뒤 '이 시간'이 지나도 가격이 안 오르고 멍하니 있으면 '이 코인 흐름 안 좋네' 하고 판단하기 시작하는 시간이에요. 예를 들어 1.5시간이면, 1시간 반 동안 가격이 찔끔찔끔 움직이거나 오히려 내려가면 '이건 아닌가보다' 하고 체크해요.")
         st.selectbox("흐름 판단 기준", ["momentum", "flat", "time"], index=["momentum", "flat", "time"].index(CFG.ROTATION_FLOW_CHECK), key="main_rotation_flow_check",
-                     on_change=sync_p, args=("main_rotation_flow_check", "sb_rotation_flow_check", "ROTATION_FLOW_CHECK"))
+                     on_change=sync_p, args=("main_rotation_flow_check", "sb_rotation_flow_check", "ROTATION_FLOW_CHECK"),
+                     help="정체 포지션이 '흐름이 나쁘다'를 어떤 기준으로 판단할지 고르는 거예요.\n\n• momentum: 15분봉 이동평균선(EMA20) 아래로 가격이 내려갔으면 '추세가 꺾였다'고 보고 교체 (추천!!)\n• flat: 가격이 거의 안 움직이고 멈춰있으면 '이 코인 죽었다'고 보고 교체\n• time: 일정 시간이 지났는데 수익이 거의 없으면 '시간 낭비'라고 보고 교체")
 
     st.markdown("---")
     st.markdown(
@@ -1346,7 +1352,8 @@ with tabs[6]:
         unsafe_allow_html=True,
     )
     
-    if st.button("📊  누적 데이터 및 통계 초기화", use_container_width=True):
+    if st.button("📊  누적 데이터 및 통계 초기화", use_container_width=True,
+                 help="이 버튼을 누르면 지금까지 쌓인 누적 수익률, 승률(몇 번 이기고 졌는지), 주문 횟수 같은 모든 성적표가 싹 다 0으로 리셋돼요! 현재 잔고를 새로운 '원금'으로 잡고 처음부터 다시 기록을 시작해요. 한 번 누르면 되돌릴 수 없으니 신중하게!"):
         d_data = engine.get_dashboard_data()
         current_bal = d_data.get("total_balance", 30.0)
         if current_bal <= 0:
