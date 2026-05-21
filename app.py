@@ -404,7 +404,7 @@ with st.sidebar:
         '1. SSL 채널: 전체 추세 필터링 (파란선 위: 롱, 빨간선 아래: 숏)&#10;'
         '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
         '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착">'
-        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.0.6</span></div>',
+        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.0.7</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -569,6 +569,20 @@ with tabs[0]:
     else:
         # ── 데이터 통합 조회 ──────────────────────────
         dash = engine.get_dashboard_data()
+        if not dash:
+            dash = {
+                "total_balance": 0.0,
+                "free_margin": 0.0,
+                "used_margin": 0.0,
+                "realized_pnl": 0.0,
+                "positions": [],
+                "is_scanning": False,
+                "is_trading": False,
+                "engine_state": "ERROR",
+            }
+            st.warning("⚠️ 거래소 API 연결이 끊겼거나 응답하지 않아 실시간 잔고를 불러올 수 없습니다.")
+            if hasattr(engine, '_error_msg') and engine._error_msg:
+                st.error(f"오류 상세: {engine._error_msg}")
         raw_positions = dash.get("positions", [])
         
         # [v1.2.52] 포지션 데이터 취득 및 잔상 방지 필터링

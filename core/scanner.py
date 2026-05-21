@@ -80,7 +80,11 @@ class Scanner:
         try:
             tickers = self.client.get_tickers()
         except Exception as e:
-            self._log(f"[ERR] Ticker 일괄 조회 실패: {e}")
+            self._log(f"[ERR] Ticker 일괄 조회 예외 발생: {e}")
+            return
+
+        if not tickers:
+            self._log("[WARN] 일괄 조회된 Ticker가 없습니다. 스캔 건너뜀.")
             return
 
         results = []
@@ -90,13 +94,14 @@ class Scanner:
             if not self._running:
                 break
             try:
-                # 일괄 조회된 딕셔너리에서 가져오기 (없으면 개별 조회 시도)
+                # 일괄 조회된 딕셔너리에서 가져오기 (개별 API 호출 차단)
                 ticker = tickers.get(sym)
                 if not ticker:
-                    try:
-                        ticker = self.client.get_ticker(sym)
-                    except Exception:
-                        continue
+                    # 보조 매핑 시도
+                    ticker = tickers.get(sym.split(":")[0])
+                
+                if not ticker:
+                    continue
                 
                 vol = ticker.get("volume", 0)
                 if vol < self.cfg.MIN_VOLUME_USDT:

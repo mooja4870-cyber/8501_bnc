@@ -127,6 +127,46 @@ class TestRegressionSuite:
         assert len(filtered_positions) == 1
         assert filtered_positions[0]["symbol"] == "BTC/USDT:USDT"
 
+    def test_regression_ticker_normalization_and_fallback(self):
+        """Regression 5: Ticker 키 매핑 보정, 예외 시 빈 딕셔너리 반환, 스캐너 호출 차단 검증"""
+        from core.exchange import BinanceClient
+        from unittest.mock import MagicMock
+        
+        client = BinanceClient(api_key="fake", secret_key="fake")
+        
+        client._markets = {
+            "ETH/USDT:USDT": {"quote": "USDT", "type": "swap", "active": True},
+            "BTC/USDT:USDT": {"quote": "USDT", "type": "swap", "active": True},
+        }
+        
+        client._symbol_map = {
+            "ETH/USDT:USDT": "ETH/USDT:USDT",
+            "ETH/USDT": "ETH/USDT:USDT",
+            "ETHUSDT": "ETH/USDT:USDT",
+            "BTC/USDT:USDT": "BTC/USDT:USDT",
+            "BTC/USDT": "BTC/USDT:USDT",
+            "BTCUSDT": "BTC/USDT:USDT",
+        }
+        
+        client.exchange = MagicMock()
+        client.exchange.fetch_tickers = MagicMock(return_value={
+            "ETH/USDT": {"last": 3000.0, "quoteVolume": 50000000.0, "bid": 2999.0, "ask": 3001.0, "percentage": 2.5},
+            "BTC/USDT:USDT": {"last": 60000.0, "quoteVolume": 100000000.0, "bid": 59990.0, "ask": 60010.0, "percentage": 1.1},
+        })
+        
+        tickers = client.get_tickers()
+        
+        assert "ETH/USDT:USDT" in tickers
+        assert tickers["ETH/USDT:USDT"]["last"] == 3000.0
+        assert tickers["ETH/USDT:USDT"]["volume"] == 50000000.0
+        assert "BTC/USDT:USDT" in tickers
+        assert tickers["BTC/USDT:USDT"]["last"] == 60000.0
+        
+        # 예외 처리 검증
+        client.exchange.fetch_tickers = MagicMock(side_effect=Exception("Binance Rate Limit (HTTP 418)"))
+        tickers_err = client.get_tickers()
+        assert tickers_err == {}
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

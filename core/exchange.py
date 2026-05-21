@@ -27,6 +27,7 @@ class BinanceClient:
             "rateLimit": 200,              # ms 단위
         })
         self._markets: Dict = {}
+        self._symbol_map: Dict[str, str] = {}
 
     # ── API 호출 재시도 헬퍼 ───────────────────────────
 
@@ -53,7 +54,18 @@ class BinanceClient:
         """마켓 정보 로드 (앱 시작 시 1회 호출)"""
         try:
             self._markets = self._execute_with_retry(self.exchange.load_markets)
-            logger.info(f"마켓 로드 완료: {len(self._markets)}개 종목")
+            self._symbol_map = {}
+            for official_sym in self._markets.keys():
+                self._symbol_map[official_sym.upper()] = official_sym
+                if ":" in official_sym:
+                    self._symbol_map[official_sym.split(":")[0].upper()] = official_sym
+                no_slash = official_sym.replace("/", "")
+                if ":" in no_slash:
+                    no_slash_no_colon = no_slash.split(":")[0]
+                    self._symbol_map[no_slash_no_colon.upper()] = official_sym
+                else:
+                    self._symbol_map[no_slash.upper()] = official_sym
+            logger.info(f"마켓 로드 완료: {len(self._markets)}개 종목 (매핑 {len(self._symbol_map)}개)")
             return True
         except Exception as e:
             logger.error(f"마켓 로드 실패: {e}")
@@ -247,8 +259,11 @@ class BinanceClient:
                 if not usdt_vol:
                     base_vol = t.get("baseVolume", 0) or 0
                     usdt_vol = base_vol * last_price if base_vol and last_price else 0
-                tickers[sym] = {
-                    "symbol": sym,
+                
+                # 심볼 매핑 보정
+                official_sym = self._symbol_map.get(sym.upper(), sym)
+                tickers[official_sym] = {
+                    "symbol": official_sym,
                     "last": last_price,
                     "bid": t.get("bid", 0) or 0,
                     "ask": t.get("ask", 0) or 0,
@@ -258,7 +273,7 @@ class BinanceClient:
             return tickers
         except Exception as e:
             logger.error(f"Tickers 일괄 조회 실패: {e}")
-            raise e
+            return {}
 
     def get_ticker(self, symbol: str) -> Dict:
         """현재가 조회"""
