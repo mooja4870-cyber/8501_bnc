@@ -5,12 +5,13 @@
 import threading
 import logging
 from typing import Optional, List, Dict
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, timezone
 
-from core.exchange import OKXClient
+from core.exchange import BinanceClient
 from core.strategy import Signal
 from core.config import CFG
 import core.stats as stats_store
+from core.logger import log_trade as csv_log
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class AutoTrader:
     Scanner.on_signal 콜백으로 신호를 받아 리스크 체크 후 실거래 실행
     """
 
-    def __init__(self, client: OKXClient):
+    def __init__(self, client: BinanceClient):
         self.client = client
         self.cfg = CFG
         self._lock = threading.Lock()
@@ -104,6 +105,19 @@ class AutoTrader:
                 stats_store.record_order()
                 self._log_trade(sig, status="EXECUTED", result=result)
                 logger.info(f"[ORDER] {sig.symbol} {sig.direction.upper()} 실행 완료")
+                # CSV 영구 기록
+                csv_log({
+                    "timestamp": datetime.now(timezone(timedelta(hours=9))),
+                    "symbol": sig.symbol,
+                    "type": "진입",
+                    "side": sig.direction,
+                    "price": result.get("entry_price", 0),
+                    "amount": result.get("amount", 0),
+                    "pnl_usdt": 0,
+                    "pnl_pct": 0,
+                    "leverage": self.cfg.LEVERAGE,
+                    "order_id": result.get("order_id", ""),
+                })
             else:
                 self._log_trade(sig, status="FAILED", reason="주문 API 오류")
 

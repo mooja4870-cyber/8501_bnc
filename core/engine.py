@@ -9,7 +9,7 @@ import time
 from enum import Enum, auto
 from typing import Optional, List, Dict
 
-from core.exchange import OKXClient
+from core.exchange import BinanceClient
 from core.scanner import Scanner
 from core.trader import AutoTrader
 from core.config import CFG
@@ -37,11 +37,11 @@ class EngineState(Enum):
 _TRANSITIONS = {
     EngineState.IDLE:       {EngineState.CONNECTING},
     EngineState.CONNECTING: {EngineState.CONNECTED, EngineState.ERROR},
-    EngineState.CONNECTED:  {EngineState.SCANNING, EngineState.IDLE},
-    EngineState.SCANNING:   {EngineState.TRADING, EngineState.CONNECTED, EngineState.ERROR},
-    EngineState.TRADING:    {EngineState.SCANNING, EngineState.CONNECTED, EngineState.ERROR},
-    EngineState.ERROR:      {EngineState.RECOVERING, EngineState.IDLE},
-    EngineState.RECOVERING: {EngineState.CONNECTED, EngineState.ERROR, EngineState.IDLE},
+    EngineState.CONNECTED:  {EngineState.SCANNING, EngineState.IDLE, EngineState.CONNECTING},
+    EngineState.SCANNING:   {EngineState.TRADING, EngineState.CONNECTED, EngineState.ERROR, EngineState.CONNECTING},
+    EngineState.TRADING:    {EngineState.SCANNING, EngineState.CONNECTED, EngineState.ERROR, EngineState.CONNECTING},
+    EngineState.ERROR:      {EngineState.RECOVERING, EngineState.IDLE, EngineState.CONNECTING},
+    EngineState.RECOVERING: {EngineState.CONNECTED, EngineState.ERROR, EngineState.IDLE, EngineState.CONNECTING},
 }
 
 
@@ -54,7 +54,7 @@ class QuantumEngine:
     - 모듈별 Health 모니터링
     """
     def __init__(self):
-        self.client: Optional[OKXClient] = None
+        self.client: Optional[BinanceClient] = None
         self.scanner: Optional[Scanner] = None
         self.trader: Optional[AutoTrader] = None
         self.cfg = CFG
@@ -108,7 +108,7 @@ class QuantumEngine:
 
         with self._lock:
             try:
-                self.client = OKXClient(api_key, secret_key, passphrase)
+                self.client = BinanceClient(api_key, secret_key, passphrase)
                 if self.client.load_markets():
                     self.scanner = Scanner(self.client)
                     self.trader = AutoTrader(self.client)
@@ -283,6 +283,8 @@ class QuantumEngine:
                         logger.error(f"청산 CSV 기록 실패: {e}")
 
                     stats_store.record_result(pnl)
+                    if self.trader:
+                        self.trader.daily_pnl_usdt = round(self.trader.daily_pnl_usdt + pnl, 4)
                     logger.info(
                         f"[CLOSED] {sym} PnL={pnl:+.4f} USDT"
                         f" -> {'WIN' if pnl >= 0 else 'LOSS'} 기록"
@@ -402,6 +404,8 @@ class QuantumEngine:
                         
                         # 일별 승률 통계 반영
                         stats_store.record_result(pnl)
+                        if self.trader:
+                            self.trader.daily_pnl_usdt = round(self.trader.daily_pnl_usdt + pnl, 4)
 
     def _is_flow_bad(self, p: Dict) -> bool:
         """포지션의 가격 흐름이 나쁜지 판단"""

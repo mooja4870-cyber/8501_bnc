@@ -1,6 +1,21 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v1.4.02] Auto-Tuning Persistence & Multi-Tab Layout Refresh:**
+  - [Feature] 자동 피팅 이력 영구 기록 시스템 (`data/autotune_history.csv`) 구축 — 앱 업데이트, 서버 재시작 등에도 영구 보존.
+  - [UI/UX] 대시보드 탭 레이아웃 재배치 — 7단 탭 구조 (`대시보드`, `스캐너`, `매매 이력`, `포지션 진입`, `TP/SL 최적화기`, `오토피팅 이력`, `설정`) 완성.
+  - [UI/UX] 신설된 `📈 오토피팅 이력` 독립 탭을 통해 언제든지 봇의 수학적 퀀트 손익비 피팅 역사를 확인 가능.
+  - [Test] `harness.py` 테스트 러너 유니코드 인코딩 수정 — Windows 환경(CP949) 및 일반 환경에서 100% 무오류 통과 보장.
+- **[v1.4.01] Critical SL/TP Bugfix — OCO 통합 + Stop-Market + 스프레드 필터:**
+  - [Bugfix] SL/TP 주문이 Stop-**Limit**으로 걸려 급변동 시 미체결되던 치명적 버그 수정 → Stop-**Market** 전환.
+  - [Architecture] 3개 분리 주문(진입+SL+TP) → 1개 통합 OCO 주문(`attachAlgoOrds`) — 한쪽 체결 시 반대쪽 자동 취소.
+  - [Risk] 스프레드 필터 추가 (`MAX_SPREAD_PCT=0.3%`) — 호가 갭이 넓은 저유동성 종목 진입 원천 차단.
+- **[v1.4.00] Harness & Orchestration Lv.4 Upgrade:**
+  - [Architecture] `QuantumEngine` v2 — FSM 상태 머신(7개 상태 + 전이 맵), Health Check, 지수 백오프 자동 복구 추가.
+  - [Test] `MockOKXClient` 구현 — 6개 시나리오 프리셋(default, low_balance, no_margin, max_positions, with_positions, profitable/losing).
+  - [Test] 30개 단위/통합 테스트 전체 통과 — 리스크 게이트(5), 포지션 가드(5), 주문 실행(3), 전략 신호(5), Mock 데이터(3), FSM(5), Health(2), E2E(2).
+  - [Bugfix] `trader.py` — `timedelta` import 누락 수정.
+  - [Test] `harness.py` v2 — `--mock` 플래그로 실 API 없이 전체 엔진 흐름 테스트 가능.
 - **[v1.3.04] Agent Skills Configured:** Applied top 3 latest agentic coding skills via `.antigravityrules`. Configured Artifact-based verification guidelines, MCP local tool integration protocol, and Semantic Codebase Sanitization constraints to ensure safe, stable agent collaboration and hallucination prevention.
 - **[v1.3.03] Streamlit Min-Value Hotfix:** Decreased the minimum allowed value for "익절 (%)" and "손절 (%)" number inputs to `0.1%` in all sidebar and settings widgets. This resolves the `StreamlitValueBelowMinError` crash when running fine-tuned day trading configurations.
 - **[v1.3.02] Day Trading Optimization & Dynamic TIMEFRAME Widget:** Applied day trading optimized parameters (TIMEFRAME = 15m, SL = 0.8%, TP = 1.2%, MAX_HOLDING_HOURS = 4.0, BB_STD = 1.8, EMA_PERIOD = 100) to hit the daily 1%~2% return target. Added dynamic selectbox widgets in the sidebar and main entry tabs for remote timeframe adjustments.

@@ -1,12 +1,12 @@
 """
-Triple-Indicator 매매 전략
-EMA200 (추세 필터) + BB Reversion (과매도 포착) + MACD Signal (진입 확인)
+AKMCD + SSL 하이브리드 매매 전략
+===============================
+대본 기반: 코인슈타인 전략 구현 (OKX -> Binance)
 """
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
 from typing import Optional, Tuple
-import ta
 from core.config import CFG
 import logging
 
@@ -18,67 +18,99 @@ class Signal:
     symbol: str
     direction: str          # "long" | "short" | "none"
     strength: int           # 0~100 (신호 강도)
-    ema_ok: bool
-    bb_ok: bool
-    macd_ok: bool
+    ema_ok: bool            # SSL 추세 조건 충족 여부 (ema_ok로 필드명 유지)
+    bb_ok: bool             # AKMCD 점 색상 전환 조건 충족 여부 (bb_ok로 필드명 유지)
+    macd_ok: bool           # AKMCD 영선 돌파 조건 충족 여부 (macd_ok로 필드명 유지)
     close: float
-    ema200: float
-    bb_upper: float
-    bb_lower: float
-    macd_hist: float
+    ema200: float           # SSL 추세선 값 (UI 호환용)
+    bb_upper: float         # AKMCD 볼린저 밴드 상단
+    bb_lower: float         # AKMCD 볼린저 밴드 하단
+    macd_hist: float        # AKMCD 히스토그램 값
     reason: str
 
 
 class StrategyEngine:
     """
-    Triple-Indicator 전략 엔진
+    AKMCD + SSL 하이브리드 전략 엔진
+    
+    롱 조건:
+      1. 캔들이 SSL 파란선(ssl_up) 위 (ema_ok)
+      2. 캔들 색상 파란색 (close > close.shift(1))
+      3. AKMCD histogram이 영선(0) 위 (macd_ok)
+      4. 이전 봉: 빨간점 → 현재 봉: 초록점 (색깔 전환) (bb_ok)
 
-    진입 조건 (Long):
-        1. 종가 > EMA200 (상승 추세)
-        2. 종가가 BB 하단 터치 후 회귀 (과매도 반등)
-        3. MACD 히스토그램 음 → 양 전환 (모멘텀 확인)
-
-    진입 조건 (Short):
-        1. 종가 < EMA200 (하락 추세)
-        2. 종가가 BB 상단 터치 후 회귀
-        3. MACD 히스토그램 양 → 음 전환
+    숏 조건:
+      1. 캔들이 SSL 빨간선(ssl_down) 아래 (ema_ok)
+      2. 캔들 색상 빨간색 (close <= close.shift(1))
+      3. AKMCD histogram이 영선(0) 아래 (macd_ok)
+      4. 이전 봉: 초록점 → 현재 봉: 빨간점 (색깔 전환) (bb_ok)
     """
 
     def __init__(self):
         self.cfg = CFG
 
+    def calculate_ema(self, series: pd.Series, period: int) -> pd.Series:
+        """EMA(지수이동평균) 계산"""
+        return series.ewm(span=period, adjust=False).mean()
+
     def calculate_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """기술 지표 계산"""
-        if len(df) < max(self.cfg.EMA_PERIOD, self.cfg.BB_PERIOD, self.cfg.MACD_SLOW) + 10:
+        required_len = max(self.cfg.BB_PERIOD, self.cfg.MACD_SLOW, self.cfg.SSL_PERIOD) + 10
+        if len(df) < required_len:
             return pd.DataFrame()
 
         df = df.copy()
 
-        # EMA 200
-        df["ema200"] = ta.trend.ema_indicator(df["close"], window=self.cfg.EMA_PERIOD)
+        # 1. AKMCD 계산
+        close = df['close']
+        ema_fast = self.calculate_ema(close, self.cfg.MACD_FAST)
+        ema_slow = self.calculate_ema(close, self.cfg.MACD_SLOW)
+        macd_line = ema_fast - ema_slow
+        signal_line = self.calculate_ema(macd_line, self.cfg.MACD_SIGNAL)
+        histogram = macd_line - signal_line
 
-        # Bollinger Bands
-        bb = ta.volatility.BollingerBands(
-            df["close"], window=self.cfg.BB_PERIOD, window_dev=self.cfg.BB_STD
-        )
-        df["bb_upper"] = bb.bollinger_hband()
-        df["bb_mid"] = bb.bollinger_mavg()
-        df["bb_lower"] = bb.bollinger_lband()
-        df["bb_width"] = (df["bb_upper"] - df["bb_lower"]) / df["bb_mid"]
+        # 히스토그램 볼린저 밴드
+        bb_mid = histogram.rolling(self.cfg.BB_PERIOD).mean()
+        bb_std = histogram.rolling(self.cfg.BB_PERIOD).std()
+        bb_upper = bb_mid + (self.cfg.BB_STD * bb_std)
+        bb_lower = bb_mid - (self.cfg.BB_STD * bb_std)
 
-        # MACD
-        macd = ta.trend.MACD(
-            df["close"],
-            window_fast=self.cfg.MACD_FAST,
-            window_slow=self.cfg.MACD_SLOW,
-            window_sign=self.cfg.MACD_SIGNAL,
-        )
-        df["macd"] = macd.macd()
-        df["macd_signal"] = macd.macd_signal()
-        df["macd_hist"] = macd.macd_diff()
+        # 점 색깔 결정 (상승: green, 하락: red)
+        dot_color = pd.Series('red', index=df.index)
+        dot_color[histogram > histogram.shift(1)] = 'green'
 
-        # RSI (보조)
-        df["rsi"] = ta.momentum.RSIIndicator(df["close"], window=14).rsi()
+        df['macd'] = macd_line
+        df['signal'] = signal_line
+        df['macd_hist'] = histogram
+        df['bb_upper'] = bb_upper
+        df['bb_lower'] = bb_lower
+        df['dot_color'] = dot_color
+
+        # 2. SSL 하이브리드 계산
+        high = df['high']
+        low = df['low']
+        sma_high = high.rolling(self.cfg.SSL_PERIOD).mean()
+        sma_low = low.rolling(self.cfg.SSL_PERIOD).mean()
+
+        hlv = pd.Series(0, index=df.index)
+        hlv[close > sma_high] = 1
+        hlv[close < sma_low] = -1
+        hlv = hlv.replace(0, np.nan).ffill().fillna(0)
+
+        ssl_down = pd.Series(np.where(hlv < 0, sma_high, sma_low), index=df.index)
+        ssl_up = pd.Series(np.where(hlv < 0, sma_low, sma_high), index=df.index)
+
+        ssl_trend = pd.Series('neutral', index=df.index)
+        ssl_trend[close > ssl_up] = 'up'
+        ssl_trend[close < ssl_down] = 'down'
+
+        candle_color = pd.Series('red', index=df.index)
+        candle_color[close > close.shift(1)] = 'blue'
+
+        df['ssl_up'] = ssl_up
+        df['ssl_down'] = ssl_down
+        df['ssl_trend'] = ssl_trend
+        df['candle_color'] = candle_color
 
         return df.dropna()
 
@@ -96,82 +128,89 @@ class StrategyEngine:
         if df.empty or len(df) < 3:
             return empty_signal
 
-        cur = df.iloc[-1]
+        curr = df.iloc[-1]
         prev = df.iloc[-2]
-        prev2 = df.iloc[-3]
 
-        close = cur["close"]
-        ema200 = cur["ema200"]
-        bb_upper = cur["bb_upper"]
-        bb_lower = cur["bb_lower"]
-        macd_hist = cur["macd_hist"]
-        prev_hist = prev["macd_hist"]
-        rsi = cur["rsi"]
+        close = curr['close']
+        ssl_up = curr['ssl_up']
+        ssl_down = curr['ssl_down']
+        macd_hist = curr['macd_hist']
 
-        # ── LONG 조건 평가 ──────────────────────────────
-        long_ema = close > ema200
-        long_bb = (prev["close"] <= prev["bb_lower"] or prev2["close"] <= prev2["bb_lower"]) \
-                  and close > bb_lower
-        long_macd = prev_hist < 0 and macd_hist > prev_hist  # 음 → 상승 전환
-        long_rsi = rsi < 60  # 과매수 아님
+        # ── 롱 조건 체크 ──
+        cond_long_1 = close > ssl_up                     # SSL 파란선 위
+        cond_long_2 = curr['candle_color'] == 'blue'     # 캔들 파란색
+        cond_long_3 = macd_hist > 0                      # AKMCD 영선 위
+        cond_long_4 = (prev['dot_color'] == 'red' and    # 이전: 빨강 -> 현재: 초록
+                       curr['dot_color'] == 'green')
 
-        # ── SHORT 조건 평가 ─────────────────────────────
-        short_ema = close < ema200
-        short_bb = (prev["close"] >= prev["bb_upper"] or prev2["close"] >= prev2["bb_upper"]) \
-                   and close < bb_upper
-        short_macd = prev_hist > 0 and macd_hist < prev_hist  # 양 → 하락 전환
-        short_rsi = rsi > 40  # 과매도 아님
+        # ── 숏 조건 체크 ──
+        cond_short_1 = close < ssl_down                  # SSL 빨간선 아래
+        cond_short_2 = curr['candle_color'] == 'red'     # 캔들 빨간색
+        cond_short_3 = macd_hist < 0                     # AKMCD 영선 아래
+        cond_short_4 = (prev['dot_color'] == 'green' and  # 이전: 초록 -> 현재: 빨강
+                        curr['dot_color'] == 'red')
 
-        # ── 신호 강도 계산 ──────────────────────────────
-        def compute_strength(ema_ok, bb_ok, macd_ok, hist_mag) -> int:
+        # 신호 강도 계산 (4가지 조건 각각 점수 배분)
+        # SSL 추세 일치(35점), 영선 돌파(25점), 캔들 색상 일치(20점), 점 색상 전환 완료(20점)
+        def compute_strength(c1, c2, c3, c4) -> int:
             score = 0
-            if ema_ok:
-                score += 35
-            if bb_ok:
-                score += 35
-            if macd_ok:
-                score += 20
-            # MACD 히스토그램 절대값이 클수록 가중
-            score += min(10, int(abs(hist_mag) / close * 10_000))
-            return min(100, score)
+            if c1: score += 35
+            if c2: score += 20
+            if c3: score += 25
+            if c4: score += 20
+            return score
 
-        if long_ema and long_bb and long_macd and long_rsi and self.cfg.ALLOW_LONG:
-            strength = compute_strength(long_ema, long_bb, long_macd, macd_hist)
+        # 롱 신호
+        if cond_long_1 and cond_long_2 and cond_long_3 and cond_long_4 and self.cfg.ALLOW_LONG:
+            strength = compute_strength(cond_long_1, cond_long_2, cond_long_3, cond_long_4)
             return Signal(
                 symbol=symbol, direction="long", strength=strength,
-                ema_ok=long_ema, bb_ok=long_bb, macd_ok=long_macd,
-                close=close, ema200=ema200,
-                bb_upper=bb_upper, bb_lower=bb_lower,
+                ema_ok=cond_long_1, bb_ok=cond_long_4, macd_ok=cond_long_3,
+                close=close, ema200=ssl_up,
+                bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
                 macd_hist=macd_hist,
-                reason=f"EMA200 위 + BB하단 반등 + MACD강세 (강도 {strength}%)"
+                reason=f"SSL 롱 추세 + AKMCD 초록점 전환 완료 (강도 {strength}%)"
             )
 
-        if short_ema and short_bb and short_macd and short_rsi and self.cfg.ALLOW_SHORT:
-            strength = compute_strength(short_ema, short_bb, short_macd, macd_hist)
+        # 숏 신호
+        if cond_short_1 and cond_short_2 and cond_short_3 and cond_short_4 and self.cfg.ALLOW_SHORT:
+            strength = compute_strength(cond_short_1, cond_short_2, cond_short_3, cond_short_4)
             return Signal(
                 symbol=symbol, direction="short", strength=strength,
-                ema_ok=short_ema, bb_ok=short_bb, macd_ok=short_macd,
-                close=close, ema200=ema200,
-                bb_upper=bb_upper, bb_lower=bb_lower,
+                ema_ok=cond_short_1, bb_ok=cond_short_4, macd_ok=cond_short_3,
+                close=close, ema200=ssl_down,
+                bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
                 macd_hist=macd_hist,
-                reason=f"EMA200 아래 + BB상단 반전 + MACD약세 (강도 {strength}%)"
+                reason=f"SSL 숏 추세 + AKMCD 빨간점 전환 완료 (강도 {strength}%)"
             )
 
         # 부분 신호 강도 계산 (스캐너 표시용)
-        if long_ema:
-            s = compute_strength(long_ema, long_bb, long_macd, macd_hist)
+        # 롱 방향 추세인 경우
+        if close > ssl_up:
+            s = compute_strength(cond_long_1, cond_long_2, cond_long_3, cond_long_4)
             return Signal(
                 symbol=symbol, direction="none", strength=s,
-                ema_ok=long_ema, bb_ok=long_bb, macd_ok=long_macd,
-                close=close, ema200=ema200,
-                bb_upper=bb_upper, bb_lower=bb_lower,
-                macd_hist=macd_hist, reason="조건 미충족"
+                ema_ok=cond_long_1, bb_ok=cond_long_4, macd_ok=cond_long_3,
+                close=close, ema200=ssl_up,
+                bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
+                macd_hist=macd_hist, reason="조건 일부 미충족 (LONG 추세)"
+            )
+
+        # 숏 방향 추세인 경우
+        if close < ssl_down:
+            s = compute_strength(cond_short_1, cond_short_2, cond_short_3, cond_short_4)
+            return Signal(
+                symbol=symbol, direction="none", strength=s,
+                ema_ok=cond_short_1, bb_ok=cond_short_4, macd_ok=cond_short_3,
+                close=close, ema200=ssl_down,
+                bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
+                macd_hist=macd_hist, reason="조건 일부 미충족 (SHORT 추세)"
             )
 
         return Signal(
             symbol=symbol, direction="none", strength=10,
-            ema_ok=long_ema, bb_ok=False, macd_ok=False,
-            close=close, ema200=ema200,
-            bb_upper=bb_upper, bb_lower=bb_lower,
-            macd_hist=macd_hist, reason="EMA200 이하 — 추세 없음"
+            ema_ok=False, bb_ok=False, macd_ok=False,
+            close=close, ema200=ssl_up,
+            bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
+            macd_hist=macd_hist, reason="SSL 중립 추세 — 신호 없음"
         )

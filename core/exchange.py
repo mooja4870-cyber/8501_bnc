@@ -1,6 +1,6 @@
 """
-OKX Exchange 연동 모듈
-ccxt 라이브러리 기반 OKX API v5 래퍼
+Binance Exchange 연동 모듈
+ccxt 라이브러리 기반 Binance USD-M Futures API 래퍼
 """
 import ccxt
 import pandas as pd
@@ -12,19 +12,18 @@ from core.config import CFG
 logger = logging.getLogger(__name__)
 
 
-class OKXClient:
-    """OKX API v5 클라이언트 — 실거래 전용"""
+class BinanceClient:
+    """Binance USD-M Futures API 클라이언트 — 실거래 전용"""
 
-    def __init__(self, api_key: str, secret_key: str, passphrase: str):
-        self.exchange = ccxt.okx({
+    def __init__(self, api_key: str, secret_key: str, passphrase: Optional[str] = None):
+        # passphrase는 Binance에서 사용하지 않지만, OKXClient와의 시그니처 호환성을 위해 유지합니다.
+        self.exchange = ccxt.binanceusdm({
             "apiKey": api_key,
             "secret": secret_key,
-            "password": passphrase,        # OKX는 passphrase 필수
             "options": {
-                "defaultType": "swap",     # 선물(영구 계약)
                 "adjustForTimeDifference": True,
             },
-            "enableRateLimit": True,       # Rate-limit 자동 준수
+            "enableRateLimit": True,
             "rateLimit": 200,              # ms 단위
         })
         self._markets: Dict = {}
@@ -46,12 +45,12 @@ class OKXClient:
     def get_balance(self) -> Dict:
         """계좌 잔고 조회 (USDT 기준)"""
         try:
-            bal = self.exchange.fetch_balance({"type": "swap"})
+            bal = self.exchange.fetch_balance()
             usdt = bal.get("USDT", {})
             return {
-                "total": round(usdt.get("total", 0), 4),
-                "free": round(usdt.get("free", 0), 4),
-                "used": round(usdt.get("used", 0), 4),
+                "total": round(usdt.get("total", 0) or 0, 4),
+                "free": round(usdt.get("free", 0) or 0, 4),
+                "used": round(usdt.get("used", 0) or 0, 4),
             }
         except Exception as e:
             logger.error(f"잔고 조회 실패: {e}")
@@ -63,17 +62,24 @@ class OKXClient:
             positions = self.exchange.fetch_positions()
             active = []
             for p in positions:
-                contracts = p.get("contracts", 0) or 0
-                if float(contracts) > 0:
+                contracts = abs(float(p.get("contracts") or p.get("amount") or p.get("size") or 0))
+                if contracts > 0:
                     entry = p.get("entryPrice") or 0
                     current = p.get("markPrice") or p.get("lastPrice") or 0
-                    side = p.get("side", "long")
+                    side = p.get("side")
+                    if not side:
+                        # contracts/amount 부호 기준
+                        raw_amt = p.get("contracts") or p.get("amount") or 0
+                        side = "long" if float(raw_amt) > 0 else "short"
+                    
                     lev = float(p.get("leverage") or CFG.LEVERAGE)
                     if entry and current:
                         raw = (float(current) - float(entry)) / float(entry)
                         pct = raw * lev if side == "long" else -raw * lev
+                    else:
+                        pct = 0.0
                     market = self._markets.get(p.get("symbol", ""), {})
-                    contract_size = market.get("contractSize", 1.0)
+                    contract_size = market.get("contractSize", 1.0) or 1.0
                     coins = float(contracts) * contract_size
                     entry_val = float(entry) * coins
                     
@@ -89,7 +95,7 @@ class OKXClient:
                         "leverage": p.get("leverage", CFG.LEVERAGE),
                         "margin": round(p.get("initialMargin", 0) or 0, 4),
                         "timestamp": p.get("timestamp"),
-                        "amount_usdt": round(entry_val, 2), # 진입 가치 (Entry Price * Coins)
+                        "amount_usdt": round(entry_val, 2),
                     })
             return active
         except Exception as e:
@@ -123,23 +129,15 @@ class OKXClient:
             result = []
             for t in trades:
                 info = t.get("info", {})
-                pos_side = info.get("posSide", "") # long, short
-                side = t.get("side", "")           # buy, sell
+                side = t.get("side", "").lower()           # buy, sell
                 
-                # 구분 (Entry vs Exit)
-                # OKX: BUY&LONG=Entry, SELL&LONG=Exit, SELL&SHORT=Entry, BUY&SHORT=Exit
-                category = "진입"
-                if (side == "buy" and pos_side == "short") or (side == "sell" and pos_side == "long"):
-                    category = "청산"
-                
-                # 손익 (OKX V5 fillPnl)
-                pnl = float(info.get("fillPnl", 0) or 0)
+                # Binance USD-M futures: realizedPnl이 존재하면 청산(Exit), 없거나 0이면 진입(Entry)
+                pnl = float(info.get("realizedPnl", 0) or 0)
+                category = "청산" if pnl != 0 else "진입"
                 cost = float(t.get("cost", 0) or 0)
                 
-                # 수익률 (%) - (손익 / 증거금) * 100. 증거금은 비용/레버리지로 추정
                 pnl_pct = 0.0
                 if category == "청산" and pnl != 0 and cost > 0:
-                    # 현재 설정 레버리지(CFG.LEVERAGE)를 기준으로 역산 (근사치)
                     margin_est = cost / CFG.LEVERAGE
                     if margin_est > 0:
                         pnl_pct = (pnl / margin_est) * 100
@@ -162,17 +160,24 @@ class OKXClient:
             logger.error(f"거래 이력 조회 실패: {e}")
             return []
 
-
-    def get_closed_positions_pnl(self, limit=20):
+    def get_closed_positions_pnl(self, limit=20) -> List[Dict]:
+        """실현 손익 조회 (REALIZED_PNL)"""
         try:
-            raw = self.exchange.privateGetAccountPositionsHistory({'limit': str(limit)})
+            raw = self.exchange.fapiPrivateGetIncome({
+                'incomeType': 'REALIZED_PNL',
+                'limit': limit
+            })
             return [
-                {'symbol': r.get('instId',''), 'pnl_usdt': float(r.get('realizedPnl', 0) or 0)}
-                for r in raw.get('data', [])
+                {
+                    'symbol': self.exchange.safe_symbol(r.get('symbol', '')), 
+                    'pnl_usdt': float(r.get('income', 0) or 0)
+                }
+                for r in raw if r.get('incomeType') == 'REALIZED_PNL'
             ]
         except Exception as e:
             logger.error(f'closed pnl error: {e}')
             return []
+
     # ── 시장 데이터 ────────────────────────────────────
 
     def get_ohlcv(
@@ -198,7 +203,6 @@ class OKXClient:
                         break
                     raw.extend(chunk)
                     since = chunk[-1][0] + tf_ms
-                    import time
                     time.sleep(0.1)
             df = pd.DataFrame(
                 raw, columns=["timestamp", "open", "high", "low", "close", "volume"]
@@ -233,7 +237,7 @@ class OKXClient:
             return {}
 
     def get_all_usdt_swap_symbols(self) -> List[str]:
-        """USDT 선물 전종목 심볼 목록 반환 (거래대금 필터 적용)"""
+        """USDT 선물 전종목 심볼 목록 반환"""
         symbols = []
         for sym, mkt in self._markets.items():
             if (
@@ -246,27 +250,52 @@ class OKXClient:
 
     # ── 주문 실행 ──────────────────────────────────────
 
+    def set_margin_mode(self, symbol: str, margin_mode: str = "isolated") -> bool:
+        """마진 모드 설정 (ISOLATED | CROSSED)"""
+        try:
+            self.exchange.set_margin_mode(margin_mode.upper(), symbol)
+            logger.info(f"마진 모드 설정 완료: {symbol} {margin_mode}")
+            return True
+        except Exception as e:
+            logger.debug(f"마진 모드 설정 무시/실패 ({symbol}): {e}")
+            return False
+
     def set_leverage(self, symbol: str, leverage: int) -> bool:
         """레버리지 설정"""
         try:
-            self.exchange.set_leverage(leverage, symbol, params={"mgnMode": "isolated"})
-            logger.info(f"레버리지 설정: {symbol} {leverage}x")
+            self.exchange.set_leverage(leverage, symbol)
+            logger.info(f"레버리지 설정 완료: {symbol} {leverage}x")
             return True
         except Exception as e:
             logger.error(f"레버리지 설정 실패 ({symbol}): {e}")
             return False
 
     def get_market_max_leverage(self, symbol: str) -> int:
-        """해당 종목의 거래소 정책상 최대 레버리지 조회"""
+        """해당 종목의 최대 레버리지 조회"""
         try:
             market = self._markets.get(symbol, {})
-            info = market.get("info", {})
-            # OKX v5 API는 maxLvl 필드에 최대 레버리지를 제공함
-            max_lvl = int(info.get("maxLvl", 10))
-            return max_lvl
+            limits = market.get("limits", {})
+            leverage = limits.get("leverage", {})
+            max_lvl = leverage.get("max")
+            if max_lvl is not None:
+                return int(max_lvl)
+            
+            if "BTC" in symbol or "ETH" in symbol:
+                return 100
+            return 20
         except Exception as e:
-            logger.warning(f"최대 레버리지 조회 실패 ({symbol}), 기본값 10 적용: {e}")
-            return 10
+            logger.warning(f"최대 레버리지 조회 실패 ({symbol}), 기본값 20 적용: {e}")
+            return 20
+
+    def cancel_all_orders(self, symbol: str) -> bool:
+        """해당 종목의 모든 미체결 주문 취소"""
+        try:
+            self.exchange.cancel_all_orders(symbol)
+            logger.info(f"모든 주문 취소 완료: {symbol}")
+            return True
+        except Exception as e:
+            logger.error(f"주문 취소 실패 ({symbol}): {e}")
+            return False
 
     def place_order(
         self,
@@ -277,98 +306,91 @@ class OKXClient:
         take_profit_pct: float = CFG.TAKE_PROFIT_PCT,
     ) -> Optional[Dict]:
         """
-        시장가 주문 + 즉시 SL/TP 설정
-        side: "buy" = 롱 진입, "sell" = 숏 진입
+        시장가 진입 주문 + 개별 Stop Loss / Take Profit 주문 등록
         """
         try:
-            # 1) 가변 레버리지 결정: min(설정값, 거래소 정책 최대치)
+            # 1) 가변 레버리지 결정
             policy_max = self.get_market_max_leverage(symbol)
             applied_leverage = min(CFG.LEVERAGE, policy_max)
-            
-            # 2) 레버리지 설정 실행
-            self.set_leverage(symbol, applied_leverage)
 
-            # 3) 현재가로 수량 계산
+            # 2) 마진 모드 및 레버리지 설정
+            self.set_margin_mode(symbol, CFG.MARGIN_MODE)
+            lev_ok = self.set_leverage(symbol, applied_leverage)
+            if not lev_ok:
+                logger.error(f"[ORDER ABORT] {symbol} 레버리지 설정 실패로 주문 중단.")
+                return None
+
+            # 3) 현재가 조회 및 수량 계산
             ticker = self.get_ticker(symbol)
             price = ticker.get("last", 0)
             if not price:
                 raise ValueError("현재가 조회 실패")
 
             market = self._markets.get(symbol, {})
-            contract_size = market.get("contractSize", 1)
-            
-            # 실제 적용된 레버리지(applied_leverage)로 포지션 가치(Notional) 계산
+            contract_size = market.get("contractSize", 1.0) or 1.0
+
             notional = margin_usdt * applied_leverage
             amount = notional / (price * contract_size)
-
-            # ccxt precision 적용
             amount = self.exchange.amount_to_precision(symbol, amount)
 
-            # 3) 시장가 진입
+            # 4) 진입 시장가 주문 실행
             order = self.exchange.create_order(
                 symbol=symbol,
                 type="market",
                 side=side,
                 amount=float(amount),
-                params={"tdMode": "isolated", "posSide": "long" if side == "buy" else "short"},
             )
-            entry_price = float(order.get("average") or price)
+            entry_price = float(order.get("average") or order.get("price") or price)
 
-            # 4) Stop-Loss 주문 즉시 전송
-            sl_price = (
-                entry_price * (1 - stop_loss_pct)
-                if side == "buy"
-                else entry_price * (1 + stop_loss_pct)
-            )
-            tp_price = (
-                entry_price * (1 + take_profit_pct)
-                if side == "buy"
-                else entry_price * (1 - take_profit_pct)
-            )
+            # 5) SL/TP 가격 계산
+            if side == "buy":
+                sl_price = entry_price * (1 - stop_loss_pct)
+                tp_price = entry_price * (1 + take_profit_pct)
+                close_side = "sell"
+                pos_side = "long"
+            else:
+                sl_price = entry_price * (1 + stop_loss_pct)
+                tp_price = entry_price * (1 - take_profit_pct)
+                close_side = "buy"
+                pos_side = "short"
+
             sl_price = float(self.exchange.price_to_precision(symbol, sl_price))
             tp_price = float(self.exchange.price_to_precision(symbol, tp_price))
 
-            # SL 주문
-            self.exchange.create_order(
-                symbol=symbol,
-                type="stop",
-                side="sell" if side == "buy" else "buy",
-                amount=float(amount),
-                price=sl_price,
-                params={
-                    "stopPrice": sl_price,
-                    "tdMode": "isolated",
-                    "posSide": "long" if side == "buy" else "short",
-                    "reduceOnly": True,
-                },
-            )
+            # 6) 개별 SL / TP 주문 접수 (reduceOnly=True)
+            try:
+                self.exchange.create_order(
+                    symbol=symbol,
+                    type="STOP_MARKET",
+                    side=close_side,
+                    amount=float(amount),
+                    params={"stopPrice": sl_price, "reduceOnly": True}
+                )
+            except Exception as sle:
+                logger.error(f"Stop Loss 설정 실패 ({symbol}): {sle}")
 
-            # TP 주문
-            self.exchange.create_order(
-                symbol=symbol,
-                type="stop",
-                side="sell" if side == "buy" else "buy",
-                amount=float(amount),
-                price=tp_price,
-                params={
-                    "stopPrice": tp_price,
-                    "tdMode": "isolated",
-                    "posSide": "long" if side == "buy" else "short",
-                    "reduceOnly": True,
-                },
-            )
+            try:
+                self.exchange.create_order(
+                    symbol=symbol,
+                    type="TAKE_PROFIT_MARKET",
+                    side=close_side,
+                    amount=float(amount),
+                    params={"stopPrice": tp_price, "reduceOnly": True}
+                )
+            except Exception as tpe:
+                logger.error(f"Take Profit 설정 실패 ({symbol}): {tpe}")
 
             result = {
                 "order_id": order.get("id"),
                 "symbol": symbol,
-                "side": "long" if side == "buy" else "short",
+                "side": pos_side,
                 "entry_price": entry_price,
                 "amount": float(amount),
                 "sl_price": sl_price,
                 "tp_price": tp_price,
                 "usdt_margin": margin_usdt,
             }
-            logger.info(f"주문 완료: {result}")
+            logger.info(f"주문 완료 (Binance): {result}")
             return result
 
         except Exception as e:
@@ -376,13 +398,17 @@ class OKXClient:
             return None
 
     def close_position(self, symbol: str, side: str) -> bool:
-        """포지션 전체 청산 (시장가)"""
+        """포지션 전체 청산 (시장가) 및 모든 주문 취소"""
         try:
-            pos_side = "long" if side == "long" else "short"
+            # 1) 미체결 SL/TP 주문 취소
+            self.cancel_all_orders(symbol)
+
+            # 2) 포지션 수량 조회 및 청산
             close_side = "sell" if side == "long" else "buy"
             positions = self.get_positions()
             target = next((p for p in positions if p["symbol"] == symbol), None)
             if not target:
+                logger.warning(f"청산 대상 포지션 없음: {symbol}")
                 return False
 
             self.exchange.create_order(
@@ -390,7 +416,7 @@ class OKXClient:
                 type="market",
                 side=close_side,
                 amount=target["size"],
-                params={"tdMode": "isolated", "posSide": pos_side, "reduceOnly": True},
+                params={"reduceOnly": True},
             )
             logger.info(f"포지션 청산 완료: {symbol} {side}")
             return True

@@ -131,7 +131,7 @@ class TradeOptimizer:
                 analyzed.append(res)
                 
         if not analyzed:
-            return {"status": "error", "message": "OKX API에서 진입 시점의 캔들 데이터를 가져오지 못했습니다. (API 제한 또는 과거 거래)"}
+            return {"status": "error", "message": "Binance API에서 진입 시점의 캔들 데이터를 가져오지 못했습니다. (API 제한 또는 과거 거래)"}
             
         # 가상 시뮬레이션 (익절 0.5%~3.0%, 손절 0.3%~2.0%)
         best_tp = 1.2

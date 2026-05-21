@@ -9,11 +9,11 @@ from typing import List
 @dataclass
 class TradingConfig:
     # ── 거래소 ──────────────────────────────────────────
-    EXCHANGE_ID: str = "okx"
-    BASE_URL: str = "https://www.okx.com"
+    EXCHANGE_ID: str = "binance"
+    BASE_URL: str = "https://fapi.binance.com"
 
     # ── 포지션 설정 ──────────────────────────────────────
-    LEVERAGE: int = 10                     # 10배 고정
+    LEVERAGE: int = 5                      # 레버리지 (기본값 5)
     MARGIN_MODE: str = "isolated"          # 격리 마진
     MARGIN_USDT: float = 5.0               # 1회 진입 증거금 (USDT)
     MAX_POSITIONS: int = 5                # 최대 동시 보유 종목 수
@@ -23,20 +23,16 @@ class TradingConfig:
 
 
     # ── 손익 설정 ──────────────────────────────────────
-    STOP_LOSS_PCT: float = 0.008           # 손절 0.8% (10배 레버리지 기준 -8% ROI)
-    TAKE_PROFIT_PCT: float = 0.012          # 익절 1.2% (10배 레버리지 기준 +12% ROI)
-    TRAILING_STOP_PCT: float = 0.01        # 추적 손절 (1.0%)
-    PROFIT_FACTOR_MIN: float = 1.0        # Profit Factor 최소 기준 (1:1)
-    AUTO_TUNE_SL_TP: bool = True           # 최근 매매 기반 익절/손절 자동 피팅 활성화 (Auto-Tuning)
+    STOP_LOSS_PCT: float = 0.01            # 손절 1.0% (기본값)
+    TAKE_PROFIT_PCT: float = 0.015          # 익절 1.5% (기본값)
+    AUTO_TUNE_SL_TP: bool = False          # 최근 매매 기반 익절/손절 자동 피팅 활성화 (Auto-Tuning)
 
     # ── 리스크 한도 ────────────────────────────────────
     MAX_DRAWDOWN_PCT: float = 0.10        # 최대 낙폭 10% 초과 시 전략 중단
     DAILY_LOSS_LIMIT_USDT: float = 25.0  # 일일 손실 한도 (5회 진입분)
-    MAX_DAILY_TRADES: int = 20            # 일일 최대 거래 횟수
-    VOLATILITY_FILTER: bool = True        # 변동성 필터 활성화
     
     # ── 포지션 로테이션 (Stale Position Rotation) 설정 ──
-    ROTATION_ENABLED: bool = True          # 정체 포지션 로테이션 활성화
+    ROTATION_ENABLED: bool = False         # 정체 포지션 로테이션 활성화
     ROTATION_MIN_SIGNALS: int = 3          # 교체 진입을 위한 스캐너 최소 대기 신호 수
     ROTATION_STALE_HOURS: float = 1.5      # 정체 판단 시간 (시간 단위)
     ROTATION_FLOW_CHECK: str = "momentum"  # 흐름 판단 기준 ('momentum', 'flat', 'time')
@@ -50,13 +46,13 @@ class TradingConfig:
     MARKET_TYPE: str = "swap"             # 선물(영구 계약)
 
     # ── 지표 파라미터 ──────────────────────────────────
-    EMA_PERIOD: int = 100
-    BB_PERIOD: int = 20
-    BB_STD: float = 1.8
-    MACD_FAST: int = 12
-    MACD_SLOW: int = 26
-    MACD_SIGNAL: int = 9
-    TIMEFRAME: str = "15m"                 # 캔들 타임프레임 (사용자 조정 가능)
+    BB_PERIOD: int = 20                    # AKMCD 볼린저밴드 기간 (기본값 20)
+    BB_STD: float = 2.0                    # AKMCD 볼린저밴드 배수 (기본값 2.0)
+    MACD_FAST: int = 12                    # AKMCD MACD Fast (기본값 12)
+    MACD_SLOW: int = 26                    # AKMCD MACD Slow (기본값 26)
+    MACD_SIGNAL: int = 9                   # AKMCD MACD Signal (기본값 9)
+    SSL_PERIOD: int = 10                   # SSL 기간 (기본값 10)
+    TIMEFRAME: str = "15m"                 # 캔들 타임프레임 (기본값 15m)
 
     # ── 백테스트 설정 ──────────────────────────────────
     BT_COMMISSION: float = 0.0005         # 수수료 0.05%

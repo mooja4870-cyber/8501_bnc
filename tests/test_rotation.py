@@ -9,7 +9,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.mock_exchange import MockOKXClient
+from core.mock_exchange import MockBinanceClient
 from core.engine import QuantumEngine, EngineState
 from core.scanner import Scanner
 from core.trader import AutoTrader
@@ -19,7 +19,7 @@ from core.strategy import Signal
 
 class TestPositionRotation:
     def setup_method(self):
-        self.mock = MockOKXClient()
+        self.mock = MockBinanceClient()
         self.mock.load_markets()
         
         # 엔진 및 의존성 주입 초기화

@@ -73,6 +73,26 @@ def get_win_rate() -> float:
     return round(wins / total * 100, 1)
 
 
+def reset_stats(current_balance: float):
+    """stats.json 데이터를 현재 자산 및 현재각 기준(0)으로 초기화"""
+    from datetime import datetime, timedelta
+    now_kst = datetime.utcnow() + timedelta(hours=9)
+    now_str = now_kst.strftime("%Y-%m-%d %H:%M:%S")
+    
+    data = {
+        "today_date": now_kst.strftime("%Y-%m-%d"),
+        "orders_today": 0,
+        "daily_pnl_usdt": 0.0,
+        "total_pnl_usdt": 0.0,
+        "total_trades": 0,
+        "total_wins": 0,
+        "total_losses": 0,
+        "seed_money": current_balance,
+        "perf_start_time": now_str,
+    }
+    _write(data)
+
+
 def _default() -> Dict:
     return {
         "today_date": str(date.today()),
@@ -82,6 +102,8 @@ def _default() -> Dict:
         "total_trades": 0,
         "total_wins": 0,
         "total_losses": 0,
+        "seed_money": 30.0,
+        "perf_start_time": "2026-05-19 00:00:00",
     }
 
 

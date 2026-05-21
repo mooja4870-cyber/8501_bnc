@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard
+AI QUANTUM — Binance Auto-Trading Dashboard
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -13,7 +13,7 @@ import time
 import os
 from dotenv import load_dotenv
 
-from core.exchange import OKXClient
+from core.exchange import BinanceClient
 from core.scanner import Scanner
 from core.trader import AutoTrader
 from core.engine import QuantumEngine
@@ -24,7 +24,7 @@ load_dotenv(override=True)
 
 # ── 페이지 설정 ───────────────────────────────────────
 st.set_page_config(
-    page_title="AI QUANTUM · OKX Trader",
+    page_title="AI QUANTUM · Binance Trader",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -144,7 +144,7 @@ st.markdown(
     /* 로고 */
     .quantum-logo {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 1.1rem;
+        font-size: calc(1.1rem * 1.44);
         font-weight: 700;
         color: var(--terminal-accent);
         border-bottom: 2px solid var(--terminal-accent);
@@ -322,15 +322,19 @@ def init_session():
             st.session_state[k] = v
 
     # .env 값이 있으면 UI 입력창 세션 상태 강제 초기화
-    for state_key, env_key in [("api_key_input", "OKX_API_KEY"), 
-                               ("secret_input", "OKX_SECRET_KEY"), 
-                               ("pass_input", "OKX_PASSPHRASE")]:
-        env_val = os.getenv(env_key, "")
+    for state_key, env_keys in [("api_key_input", ["BINANCE_API_KEY", "OKX_API_KEY"]), 
+                                ("secret_input", ["BINANCE_SECRET_KEY", "OKX_SECRET_KEY"]), 
+                                ("pass_input", ["BINANCE_PASSPHRASE", "OKX_PASSPHRASE"])]:
+        env_val = ""
+        for k in env_keys:
+            env_val = os.getenv(k, "")
+            if env_val:
+                break
         if env_val and (state_key not in st.session_state or not st.session_state[state_key]):
             st.session_state[state_key] = env_val
 
 def connect_api(api_key, secret_key, passphrase):
-    if not api_key or not secret_key or not passphrase:
+    if not api_key or not secret_key:
         return False, "❌ API 키를 모두 입력해주세요."
     
     engine: QuantumEngine = st.session_state.engine
@@ -358,10 +362,10 @@ def sync_p(src_key: str, dst_key: str, cfg_attr: str, is_pct: bool = False):
         setattr(CFG, cfg_attr, val)
 
 if not st.session_state.api_connected:
-    ak = os.getenv("OKX_API_KEY", "")
-    sk = os.getenv("OKX_SECRET_KEY", "")
-    pw = os.getenv("OKX_PASSPHRASE", "")
-    if ak and sk and pw:
+    ak = os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY", "")
+    sk = os.getenv("BINANCE_SECRET_KEY") or os.getenv("OKX_SECRET_KEY", "")
+    pw = os.getenv("BINANCE_PASSPHRASE") or os.getenv("OKX_PASSPHRASE", "")
+    if ak and sk:
         connect_api(ak, sk, pw)
 
 
@@ -383,7 +387,12 @@ PLOT_LAYOUT = dict(
 
 with st.sidebar:
     st.markdown(
-        '<div class="quantum-logo" style="letter-spacing:-0.5px;">MACD-BB-EMA<br><span style="font-size:0.75rem;">v1.4.10</span></div>',
+        '<div class="quantum-logo" style="letter-spacing:-0.5px;" '
+        'title="[AKMCD + SSL 하이브리드 전략]&#10;'
+        '1. SSL 채널: 전체 추세 필터링 (파란선 위: 롱, 빨간선 아래: 숏)&#10;'
+        '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
+        '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착">'
+        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.0.1</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -394,20 +403,20 @@ with st.sidebar:
     )
 
     api_key = st.text_input(
-        "API Key", value=os.getenv("OKX_API_KEY", ""), type="password", key="api_key_input"
+        "API Key", value=os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY", ""), type="password", key="api_key_input"
     )
     secret_key = st.text_input(
-        "Secret Key", value=os.getenv("OKX_SECRET_KEY", ""), type="password", key="secret_input"
+        "Secret Key", value=os.getenv("BINANCE_SECRET_KEY") or os.getenv("OKX_SECRET_KEY", ""), type="password", key="secret_input"
     )
     passphrase = st.text_input(
-        "Passphrase", value=os.getenv("OKX_PASSPHRASE", ""), type="password", key="pass_input"
+        "Passphrase (Optional)", value=os.getenv("BINANCE_PASSPHRASE") or os.getenv("OKX_PASSPHRASE", ""), type="password", key="pass_input"
     )
 
-    if st.button("🔗  OKX 연결", use_container_width=True):
+    if st.button("🔗  Binance 연결", use_container_width=True):
         with st.spinner("연결 중..."):
-            ak = api_key if api_key else os.getenv("OKX_API_KEY", "")
-            sk = secret_key if secret_key else os.getenv("OKX_SECRET_KEY", "")
-            pw = passphrase if passphrase else os.getenv("OKX_PASSPHRASE", "")
+            ak = api_key if api_key else (os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY", ""))
+            sk = secret_key if secret_key else (os.getenv("BINANCE_SECRET_KEY") or os.getenv("OKX_SECRET_KEY", ""))
+            pw = passphrase if passphrase else (os.getenv("BINANCE_PASSPHRASE") or os.getenv("OKX_PASSPHRASE", ""))
             success, msg = connect_api(ak, sk, pw)
             if success:
                 st.success(msg)
@@ -451,8 +460,8 @@ with st.sidebar:
     st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#ff9900; letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">[ STRATEGY ENGINE ]</p>', unsafe_allow_html=True)
     
     with st.expander("📊 지표 및 스캐너 설정", expanded=False):
-        st.number_input("EMA 기간", 10, 500, CFG.EMA_PERIOD, step=10, key="sb_ema_period", 
-                        on_change=sync_p, args=("sb_ema_period", "main_ema_period", "EMA_PERIOD"))
+        st.number_input("SSL 기간", 2, 100, CFG.SSL_PERIOD, step=1, key="sb_ssl_period", 
+                        on_change=sync_p, args=("sb_ssl_period", "main_ssl_period", "SSL_PERIOD"))
         # [v1.3.02] 타임프레임 원격 제어 추가
         tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
         st.selectbox("타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="sb_timeframe",
@@ -483,31 +492,12 @@ with st.sidebar:
                         on_change=sync_p, args=("sb_margin", "main_margin", "MARGIN_USDT"))
         st.number_input("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="sb_max_pos",
                         on_change=sync_p, args=("sb_max_pos", "main_max_pos", "MAX_POSITIONS"))
-        st.number_input("타임아웃 (시간)", 0.5, 24.0, float(CFG.MAX_HOLDING_HOURS), step=0.5, key="sb_timeout",
-                        on_change=sync_p, args=("sb_timeout", "main_timeout", "MAX_HOLDING_HOURS"))
 
     with st.expander("🛡️ 리스크 및 한도 설정", expanded=True):
         st.number_input("익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="sb_tp",
                         on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True))
         st.number_input("손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
                         on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True))
-        st.number_input("MDD 한도 (%)", 5.0, 50.0, float(CFG.MAX_DRAWDOWN_PCT * 100), step=1.0, key="sb_mdd",
-                        on_change=sync_p, args=("sb_mdd", "main_mdd", "MAX_DRAWDOWN_PCT", True))
-        st.number_input("일일 손실 한도 (USDT)", 5.0, 500.0, CFG.DAILY_LOSS_LIMIT_USDT, key="sb_daily_loss",
-                        on_change=sync_p, args=("sb_daily_loss", "main_daily_loss", "DAILY_LOSS_LIMIT_USDT"))
-
-    with st.expander("🔄 포지션 로테이션 설정", expanded=False):
-        st.toggle("로테이션 활성화", value=CFG.ROTATION_ENABLED, key="sb_rotation_enabled",
-                  on_change=sync_p, args=("sb_rotation_enabled", "main_rotation_enabled", "ROTATION_ENABLED"))
-        st.number_input("갈아타기 대상 티커", 1, 10, CFG.ROTATION_MIN_SIGNALS, step=1, key="sb_rotation_min_signals",
-                        on_change=sync_p, args=("sb_rotation_min_signals", "main_rotation_min_signals", "ROTATION_MIN_SIGNALS"),
-                        help="'지금 들어가면 돈 벌 수 있을 것 같은 새로운 코인'이 최소 몇 개 이상 대기하고 있어야 기존 안 되는 포지션을 갈아탈지 정하는 숫자예요. 예를 들어 3이면, 스캐너가 유망 신호 3개 이상을 찾았을 때만 교체를 시도해요.")
-        st.number_input("정체 판단 시간 (시간)", 0.5, 24.0, float(CFG.ROTATION_STALE_HOURS), step=0.5, key="sb_rotation_stale_hours",
-                        on_change=sync_p, args=("sb_rotation_stale_hours", "main_rotation_stale_hours", "ROTATION_STALE_HOURS"),
-                        help="코인을 산 뒤 '이 시간'이 지나도 가격이 안 오르고 멍하니 있으면 '이 코인 흐름 안 좋네' 하고 판단하기 시작하는 시간이에요. 예를 들어 1.5시간이면, 1시간 반 동안 가격이 찔끔찔끔 움직이거나 오히려 내려가면 '이건 아닌가보다' 하고 체크해요.")
-        st.selectbox("흐름 판단 기준", ["momentum", "flat", "time"], index=["momentum", "flat", "time"].index(CFG.ROTATION_FLOW_CHECK), key="sb_rotation_flow_check",
-                     on_change=sync_p, args=("sb_rotation_flow_check", "main_rotation_flow_check", "ROTATION_FLOW_CHECK"),
-                     help="정체 포지션이 '흐름이 나쁘다'를 어떤 기준으로 판단할지 고르는 거예요.\n\n• momentum: 15분봉 이동평균선(EMA20) 아래로 가격이 내려갔으면 '추세가 꺾였다'고 보고 교체 (추천!!)\n• flat: 가격이 거의 안 움직이고 멈춰있으면 '이 코인 죽었다'고 보고 교체\n• time: 일정 시간이 지났는데 수익이 거의 없으면 '시간 낭비'라고 보고 교체")
 
 # ══════════════════════════════════════════════════════
 # 메인 헤더 (한 줄 배치)
@@ -552,7 +542,6 @@ tabs = st.tabs([
     "📋  매매 이력",
     "🎯  포지션 진입",
     "🚀  TP/SL 최적화기",
-    "📈  오토피팅 이력",
     "⚙️  설정",
 ])
 
@@ -565,7 +554,7 @@ with tabs[0]:
     engine: QuantumEngine = st.session_state.engine
 
     if not st.session_state.api_connected or not engine.is_ready:
-        st.info("사이드바에서 OKX API를 연결하세요.")
+        st.info("사이드바에서 Binance API를 연결하세요.")
     else:
         # ── 데이터 통합 조회 ──────────────────────────
         dash = engine.get_dashboard_data()
@@ -821,7 +810,7 @@ with tabs[0]:
             <div class="metric-bar-container">
                 <!-- 누적 수익률 -->
                 <div class="terminal-metric-item">
-                    <div class="terminal-metric-label">누적 수익률</div>
+                    <div class="terminal-metric-label" title="${seed_money:,.2f}가 원금">누적 수익률</div>
                     <div class="terminal-metric-value" style="color:{total_color};">{total_pnl_pct:+.2f}%</div>
                     <div class="terminal-metric-sub" style="color:#ffffff;">
                         <span>{daily_arrow}</span> {abs(daily_pnl_pct):.2f}% (24h)
@@ -864,6 +853,22 @@ with tabs[0]:
             unsafe_allow_html=True,
         )
 
+        # [v1.4.11] 누적 데이터 및 통계 초기화 긴 버튼 추가
+        if st.button("📊  수익율,승률 초기화", use_container_width=True, key="dashboard_stats_reset",
+                     help="이 버튼을 누르면 지금까지 쌓인 누적 수익률, 승률(W/L), 주문 횟수 등 모든 성적표가 싹 다 0으로 리셋됩니다. 현재 총 잔고를 새로운 '시드 머니'로 잡고 현재 시각부터 기록을 시작합니다."):
+            d_data = engine.get_dashboard_data()
+            current_bal = d_data.get("total_balance", 30.0)
+            if current_bal <= 0:
+                current_bal = 30.0
+            stats_store.reset_stats(current_bal)
+            if engine and engine.trader:
+                engine.trader.daily_pnl_usdt = 0.0
+                engine.trader.orders_today = 0
+            st.toast("✅ 모든 누적 통계 데이터가 현재 시각 및 총 잔고 기준으로 초기화되었습니다.")
+            time.sleep(0.5)
+            st.rerun()
+
+
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # TAB 2: 스캐너
@@ -873,7 +878,7 @@ with tabs[1]:
     engine: QuantumEngine = st.session_state.engine
 
     if not st.session_state.api_connected or not engine.is_ready:
-        st.info("사이드바에서 OKX API를 연결하세요.")
+        st.info("사이드바에서 Binance API를 연결하세요.")
     else:
         # 상태 배지 및 마지막 스캔 시각 표시 영역
         last = engine.scanner.last_scan_time if engine.scanner else None
@@ -958,7 +963,7 @@ with tabs[2]:
     engine: QuantumEngine = st.session_state.engine
 
     if not st.session_state.api_connected or not engine.is_ready:
-        st.info("사이드바에서 OKX API를 연결하세요.")
+        st.info("사이드바에서 Binance API를 연결하세요.")
     else:
         h1, h2 = st.columns([2, 1])
         with h1:
@@ -1069,16 +1074,16 @@ with tabs[3]:
             """
             <div style="background:#0f0f0f; border:1px solid #444; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:5px;">
                 <p style="font-family:'Inter'; font-size:1.25rem; color:#ffcc00; margin:0; line-height:1.5; text-align:center; font-weight:600;">
-                "🌊 큰 파도가 으쌰으쌰 밀어주고, ⚽ 바닥 찍고 팅겨오른 공이, 🚀 로켓 엔진까지 점화했는데, 🔋 아직 배터리 여유까지 빵빵할 때! 바로 이때가 인생 롱(LONG) 타이밍이야!"
+                "🌊 큰 파도(SSL)가 위에서 밀어주고, 🟢 AKMCD 점이 상승 전환되었으며, 🚀 히스토그램 강도마저 양수로 돌파하고, 🔵 캔들마저 양봉(Blue)일 때 롱 진입합니다!"
                 </p>
             </div>
             """, 
             unsafe_allow_html=True
         )
-        st.markdown("- **추세:** 현재가가 EMA 보다 높음 <span style='color:#ffcc00;'>☞ 큰 파도가 위로 치고 있는지 확인하는 거야. 파도가 올라갈 때 타야 멀리 가니까, '지금은 대세 상승장이다!'라는 걸 확인하는 거지.</span>", unsafe_allow_html=True)
-        st.markdown("- **반등:** 최근 2캔들 내 볼린저 밴드 하단 터치 후 상승 돌파 <span style='color:#ffcc00;'>☞ 바닥에 탱탱볼을 던진 것과 같아. 바닥을 튀기고 올라오기 시작할 때가 '이제 진짜 올라갈 때'라는 걸 알려주는 거야.</span>", unsafe_allow_html=True)
-        st.markdown("- **모멘텀:** MACD 히스토그램이 상승 반전 (음수에서 양의 방향) <span style='color:#ffcc00;'>☞ 자동차가 후진하다가 멈추고 이제 막 전진 기어를 넣은 상태야. '이제 힘의 방향이 위로 바뀌었다!'는 증거를 잡는 거지.</span>", unsafe_allow_html=True)
-        st.markdown("- **필터:** RSI < 60 (과매수 아님) <span style='color:#ffcc00;'>☞ 식당에 줄이 너무 길면 들어가기 힘들지? 사람들이 너무 많이 사서 지치기 전인지 확인해서, '아직 더 올라갈 자리가 넉넉하다'는 걸 체크하는 거야.</span>", unsafe_allow_html=True)
+        st.markdown("- **추세:** 현재 종가가 SSL 파란선(ssl_up) 위 <span style='color:#ffcc00;'>☞ 대세 상승 추세인지 확인합니다.</span>", unsafe_allow_html=True)
+        st.markdown("- **반전:** AKMCD 도트 색상이 빨간색에서 초록색으로 변경 <span style='color:#ffcc00;'>☞ 단기 모멘텀이 상승으로 전환되었음을 의미합니다.</span>", unsafe_allow_html=True)
+        st.markdown("- **모멘텀:** MACD 히스토그램이 영선(0) 위 <span style='color:#ffcc00;'>☞ MACD가 시그널 선보다 높게 있어 힘이 실렸음을 나타냅니다.</span>", unsafe_allow_html=True)
+        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가보다 높은 양봉(Blue) <span style='color:#ffcc00;'>☞ 실시간 매수세가 우위임을 확인합니다.</span>", unsafe_allow_html=True)
 
     with c2:
         st.markdown("**🔴 SHORT 포지션 진입 조건**")
@@ -1086,16 +1091,16 @@ with tabs[3]:
             """
             <div style="background:#0f0f0f; border:1px solid #444; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:5px;">
                 <p style="font-family:'Inter'; font-size:1.25rem; color:#ffcc00; margin:0; line-height:1.5; text-align:center; font-weight:600;">
-                "📉 내리막길 경사가 아찔하고, 🤕 천장에 머리 콩 박고 내려오는데, 🌬 뒤에서 찬바람까지 쌩쌩 불고, 🧊 아직 꽁꽁 얼기 전이라 더 내려갈 수 있을 때! 그때가 바로 숏(SHORT) 칠 타이밍이지!"
+                "📉 내리막길(SSL) 경사가 가파르고, 🔴 AKMCD 점이 하락 전환되었으며, 🌬 히스토그램 강도마저 음수로 떨어지고, 🔴 캔들마저 음봉(Red)일 때 숏 진입합니다!"
                 </p>
             </div>
             """, 
             unsafe_allow_html=True
         )
-        st.markdown("- **추세:** 현재가가 EMA 보다 낮음 <span style='color:#ffcc00;'>☞ 지금은 내리막길인지 확인하는 거야. 내리막에서 공을 굴려야 잘 굴러가듯이, '지금은 대세 하락장이다!'라는 걸 먼저 확인하는 거지.</span>", unsafe_allow_html=True)
-        st.markdown("- **반등:** 최근 2캔들 내 볼린저 밴드 상단 터치 후 하락 돌파 <span style='color:#ffcc00;'>☞ 천장에 머리를 '콩' 하고 박은 거야. 너무 올라가서 천장을 찍었으니, '이제 아파서 내려올 일만 남았다'는 걸 포착하는 거지.</span>", unsafe_allow_html=True)
-        st.markdown("- **모멘텀:** MACD 히스토그램이 하락 반전 (양수에서 음의 방향) <span style='color:#ffcc00;'>☞ 신나게 달리던 선수가 숨이 차서 속도를 줄이기 시작한 거야. '이제 곧 멈추고 뒤로 밀릴 수 있겠다'는 신호를 미리 채는 거지.</span>", unsafe_allow_html=True)
-        st.markdown("- **필터:** RSI > 40 (과매도 아님) <span style='color:#ffcc00;'>☞ 물건값이 너무 싸져서 다들 팔기 싫어하는 상태인지 보는 거야. '아직은 팔려는 사람들이 더 많고, 더 내려갈 힘이 있다'는 걸 확인하는 거지.</span>", unsafe_allow_html=True)
+        st.markdown("- **추세:** 현재 종가가 SSL 빨간선(ssl_down) 아래 <span style='color:#ffcc00;'>☞ 대세 하락 추세인지 확인합니다.</span>", unsafe_allow_html=True)
+        st.markdown("- **반전:** AKMCD 도트 색상이 초록색에서 빨간색으로 변경 <span style='color:#ffcc00;'>☞ 단기 모멘텀이 하락으로 전환되었음을 의미합니다.</span>", unsafe_allow_html=True)
+        st.markdown("- **모멘텀:** MACD 히스토그램이 영선(0) 아래 <span style='color:#ffcc00;'>☞ MACD가 시그널 선보다 낮게 있어 낙폭이 예상됨을 나타냅니다.</span>", unsafe_allow_html=True)
+        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가 이하인 음봉(Red) <span style='color:#ffcc00;'>☞ 실시간 매도세가 우위임을 확인합니다.</span>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown(
@@ -1106,13 +1111,13 @@ with tabs[3]:
     # 프리셋 정의
     PRESETS = {
         "기본 (Stable)": {
-            "ema": 200, "bb_p": 20, "bb_s": 2.0, "macd_f": 12, "macd_sl": 26, "macd_si": 9
+            "ssl_p": 10, "bb_p": 20, "bb_s": 2.0, "macd_f": 12, "macd_sl": 26, "macd_si": 9
         },
         "1차 공격적 (Trend)": {
-            "ema": 100, "bb_p": 20, "bb_s": 1.8, "macd_f": 10, "macd_sl": 22, "macd_si": 7
+            "ssl_p": 8, "bb_p": 20, "bb_s": 1.8, "macd_f": 10, "macd_sl": 22, "macd_si": 7
         },
         "2차 공격적 (Scalping)": {
-            "ema": 50, "bb_p": 14, "bb_s": 1.5, "macd_f": 8, "macd_sl": 18, "macd_si": 5
+            "ssl_p": 6, "bb_p": 14, "bb_s": 1.5, "macd_f": 8, "macd_sl": 18, "macd_si": 5
         }
     }
 
@@ -1121,7 +1126,7 @@ with tabs[3]:
     if st.button("🪄 프리셋 적용"):
         p = PRESETS[preset_name]
         st.session_state.active_preset = preset_name
-        CFG.EMA_PERIOD = p["ema"]
+        CFG.SSL_PERIOD = p["ssl_p"]
         CFG.BB_PERIOD = p["bb_p"]
         CFG.BB_STD = p["bb_s"]
         CFG.MACD_FAST = p["macd_f"]
@@ -1133,8 +1138,8 @@ with tabs[3]:
 
     p1, p2, p3 = st.columns(3)
     with p1:
-        st.number_input("EMA 기간", 10, 500, CFG.EMA_PERIOD, step=10, key="main_ema_period",
-                        on_change=sync_p, args=("main_ema_period", "sb_ema_period", "EMA_PERIOD"))
+        st.number_input("SSL 기간", 2, 100, CFG.SSL_PERIOD, step=1, key="main_ssl_period",
+                        on_change=sync_p, args=("main_ssl_period", "sb_ssl_period", "SSL_PERIOD"))
         # [v1.3.02] 타임프레임 원격 제어 추가
         tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
         st.selectbox("타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="main_timeframe",
@@ -1167,7 +1172,7 @@ with tabs[4]:
     )
     
     if not st.session_state.api_connected or not engine.is_ready:
-        st.info("사이드바에서 OKX API를 연결하세요.")
+        st.info("사이드바에서 Binance API를 연결하세요.")
     else:
         # 현재 로컬 CSV 거래 개수 확인
         import os
@@ -1181,13 +1186,6 @@ with tabs[4]:
             except Exception:
                 pass
                 
-        # 자동 최적 피팅 토글
-        autotune = st.toggle("🤖 실시간 익절/손절 자동 피팅 (Auto-Tuning)", 
-                             value=CFG.AUTO_TUNE_SL_TP,
-                             help="포지션이 청산될 때마다 거래소 데이터를 분석하여 자동으로 최적의 손익비를 즉시 수정하여 live 적용합니다.")
-        if autotune != CFG.AUTO_TUNE_SL_TP:
-            CFG.AUTO_TUNE_SL_TP = autotune
-            st.toast(f"✅ 실시간 손익비 자동 피팅이 {'활성화' if autotune else '비활성화'} 되었습니다.")
 
         st.metric("로컬 CSV에 저장된 매칭 완료 거래 수", f"{trade_count} 건")
         
@@ -1195,7 +1193,7 @@ with tabs[4]:
         with c_sync:
             if st.button("🔄 거래소 최근 100건 매매기록 로컬 동기화", 
                          use_container_width=True,
-                         help="OKX 거래소의 최근 100개 체결 기록을 즉시 로컬 'trade_history.csv'에 오름차순으로 동기화(복구)합니다. 분석용 매매 기록이 누락되었거나 부족할 때 사용하세요."):
+                         help="Binance 거래소의 최근 100개 체결 기록을 즉시 로컬 'trade_history.csv'에 오름차순으로 동기화(복구)합니다. 분석용 매매 기록이 누락되었거나 부족할 때 사용하세요."):
                 with st.spinner("거래소 역사적 거래 내역 동기화 중..."):
                     engine.sync_trades_to_csv()
                     st.success("거래소 거래 기록 로컬 CSV 동기화 완료!")
@@ -1227,7 +1225,7 @@ with tabs[4]:
                     with m_win:
                         st.metric("예상 시뮬레이션 승률", f"{res['optimal_winrate']}%")
                         
-                    st.info(f"✨ 해당 익절/손절 비율 적용 시 예상 가상 PnL: **{res['optimal_pnl']} USDT** (10배 레버리지 기준)")
+                    st.info(f"✨ 해당 익절/손절 비율 적용 시 예상 가상 PnL: **{res['optimal_pnl']} USDT** ({CFG.LEVERAGE}배 레버리지 기준)")
                     
                     # 상세 표 표시
                     st.subheader("📋 거래별 MAE / MFE 상세 분석")
@@ -1247,46 +1245,10 @@ with tabs[4]:
                             hide_index=True
                         )
 
-# TAB 6: 오토피팅 이력
+# TAB 6: 설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with tabs[5]:
-    st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">AUTO-TUNING HISTORY LOG</p>',
-        unsafe_allow_html=True,
-    )
-    st.write("실시간 손익비 자동 피팅(Auto-Tuning) 엔진이 계산하고 적용한 **모든 변동 내역의 역사적 히스토리**를 모니터링합니다.")
-
-    from core.logger import AUTOTUNE_LOG_FILE
-    if os.path.exists(AUTOTUNE_LOG_FILE):
-        try:
-            df_at = pd.read_csv(AUTOTUNE_LOG_FILE, encoding="utf-8-sig")
-            if not df_at.empty:
-                df_at = df_at.iloc[::-1]  # 최신순 정렬
-                st.dataframe(
-                    df_at.style.format({
-                        "이전_익절(%)": "{:.2f}%",
-                        "이전_손절(%)": "{:.2f}%",
-                        "변경_익절(%)": "{:.2f}%",
-                        "변경_손절(%)": "{:.2f}%",
-                        "예상승률(%)": "{:.1f}%",
-                        "예상수익(USDT)": "{:+.2f} USDT",
-                        "대상거래수": "{:d} 건"
-                    }),
-                    use_container_width=True,
-                    hide_index=True
-                )
-            else:
-                st.markdown("<p style='color:#666;font-family:monospace;font-size:0.85rem;'>자동 피팅 이력 없음 — 자동 피팅 기능 활성화 후 포지션이 청산되면 이력이 여기에 실시간으로 쌓입니다.</p>", unsafe_allow_html=True)
-        except Exception as e:
-            st.error(f"이력 로드 실패: {e}")
-    else:
-        st.markdown("<p style='color:#666;font-family:monospace;font-size:0.85rem;'>자동 피팅 이력 없음 — 자동 피팅 기능 활성화 후 포지션이 청산되면 이력이 여기에 실시간으로 쌓입니다.</p>", unsafe_allow_html=True)
-
-# TAB 7: 설정
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-with tabs[6]:
     st.markdown(
         '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">STRATEGY PARAMETERS</p>',
         unsafe_allow_html=True,
@@ -1302,8 +1264,6 @@ with tabs[6]:
                         on_change=sync_p, args=("main_max_pos", "sb_max_pos", "MAX_POSITIONS"))
         st.number_input("*** 스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10, key="main_scan_interval",
                         on_change=sync_p, args=("main_scan_interval", "sb_scan_interval", "SCAN_INTERVAL_SEC"))
-        st.number_input("강제 청산 타임아웃 (시간)", 0.5, 24.0, float(CFG.MAX_HOLDING_HOURS), step=0.5, key="main_timeout",
-                        on_change=sync_p, args=("main_timeout", "sb_timeout", "MAX_HOLDING_HOURS"))
 
     with s2:
         st.number_input("익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",
@@ -1312,30 +1272,6 @@ with tabs[6]:
                         on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True))
         st.number_input("*** 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
                         on_change=sync_p, args=("main_min_vol", "sb_min_vol", "MIN_VOLUME_USDT"))
-        st.number_input("MDD 한도 (%)", 5.0, 50.0, float(CFG.MAX_DRAWDOWN_PCT * 100), step=1.0, key="main_mdd",
-                        on_change=sync_p, args=("main_mdd", "sb_mdd", "MAX_DRAWDOWN_PCT", True))
-        st.number_input("일일 손실 한도 (USDT)", 5.0, 500.0, float(CFG.DAILY_LOSS_LIMIT_USDT), key="main_daily_loss",
-                        on_change=sync_p, args=("main_daily_loss", "sb_daily_loss", "DAILY_LOSS_LIMIT_USDT"))
-
-    st.markdown("---")
-    st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">🔄 PORTFOLIO ROTATION PARAMETERS</p>',
-        unsafe_allow_html=True,
-    )
-    s3, s4 = st.columns(2)
-    with s3:
-        st.toggle("정체 포지션 로테이션 활성화", value=CFG.ROTATION_ENABLED, key="main_rotation_enabled",
-                  on_change=sync_p, args=("main_rotation_enabled", "sb_rotation_enabled", "ROTATION_ENABLED"))
-        st.number_input("갈아타기 대상 티커", 1, 10, CFG.ROTATION_MIN_SIGNALS, step=1, key="main_rotation_min_signals",
-                        on_change=sync_p, args=("main_rotation_min_signals", "sb_rotation_min_signals", "ROTATION_MIN_SIGNALS"),
-                        help="'지금 들어가면 돈 벌 수 있을 것 같은 새로운 코인'이 최소 몇 개 이상 대기하고 있어야 기존 안 되는 포지션을 갈아탈지 정하는 숫자예요. 예를 들어 3이면, 스캐너가 유망 신호 3개 이상을 찾았을 때만 교체를 시도해요.")
-    with s4:
-        st.number_input("정체 판단 시간 (시간)", 0.5, 24.0, float(CFG.ROTATION_STALE_HOURS), step=0.5, key="main_rotation_stale_hours",
-                        on_change=sync_p, args=("main_rotation_stale_hours", "sb_rotation_stale_hours", "ROTATION_STALE_HOURS"),
-                        help="코인을 산 뒤 '이 시간'이 지나도 가격이 안 오르고 멍하니 있으면 '이 코인 흐름 안 좋네' 하고 판단하기 시작하는 시간이에요. 예를 들어 1.5시간이면, 1시간 반 동안 가격이 찔끔찔끔 움직이거나 오히려 내려가면 '이건 아닌가보다' 하고 체크해요.")
-        st.selectbox("흐름 판단 기준", ["momentum", "flat", "time"], index=["momentum", "flat", "time"].index(CFG.ROTATION_FLOW_CHECK), key="main_rotation_flow_check",
-                     on_change=sync_p, args=("main_rotation_flow_check", "sb_rotation_flow_check", "ROTATION_FLOW_CHECK"),
-                     help="정체 포지션이 '흐름이 나쁘다'를 어떤 기준으로 판단할지 고르는 거예요.\n\n• momentum: 15분봉 이동평균선(EMA20) 아래로 가격이 내려갔으면 '추세가 꺾였다'고 보고 교체 (추천!!)\n• flat: 가격이 거의 안 움직이고 멈춰있으면 '이 코인 죽었다'고 보고 교체\n• time: 일정 시간이 지났는데 수익이 거의 없으면 '시간 낭비'라고 보고 교체")
 
     st.markdown("---")
     st.markdown(
@@ -1353,13 +1289,16 @@ with tabs[6]:
         unsafe_allow_html=True,
     )
     
-    if st.button("📊  누적 데이터 및 통계 초기화", use_container_width=True,
+    if st.button("📊  수익율,승률 초기화", use_container_width=True,
                  help="이 버튼을 누르면 지금까지 쌓인 누적 수익률, 승률(몇 번 이기고 졌는지), 주문 횟수 같은 모든 성적표가 싹 다 0으로 리셋돼요! 현재 잔고를 새로운 '원금'으로 잡고 처음부터 다시 기록을 시작해요. 한 번 누르면 되돌릴 수 없으니 신중하게!"):
         d_data = engine.get_dashboard_data()
         current_bal = d_data.get("total_balance", 30.0)
         if current_bal <= 0:
             current_bal = 30.0
         stats_store.reset_stats(current_bal)
+        if engine and engine.trader:
+            engine.trader.daily_pnl_usdt = 0.0
+            engine.trader.orders_today = 0
         st.toast("✅ 누적 수익률, 승률, 주문수 등 모든 통계 데이터가 현재 시간 기준으로 초기화되었습니다.")
         time.sleep(0.5)
         st.rerun()

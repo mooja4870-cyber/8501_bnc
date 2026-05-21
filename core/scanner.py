@@ -8,7 +8,7 @@ import logging
 from typing import List, Dict, Callable, Optional
 from datetime import datetime
 
-from core.exchange import OKXClient
+from core.exchange import BinanceClient
 from core.strategy import StrategyEngine, Signal
 from core.config import CFG
 
@@ -23,7 +23,7 @@ class Scanner:
     - Streamlit session_state와 연동하여 UI 실시간 업데이트
     """
 
-    def __init__(self, client: OKXClient):
+    def __init__(self, client: BinanceClient):
         self.client = client
         self.strategy = StrategyEngine()
         self.cfg = CFG
@@ -88,6 +88,14 @@ class Scanner:
                 vol = ticker.get("volume", 0)
                 if vol < self.cfg.MIN_VOLUME_USDT:
                     continue
+
+                # 스프레드 필터 — 호가 갭이 넓은 저유동성 종목 차단
+                bid = ticker.get("bid", 0)
+                ask = ticker.get("ask", 0)
+                if bid and ask and ask > 0:
+                    spread_pct = (ask - bid) / ask * 100
+                    if spread_pct > self.cfg.MAX_SPREAD_PCT:
+                        continue
 
                 df = self.client.get_ohlcv(sym, limit=250)
                 if df.empty:
