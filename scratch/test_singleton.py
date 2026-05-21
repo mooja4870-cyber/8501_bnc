@@ -8,12 +8,12 @@ from core.engine import QuantumEngine
 def test_singleton():
     print("--- Singleton Verification Test ---")
     
-    # 첫 번째 인스턴스 생성
-    engine1 = QuantumEngine()
+    # get_instance() 호출
+    engine1 = QuantumEngine.get_instance()
     print(f"Engine 1 ID: {id(engine1)}")
     
-    # 두 번째 인스턴스 생성
-    engine2 = QuantumEngine()
+    # 두 번째 get_instance() 호출
+    engine2 = QuantumEngine.get_instance()
     print(f"Engine 2 ID: {id(engine2)}")
     
     # 두 객체가 동일한지 비교
@@ -21,9 +21,9 @@ def test_singleton():
     print(f"Are they the same instance? {is_same}")
     
     if is_same:
-        print("\n✅ 증빙 완료: 두 객체의 메모리 주소가 동일합니다. 전역적으로 단 하나의 엔진만 존재합니다.")
+        print("[SUCCESS] Both variables point to the exact same memory address. Singleton verified.")
     else:
-        print("\n❌ 증빙 실패: 두 객체가 서로 다릅니다.")
+        print("[FAILED] Variables point to different memory addresses.")
 
 if __name__ == "__main__":
     test_singleton()

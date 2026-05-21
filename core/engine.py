@@ -53,6 +53,18 @@ class QuantumEngine:
     - FSM 기반 명시적 상태 관리
     - 모듈별 Health 모니터링
     """
+    _instance = None
+    _instance_lock = threading.Lock()
+
+    @classmethod
+    def get_instance(cls):
+        """전역 단일 엔진(Singleton) 반환"""
+        if cls._instance is None:
+            with cls._instance_lock:
+                if cls._instance is None:
+                    cls._instance = cls()
+        return cls._instance
+
     def __init__(self):
         self.client: Optional[BinanceClient] = None
         self.scanner: Optional[Scanner] = None
@@ -99,6 +111,11 @@ class QuantumEngine:
 
     def initialize(self, api_key: str, secret_key: str, passphrase: str) -> tuple[bool, str]:
         """API 연결 및 모듈 초기화"""
+        # 만약 이미 초기화되어 있고 API Key가 동일하며 에러 상태가 아닌 경우, 재연결 건너뜀
+        if self._initialized and self._state != EngineState.ERROR and self._api_key == api_key and self._secret_key == secret_key and self._passphrase == passphrase:
+            logger.info("[ENGINE] 이미 동일한 API 키로 정상 작동 중이므로 초기화를 건너뜁니다.")
+            return True, "✅ 엔진이 이미 활성화되어 있습니다."
+
         self._transition(EngineState.CONNECTING, "API 연결 시도")
 
         # 복구용 보관

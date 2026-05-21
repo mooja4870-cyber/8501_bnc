@@ -1,3 +1,4 @@
+| v2.0.6 | 2026-05-21 | [Core/Engine] Streamlit 다중 탭 접속 시 중복 스캔 스레드 실행 방지를 위한 Singleton 패턴 및 초기화 가드 구현 | Core/Engine |
 | v2.0.5 | 2026-05-21 | [Core/Scanner] Scanner Ticker 일괄 조회(fetch_tickers) 도입으로 REST API 호출 횟수 최적화 및 API Ban(Rate Limit 418) 차단 | Core/Scanner |
 | v2.0.4 | 2026-05-21 | [Core/Risk] 거래소 API 에러 발생 시 리스크 게이트 우회 방지 (예외 전파 및 Trader 예외 처리 적용), API 백오프 재시도 추가 | Core/Risk |
 | v2.0.3 | 2026-05-21 | [UI/UX] AKMCD-SSL-HYBRID 고정 매매기법에 맞추어 불필요한 '🚀 TP/SL 최적화기' 탭 삭제 및 탭 인덱스 조정 | UI/UX |

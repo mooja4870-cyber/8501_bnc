@@ -94,5 +94,41 @@ class TestE2EFlow:
         assert e.scanner.scan_count >= 0  # Mock이라 빠르게 완료
 
 
+class TestSingleton:
+    """Singleton 패턴 및 초기화 가드 검증"""
+
+    def test_constructor_returns_different_instances(self):
+        e1 = QuantumEngine()
+        e2 = QuantumEngine()
+        assert e1 is not e2
+
+    def test_get_instance_returns_same_instance(self):
+        e1 = QuantumEngine.get_instance()
+        e2 = QuantumEngine.get_instance()
+        assert e1 is e2
+
+    def test_initialize_guard_skips_reconnection(self):
+        e = QuantumEngine()
+        from core.mock_exchange import MockBinanceClient
+        from core.scanner import Scanner
+        from core.trader import AutoTrader
+
+        mock = MockBinanceClient()
+        mock.load_markets()
+        e.client = mock
+        e.scanner = Scanner(mock)
+        e.trader = AutoTrader(mock)
+        e._initialized = True
+        e._api_key = "test_key"
+        e._secret_key = "test_secret"
+        e._passphrase = "test_pass"
+        e._state = EngineState.CONNECTED
+
+        success, msg = e.initialize("test_key", "test_secret", "test_pass")
+        assert success is True
+        assert "이미 활성화되어 있습니다" in msg
+        assert e.client is mock
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

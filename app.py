@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from core.exchange import BinanceClient
 from core.scanner import Scanner
 from core.trader import AutoTrader
-from core.engine import QuantumEngine
+from core.engine import QuantumEngine, EngineState
 from core.config import CFG
 import core.stats as stats_store
 
@@ -308,12 +308,24 @@ st.markdown(
 # ── 세션 상태 초기화 ──────────────────────────────────
 
 def init_session():
+    engine = QuantumEngine.get_instance()
+    
+    # 만약 엔진이 이미 실행 중이라면 그 상태에 맞추어 세션 상태 초기화
+    is_trading = True
+    is_long = True
+    is_short = True
+    if engine.is_ready:
+        is_trading = (engine.state == EngineState.TRADING)
+        if engine.trader:
+            is_long = engine.trader.allow_long
+            is_short = engine.trader.allow_short
+
     defaults = {
-        "engine": QuantumEngine(),
-        "api_connected": False,
-        "auto_trading": True,
-        "allow_long": True,
-        "allow_short": True,
+        "engine": engine,
+        "api_connected": engine.is_ready,
+        "auto_trading": is_trading,
+        "allow_long": is_long,
+        "allow_short": is_short,
         "active_preset": "기본 (Stable)",
         "closing_symbols": set(), # [v1.2.52] 잔상 방지용 청산 대기 목록
     }
@@ -392,7 +404,7 @@ with st.sidebar:
         '1. SSL 채널: 전체 추세 필터링 (파란선 위: 롱, 빨간선 아래: 숏)&#10;'
         '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
         '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착">'
-        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.0.5</span></div>',
+        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.0.6</span></div>',
         unsafe_allow_html=True,
     )
 
