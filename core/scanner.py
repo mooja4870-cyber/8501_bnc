@@ -76,6 +76,13 @@ class Scanner:
         symbols = self.client.get_all_usdt_swap_symbols()
         self._log(f"[SCAN] 전종목 스캔 시작: {len(symbols)}개 페어")
 
+        # Ticker 일괄 조회로 API 호출 최적화 및 밴 방지
+        try:
+            tickers = self.client.get_tickers()
+        except Exception as e:
+            self._log(f"[ERR] Ticker 일괄 조회 실패: {e}")
+            return
+
         results = []
         signal_count = 0
 
@@ -83,8 +90,14 @@ class Scanner:
             if not self._running:
                 break
             try:
-                # 최소 거래대금 필터
-                ticker = self.client.get_ticker(sym)
+                # 일괄 조회된 딕셔너리에서 가져오기 (없으면 개별 조회 시도)
+                ticker = tickers.get(sym)
+                if not ticker:
+                    try:
+                        ticker = self.client.get_ticker(sym)
+                    except Exception:
+                        continue
+                
                 vol = ticker.get("volume", 0)
                 if vol < self.cfg.MIN_VOLUME_USDT:
                     continue

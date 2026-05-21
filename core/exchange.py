@@ -236,6 +236,30 @@ class BinanceClient:
             logger.error(f"OHLCV 조회 실패 ({symbol}): {e}")
             return pd.DataFrame()
 
+    def get_tickers(self) -> Dict[str, Dict]:
+        """전종목 현재가(Volume, Bid, Ask, Last 등) 일괄 조회"""
+        try:
+            raw_tickers = self._execute_with_retry(self.exchange.fetch_tickers)
+            tickers = {}
+            for sym, t in raw_tickers.items():
+                last_price = t.get("last", 0) or 0
+                usdt_vol = t.get("quoteVolume")
+                if not usdt_vol:
+                    base_vol = t.get("baseVolume", 0) or 0
+                    usdt_vol = base_vol * last_price if base_vol and last_price else 0
+                tickers[sym] = {
+                    "symbol": sym,
+                    "last": last_price,
+                    "bid": t.get("bid", 0) or 0,
+                    "ask": t.get("ask", 0) or 0,
+                    "volume": usdt_vol,
+                    "change_pct": round(t.get("percentage", 0) or 0, 2),
+                }
+            return tickers
+        except Exception as e:
+            logger.error(f"Tickers 일괄 조회 실패: {e}")
+            raise e
+
     def get_ticker(self, symbol: str) -> Dict:
         """현재가 조회"""
         try:

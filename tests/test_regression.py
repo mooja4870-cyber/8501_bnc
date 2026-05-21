@@ -95,6 +95,13 @@ class TestRegressionSuite:
         assert usdt_vol == 100.0 * 50000.0  # 5,000,000 USDT로 정상 계산되어야 함
         assert usdt_vol > 0
 
+    def test_regression_bulk_tickers_optimization(self):
+        """Bulk tickers fetch check to ensure scanner query overhead is reduced"""
+        tickers = self.mock.get_tickers()
+        assert len(tickers) > 0
+        assert "BTC/USDT:USDT" in tickers
+        assert tickers["BTC/USDT:USDT"]["volume"] > 0
+
     def test_regression_ghosting_prevention(self):
         """Regression 4: 청산 대기 캐시(closing_symbols)를 활용한 UI 포지션 즉시 은폐(잔상 방지) 로직 검증"""
         # UI 세션 캐시 모사

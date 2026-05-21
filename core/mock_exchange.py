@@ -266,6 +266,13 @@ class MockBinanceClient:
 
         return df.astype(float)
 
+    def get_tickers(self) -> Dict[str, Dict]:
+        """전종목 현재가 일괄 조회 (Mock)"""
+        res = {}
+        for sym in self.get_all_usdt_swap_symbols():
+            res[sym] = self.get_ticker(sym)
+        return res
+
     def get_ticker(self, symbol: str) -> Dict:
         base_prices = {
             "BTC/USDT:USDT": 67000.0,
