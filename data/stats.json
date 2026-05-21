@@ -1,11 +1,11 @@
 {
   "today_date": "2026-05-21",
-  "orders_today": 0,
-  "daily_pnl_usdt": 0.0,
-  "total_pnl_usdt": 0.0,
-  "total_trades": 0,
-  "total_wins": 5,
-  "total_losses": 0,
+  "orders_today": 5,
+  "daily_pnl_usdt": -2.0,
+  "total_pnl_usdt": -2.0,
+  "total_trades": 5,
+  "total_wins": 12,
+  "total_losses": 1,
   "seed_money": 40.5175,
   "perf_start_time": "2026-05-21 22:56:19"
 }

@@ -1,3 +1,4 @@
+| v2.0.2 | 2026-05-21 | [UI/UX] 스캐너 탭의 지표 컬럼명(EMA200, MACD, BB)을 기법에 맞추어 SSL 추세, AKMCD 영선, AKMCD 점전환으로 변경 | UI/UX |
 | v2.0.1 | 2026-05-21 | [Bugfix/FSM] ERROR 및 활성 상태에서 수동 API 연결 시도 시 EngineState.CONNECTING으로의 상태 전이 허용 | Core/Bugfix |
 | v2.0.0 | 2026-05-20 | [UI/UX] 보유 중인 포지션 카드 하단의 5분봉 가격/거래량 추이 그래프(Plotly Popover) 제거 | UI/UX |
 | v1.4.09 | 2026-05-19 | [UI/UX] 5분봉 추이 그래프(Popover)의 가로폭을 부모 컨테이너(100% 영역)로 레이아웃 이동하여 약 128% 확장 | UI/UX |

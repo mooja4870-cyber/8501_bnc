@@ -392,7 +392,7 @@ with st.sidebar:
         '1. SSL 채널: 전체 추세 필터링 (파란선 위: 롱, 빨간선 아래: 숏)&#10;'
         '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
         '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착">'
-        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.0.1</span></div>',
+        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.0.2</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -932,11 +932,11 @@ with tabs[1]:
 
             # 표시용 포맷
             display = df_scan[["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok"]].copy()
-            display.columns = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","EMA200","MACD","BB"]
+            display.columns = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","SSL 추세","AKMCD 영선","AKMCD 점전환"]
             display["신호"] = display["신호"].map({"long":"🟢 LONG","short":"🔴 SHORT","none":"— "})
-            display["EMA200"] = display["EMA200"].map({True:"✅",False:"❌"})
-            display["MACD"] = display["MACD"].map({True:"✅",False:"❌"})
-            display["BB"] = display["BB"].map({True:"✅",False:"❌"})
+            display["SSL 추세"] = display["SSL 추세"].map({True:"✅",False:"❌"})
+            display["AKMCD 영선"] = display["AKMCD 영선"].map({True:"✅",False:"❌"})
+            display["AKMCD 점전환"] = display["AKMCD 점전환"].map({True:"✅",False:"❌"})
 
             def style_pnl(val):
                 color = '#ef4444' if val >= 0 else '#3b82f6'
