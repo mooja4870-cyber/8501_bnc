@@ -1,3 +1,4 @@
+| v2.0.3 | 2026-05-21 | [UI/UX] AKMCD-SSL-HYBRID 고정 매매기법에 맞추어 불필요한 '🚀 TP/SL 최적화기' 탭 삭제 및 탭 인덱스 조정 | UI/UX |
 | v2.0.2 | 2026-05-21 | [UI/UX] 스캐너 탭의 지표 컬럼명(EMA200, MACD, BB)을 기법에 맞추어 SSL 추세, AKMCD 영선, AKMCD 점전환으로 변경 | UI/UX |
 | v2.0.1 | 2026-05-21 | [Bugfix/FSM] ERROR 및 활성 상태에서 수동 API 연결 시도 시 EngineState.CONNECTING으로의 상태 전이 허용 | Core/Bugfix |
 | v2.0.0 | 2026-05-20 | [UI/UX] 보유 중인 포지션 카드 하단의 5분봉 가격/거래량 추이 그래프(Plotly Popover) 제거 | UI/UX |

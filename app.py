@@ -392,7 +392,7 @@ with st.sidebar:
         '1. SSL 채널: 전체 추세 필터링 (파란선 위: 롱, 빨간선 아래: 숏)&#10;'
         '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
         '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착">'
-        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.0.2</span></div>',
+        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.0.3</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -541,7 +541,6 @@ tabs = st.tabs([
     "🔍  스캐너",
     "📋  매매 이력",
     "🎯  포지션 진입",
-    "🚀  TP/SL 최적화기",
     "⚙️  설정",
 ])
 
@@ -1157,98 +1156,10 @@ with tabs[3]:
         st.number_input("MACD 시그널", 1, 50, CFG.MACD_SIGNAL, step=1, key="main_macd_signal",
                         on_change=sync_p, args=("main_macd_signal", "sb_macd_signal", "MACD_SIGNAL"))
 
-# TAB 5: TP/SL 최적화기
+# TAB 5: 설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 with tabs[4]:
-    st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">MAE/MFE TP/SL PARAMETER OPTIMIZER</p>',
-        unsafe_allow_html=True,
-    )
-    
-    st.write(
-        "로컬 CSV 매매 기록을 기반으로 진입~청산 기간의 1분봉 고밀도 데이터를 거래소에서 조회하여 "
-        "**최대 수익(MFE)** 및 **최대 낙폭(MAE)**을 계산하고 최적의 손절/익절 비율을 정밀 시뮬레이션합니다."
-    )
-    
-    if not st.session_state.api_connected or not engine.is_ready:
-        st.info("사이드바에서 Binance API를 연결하세요.")
-    else:
-        # 현재 로컬 CSV 거래 개수 확인
-        import os
-        from core.logger import LOG_FILE
-        trade_count = 0
-        if os.path.exists(LOG_FILE):
-            try:
-                temp_df = pd.read_csv(LOG_FILE, encoding="utf-8-sig")
-                # 진입/청산 매칭 쌍 개수 대략 추정
-                trade_count = len(temp_df[temp_df["유형"].str.contains("청산", na=False)])
-            except Exception:
-                pass
-                
-
-        st.metric("로컬 CSV에 저장된 매칭 완료 거래 수", f"{trade_count} 건")
-        
-        c_sync, c_opt = st.columns(2)
-        with c_sync:
-            if st.button("🔄 거래소 최근 100건 매매기록 로컬 동기화", 
-                         use_container_width=True,
-                         help="Binance 거래소의 최근 100개 체결 기록을 즉시 로컬 'trade_history.csv'에 오름차순으로 동기화(복구)합니다. 분석용 매매 기록이 누락되었거나 부족할 때 사용하세요."):
-                with st.spinner("거래소 역사적 거래 내역 동기화 중..."):
-                    engine.sync_trades_to_csv()
-                    st.success("거래소 거래 기록 로컬 CSV 동기화 완료!")
-                    time.sleep(0.5)
-                    st.rerun()
-                    
-        with c_opt:
-            run_sim = st.button("🔥 MAE/MFE 시뮬레이션 & 최적 파라미터 찾기", 
-                                use_container_width=True, 
-                                type="primary",
-                                help="로컬 CSV에 저장된 매매 기록을 로드하여 각 진입~청산 구간의 1분봉 고밀도 가격 데이터를 거래소에서 분석합니다. 이를 통해 최대 손실(MAE) 및 최대 이익(MFE) 구간을 계산하고, 가장 승률과 누적 수익이 높았던 최적의 익절/손절 값을 수학적으로 계산해 줍니다.")
-
-        if run_sim:
-            with st.spinner("거래소 1m OHLCV 캔들 조회 및 가상 손익비 시뮬레이션 중..."):
-                res = engine.run_optimization()
-                if res["status"] == "error":
-                    st.error(res["message"])
-                else:
-                    st.success(f"시뮬레이션 완료! 총 {res['analyzed_count']}개 거래 분석 완료.")
-                    
-                    st.markdown("### 💡 최적 파라미터 추천 결과")
-                    m_tp, m_sl, m_win = st.columns(3)
-                    with m_tp:
-                        st.metric("추천 익절 비율 (TP)", f"{res['optimal_tp']}%", 
-                                  help=f"현재 설정: {res['current_tp']}%")
-                    with m_sl:
-                        st.metric("추천 손절 비율 (SL)", f"{res['optimal_sl']}%", 
-                                  help=f"현재 설정: {res['current_sl']}%")
-                    with m_win:
-                        st.metric("예상 시뮬레이션 승률", f"{res['optimal_winrate']}%")
-                        
-                    st.info(f"✨ 해당 익절/손절 비율 적용 시 예상 가상 PnL: **{res['optimal_pnl']} USDT** ({CFG.LEVERAGE}배 레버리지 기준)")
-                    
-                    # 상세 표 표시
-                    st.subheader("📋 거래별 MAE / MFE 상세 분석")
-                    trade_df = pd.DataFrame(res["trades"])
-                    if not trade_df.empty:
-                        trade_df = trade_df[["symbol", "side", "entry_price", "exit_price", "pnl", "mae", "mfe"]]
-                        trade_df.columns = ["종목", "방향", "진입가", "청산가", "실제손익", "최대낙폭(MAE %)", "최대상승(MFE %)"]
-                        st.dataframe(
-                            trade_df.style.format({
-                                "진입가": "{:,.4f}",
-                                "청산가": "{:,.4f}",
-                                "실제손익": "{:+.4f}",
-                                "최대낙폭(MAE %)": "{:.2f}%",
-                                "최대상승(MFE %)": "{:.2f}%"
-                            }), 
-                            use_container_width=True,
-                            hide_index=True
-                        )
-
-# TAB 6: 설정
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-with tabs[5]:
     st.markdown(
         '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">STRATEGY PARAMETERS</p>',
         unsafe_allow_html=True,
