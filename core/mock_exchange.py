@@ -31,12 +31,16 @@ class MockBinanceClient:
         self._order_counter = 0
         self._fail_next_order = False
         self._scenario = "default"
+        self._fail_balance = False
+        self._fail_positions = False
 
     # ── 시나리오 프리셋 ──────────────────────────────────
 
     def set_scenario(self, name: str):
         """테스트 시나리오 설정"""
         self._scenario = name
+        self._fail_balance = False
+        self._fail_positions = False
 
         if name == "default":
             self._balance = {"total": 100.0, "free": 80.0, "used": 20.0}
@@ -75,6 +79,10 @@ class MockBinanceClient:
             self._positions = [
                 self._make_position("BTC/USDT:USDT", "long", 70000.0, mark=66000.0),
             ]
+
+        elif name == "api_error":
+            self._fail_balance = True
+            self._fail_positions = True
 
         logger.info(f"[MOCK] 시나리오 변경: {name}")
 
@@ -143,9 +151,13 @@ class MockBinanceClient:
     # ── 계좌 조회 ──────────────────────────────────────
 
     def get_balance(self) -> Dict:
+        if self._fail_balance:
+            raise Exception("Mock API Error: 잔고 조회 실패")
         return dict(self._balance)
 
     def get_positions(self) -> List[Dict]:
+        if self._fail_positions:
+            raise Exception("Mock API Error: 포지션 조회 실패")
         return list(self._positions)
 
     def get_open_orders(self) -> List[Dict]:

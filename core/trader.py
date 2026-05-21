@@ -61,10 +61,15 @@ class AutoTrader:
             self._reset_daily_if_needed()
 
             # ── 리스크 게이트 ─────────────────────────
-            passed, reason = self._risk_check(sig)
-            if not passed:
-                logger.warning(f"[RISK BLOCK] {sig.symbol} — {reason}")
-                self._log_trade(sig, status="BLOCKED", reason=reason)
+            try:
+                passed, reason = self._risk_check(sig)
+                if not passed:
+                    logger.warning(f"[RISK BLOCK] {sig.symbol} — {reason}")
+                    self._log_trade(sig, status="BLOCKED", reason=reason)
+                    return
+            except Exception as e:
+                logger.error(f"[RISK ERROR] {sig.symbol} 리스크 체크 중 예외 발생: {e}")
+                self._log_trade(sig, status="FAILED", reason=f"API 조회 오류 ({e})")
                 return
 
             # ── 방향 허용 체크 ────────────────────────
@@ -74,15 +79,20 @@ class AutoTrader:
                 return
 
             # ── 중복 포지션 체크 ──────────────────────
-            positions = self.client.get_positions()
-            symbols_held = [p["symbol"] for p in positions]
-            if sig.symbol in symbols_held:
-                logger.info(f"[SKIP] {sig.symbol} — 이미 포지션 보유")
-                return
+            try:
+                positions = self.client.get_positions()
+                symbols_held = [p["symbol"] for p in positions]
+                if sig.symbol in symbols_held:
+                    logger.info(f"[SKIP] {sig.symbol} — 이미 포지션 보유")
+                    return
 
-            # ── 최대 포지션 수 체크 ───────────────────
-            if len(positions) >= self.cfg.MAX_POSITIONS:
-                logger.info(f"[SKIP] 최대 포지션 수 도달: {len(positions)}/{self.cfg.MAX_POSITIONS}")
+                # ── 최대 포지션 수 체크 ───────────────────
+                if len(positions) >= self.cfg.MAX_POSITIONS:
+                    logger.info(f"[SKIP] 최대 포지션 수 도달: {len(positions)}/{self.cfg.MAX_POSITIONS}")
+                    return
+            except Exception as e:
+                logger.error(f"[TRADER ERROR] 포지션 체크 중 예외 발생: {e}")
+                self._log_trade(sig, status="FAILED", reason=f"포지션 조회 오류 ({e})")
                 return
 
             # ── 주문 실행 ─────────────────────────────

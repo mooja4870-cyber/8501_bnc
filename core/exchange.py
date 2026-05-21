@@ -28,12 +28,31 @@ class BinanceClient:
         })
         self._markets: Dict = {}
 
+    # ── API 호출 재시도 헬퍼 ───────────────────────────
+
+    def _execute_with_retry(self, func, *args, max_retries=3, initial_delay=1.0, **kwargs):
+        """임의의 조회용 ccxt API에 대해 지수 백오프 기반 재시도 수행"""
+        delay = initial_delay
+        for attempt in range(max_retries):
+            try:
+                return func(*args, **kwargs)
+            except (ccxt.RateLimitExceeded, ccxt.DDoSProtection) as e:
+                logger.warning(f"[API RateLimit] {func.__name__} 호출 중 API 제한 감지. 시도 {attempt + 1}/{max_retries}. {delay}초 대기... 오류: {e}")
+                time.sleep(delay)
+                delay *= 2.0
+            except (ccxt.NetworkError, ccxt.RequestTimeout) as e:
+                logger.warning(f"[API NetworkError] {func.__name__} 호출 중 네트워크 오류 감지. 시도 {attempt + 1}/{max_retries}. {delay}초 대기... 오류: {e}")
+                time.sleep(delay)
+                delay *= 1.5
+        # 최종 시도에서는 예외를 전파
+        return func(*args, **kwargs)
+
     # ── 초기화 ─────────────────────────────────────────
 
     def load_markets(self) -> bool:
         """마켓 정보 로드 (앱 시작 시 1회 호출)"""
         try:
-            self._markets = self.exchange.load_markets()
+            self._markets = self._execute_with_retry(self.exchange.load_markets)
             logger.info(f"마켓 로드 완료: {len(self._markets)}개 종목")
             return True
         except Exception as e:
@@ -43,9 +62,9 @@ class BinanceClient:
     # ── 계좌 조회 ──────────────────────────────────────
 
     def get_balance(self) -> Dict:
-        """계좌 잔고 조회 (USDT 기준)"""
+        """계좌 잔고 조회 (USDT 기준) — 오류 시 예외 전파"""
         try:
-            bal = self.exchange.fetch_balance()
+            bal = self._execute_with_retry(self.exchange.fetch_balance)
             usdt = bal.get("USDT", {})
             return {
                 "total": round(usdt.get("total", 0) or 0, 4),
@@ -54,12 +73,12 @@ class BinanceClient:
             }
         except Exception as e:
             logger.error(f"잔고 조회 실패: {e}")
-            return {"total": 0, "free": 0, "used": 0}
+            raise e
 
     def get_positions(self) -> List[Dict]:
-        """현재 보유 포지션 목록 조회"""
+        """현재 보유 포지션 목록 조회 — 오류 시 예외 전파"""
         try:
-            positions = self.exchange.fetch_positions()
+            positions = self._execute_with_retry(self.exchange.fetch_positions)
             active = []
             for p in positions:
                 contracts = abs(float(p.get("contracts") or p.get("amount") or p.get("size") or 0))
@@ -100,12 +119,12 @@ class BinanceClient:
             return active
         except Exception as e:
             logger.error(f"포지션 조회 실패: {e}")
-            return []
+            raise e
 
     def get_open_orders(self) -> List[Dict]:
         """미체결 주문 조회"""
         try:
-            orders = self.exchange.fetch_open_orders()
+            orders = self._execute_with_retry(self.exchange.fetch_open_orders)
             return [
                 {
                     "id": o["id"],
@@ -125,7 +144,7 @@ class BinanceClient:
     def get_trade_history(self, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
         """체결 이력 조회"""
         try:
-            trades = self.exchange.fetch_my_trades(symbol=symbol, limit=limit)
+            trades = self._execute_with_retry(self.exchange.fetch_my_trades, symbol=symbol, limit=limit)
             result = []
             for t in trades:
                 info = t.get("info", {})
@@ -163,10 +182,13 @@ class BinanceClient:
     def get_closed_positions_pnl(self, limit=20) -> List[Dict]:
         """실현 손익 조회 (REALIZED_PNL)"""
         try:
-            raw = self.exchange.fapiPrivateGetIncome({
-                'incomeType': 'REALIZED_PNL',
-                'limit': limit
-            })
+            raw = self._execute_with_retry(
+                self.exchange.fapiPrivateGetIncome,
+                {
+                    'incomeType': 'REALIZED_PNL',
+                    'limit': limit
+                }
+            )
             return [
                 {
                     'symbol': self.exchange.safe_symbol(r.get('symbol', '')), 
@@ -191,14 +213,14 @@ class BinanceClient:
             timeframe = CFG.TIMEFRAME
         try:
             if limit <= 300:
-                raw = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+                raw = self._execute_with_retry(self.exchange.fetch_ohlcv, symbol, timeframe=timeframe, limit=limit)
             else:
                 tf_ms = self.exchange.parse_timeframe(timeframe) * 1000
                 since = self.exchange.milliseconds() - (limit * tf_ms)
                 raw = []
                 while len(raw) < limit:
                     fetch_limit = min(300, limit - len(raw))
-                    chunk = self.exchange.fetch_ohlcv(symbol, timeframe=timeframe, since=since, limit=fetch_limit)
+                    chunk = self._execute_with_retry(self.exchange.fetch_ohlcv, symbol, timeframe=timeframe, since=since, limit=fetch_limit)
                     if not chunk:
                         break
                     raw.extend(chunk)
@@ -217,7 +239,7 @@ class BinanceClient:
     def get_ticker(self, symbol: str) -> Dict:
         """현재가 조회"""
         try:
-            t = self.exchange.fetch_ticker(symbol)
+            t = self._execute_with_retry(self.exchange.fetch_ticker, symbol)
             last_price = t.get("last", 0)
             usdt_vol = t.get("quoteVolume")
             if not usdt_vol:

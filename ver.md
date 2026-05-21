@@ -1,3 +1,4 @@
+| v2.0.4 | 2026-05-21 | [Core/Risk] 거래소 API 에러 발생 시 리스크 게이트 우회 방지 (예외 전파 및 Trader 예외 처리 적용), API 백오프 재시도 추가 | Core/Risk |
 | v2.0.3 | 2026-05-21 | [UI/UX] AKMCD-SSL-HYBRID 고정 매매기법에 맞추어 불필요한 '🚀 TP/SL 최적화기' 탭 삭제 및 탭 인덱스 조정 | UI/UX |
 | v2.0.2 | 2026-05-21 | [UI/UX] 스캐너 탭의 지표 컬럼명(EMA200, MACD, BB)을 기법에 맞추어 SSL 추세, AKMCD 영선, AKMCD 점전환으로 변경 | UI/UX |
 | v2.0.1 | 2026-05-21 | [Bugfix/FSM] ERROR 및 활성 상태에서 수동 API 연결 시도 시 EngineState.CONNECTING으로의 상태 전이 허용 | Core/Bugfix |

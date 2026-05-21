@@ -53,6 +53,11 @@ class TestRiskGate:
         ok, r = self.trader._risk_check(_sig())
         assert not ok and "일일 손실 한도" in r
 
+    def test_risk_gate_api_failure(self):
+        self.mock.set_scenario("api_error")
+        with pytest.raises(Exception, match="잔고 조회 실패"):
+            self.trader._risk_check(_sig())
+
 
 class TestPositionGuards:
     def setup_method(self):
@@ -93,6 +98,14 @@ class TestPositionGuards:
         n = self.trader.orders_today
         self.trader.on_signal(_sig(direction="short"))
         assert self.trader.orders_today == n
+
+    def test_position_check_api_failure(self):
+        self.mock.set_scenario("api_error")
+        self.trader.on_signal(_sig())
+        log = self.trader.get_trade_log()
+        assert len(log) == 1
+        assert log[0]["status"] == "FAILED"
+        assert "조회 오류" in log[0]["reason"]
 
 
 class TestOrderExecution:
