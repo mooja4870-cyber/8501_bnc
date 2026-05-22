@@ -24,7 +24,17 @@ from core.history_helper import load_local_trade_history, aggregate_and_pair_tra
 load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
-APP_VERSION = "v3.1.9"
+def get_git_tag():
+    import subprocess
+    try:
+        tag = subprocess.check_output(["git", "describe", "--tags", "--always"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
+        if tag:
+            return tag
+    except Exception:
+        pass
+    return "v3.2.0" # Fallback 하드코딩
+
+APP_VERSION = get_git_tag()
 
 # ── 페이지 설정 ───────────────────────────────────────
 st.set_page_config(
@@ -42,137 +52,179 @@ st.markdown(
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 
     :root {
-        --terminal-bg: #050505;
-        --terminal-surface: #0f0f0f;
-        --terminal-border: #262626;
-        --terminal-text: #e0e0e0;
-        --terminal-dim: #666666;
-        --terminal-accent: #ff9900; /* Bloomberg Orange */
-        --terminal-green: #00ff00;
-        --terminal-red: #ff3b30;
+        --terminal-bg: #030408;
+        --terminal-surface: rgba(13, 17, 33, 0.45);
+        --terminal-border: rgba(255, 255, 255, 0.08);
+        --terminal-text: #e2e8f0;
+        --terminal-dim: #718096;
+        --terminal-accent: #00e0ff; /* 영롱한 아쿠아 블루 */
+        --terminal-accent-glow: rgba(0, 224, 255, 0.15);
+        --terminal-green: #10b981;
+        --terminal-red: #ef4444;
+        --glass-border: rgba(255, 255, 255, 0.06);
     }
 
     html, body, [data-testid="stAppViewContainer"] {
         background-color: var(--terminal-bg) !important;
+        background-image: 
+            /* 우상향 영롱한 글로우 (radial gradient at top right) */
+            radial-gradient(circle at 90% 10%, rgba(139, 92, 246, 0.15) 0%, rgba(0, 224, 255, 0.08) 30%, rgba(244, 63, 94, 0.03) 60%, transparent 100%),
+            /* 아주 흐릿한 격자무늬 (가로세로 약 1cm 크기: 38px) */
+            linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+        background-size: 100% 100%, 38px 38px, 38px 38px;
+        background-attachment: fixed;
         color: var(--terminal-text) !important;
-        font-family: 'Inter', sans-serif !important;
+        font-family: 'Pretendard', 'Inter', sans-serif !important;
     }
 
     [data-testid="stHeader"] { background: transparent !important; }
 
     [data-testid="stSidebar"] {
-        background-color: var(--terminal-surface) !important;
-        border-right: 1px solid var(--terminal-border) !important;
+        background-color: rgba(6, 8, 18, 0.85) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border-right: 1px solid var(--glass-border) !important;
     }
 
-    /* 메트릭 카드: 각진 모서리, 그리드 스타일 */
+    /* 메트릭 카드: 글래스모피즘 스타일 적용 */
     [data-testid="metric-container"] {
         background: var(--terminal-surface) !important;
-        border: 1px solid var(--terminal-border) !important;
-        border-radius: 0px !important;
-        padding: 10px 15px !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 8px !important;
+        padding: 12px 18px !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+        transition: all 0.3s ease;
+    }
+    [data-testid="metric-container"]:hover {
+        border-color: rgba(0, 224, 255, 0.25) !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 224, 255, 0.08) !important;
+        transform: translateY(-1px);
     }
     [data-testid="stMetricValue"] {
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 1.4rem !important;
+        font-size: 1.5rem !important;
         font-weight: 700 !important;
-        color: var(--terminal-text) !important;
+        color: #ffffff !important;
     }
     [data-testid="stMetricLabel"] {
         font-family: 'JetBrains Mono', monospace !important;
-        font-size: 0.9rem !important; /* 상향: 14px+ */
-        letter-spacing: 0.1em !important;
-        color: #cccccc !important; /* Bright Grey */
+        font-size: 0.85rem !important;
+        letter-spacing: 0.08em !important;
+        color: #94a3b8 !important;
         text-transform: uppercase !important;
     }
 
-    /* 버튼: 전문 터미널 감성 */
+    /* 버튼: 영롱한 네온 느낌 */
     .stButton > button {
-        background: var(--terminal-surface) !important;
+        background: rgba(0, 224, 255, 0.03) !important;
         color: var(--terminal-accent) !important;
-        border: 1px solid var(--terminal-accent) !important;
-        border-radius: 0px !important;
+        border: 1px solid rgba(0, 224, 255, 0.3) !important;
+        border-radius: 6px !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-weight: 600 !important;
-        font-size: 0.9rem !important; /* 상향: 14px+ */
-        transition: all 0.2s;
+        font-size: 0.9rem !important;
+        transition: all 0.25s ease !important;
+        box-shadow: 0 2px 8px rgba(0, 224, 255, 0.05) !important;
     }
     .stButton > button:hover {
         background: var(--terminal-accent) !important;
-        color: var(--terminal-bg) !important;
+        color: #030408 !important;
+        border-color: var(--terminal-accent) !important;
+        box-shadow: 0 0 15px rgba(0, 224, 255, 0.3) !important;
     }
 
     /* 특수 버튼 (새로고침 등) */
     .refresh-btn button {
-        border-color: #5de1ff !important;
-        color: #5de1ff !important;
+        border-color: #a78bfa !important;
+        color: #a78bfa !important;
+        background: rgba(167, 139, 250, 0.03) !important;
     }
     .refresh-btn button:hover {
-        background: #5de1ff !important;
-        color: #000 !important;
+        background: #a78bfa !important;
+        color: #030408 !important;
+        box-shadow: 0 0 15px rgba(167, 139, 250, 0.3) !important;
     }
 
     /* 탭 */
     .stTabs [data-baseweb="tab-list"] {
-        background: var(--terminal-surface);
-        border: 1px solid var(--terminal-border);
-        border-radius: 0px;
-        padding: 2px;
+        background: rgba(10, 14, 28, 0.4) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 8px !important;
+        padding: 4px !important;
     }
     .stTabs [data-baseweb="tab"] {
-        color: #cccccc !important; /* Bright Grey */
+        color: #94a3b8 !important;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem !important; /* 상향: 14px+ */
+        font-size: 0.9rem !important;
         padding: 8px 16px;
+        border-radius: 6px !important;
+        transition: all 0.2s;
     }
     .stTabs [aria-selected="true"] {
-        background: var(--terminal-accent) !important;
-        color: var(--terminal-bg) !important;
-        border-radius: 0px !important;
+        background: rgba(0, 224, 255, 0.15) !important;
+        color: var(--terminal-accent) !important;
+        border: 1px solid rgba(0, 224, 255, 0.35) !important;
+        font-weight: 700 !important;
     }
 
     /* 인풋 필드 */
     .stTextInput input, .stSelectbox select, .stNumberInput input {
-        background: #000000 !important;
-        border: 1px solid var(--terminal-border) !important;
+        background: rgba(5, 7, 15, 0.8) !important;
+        border: 1px solid var(--glass-border) !important;
         color: var(--terminal-text) !important;
         font-family: 'JetBrains Mono', monospace !important;
-        border-radius: 0px !important;
+        border-radius: 6px !important;
         font-size: 0.9rem !important;
+    }
+    .stTextInput input:focus, .stSelectbox select:focus, .stNumberInput input:focus {
+        border-color: var(--terminal-accent) !important;
+        box-shadow: 0 0 8px rgba(0, 224, 255, 0.2) !important;
     }
 
     /* 데이터프레임 */
     [data-testid="stDataFrame"] {
-        border: 1px solid var(--terminal-border) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 8px !important;
+        background: rgba(10, 14, 28, 0.3) !important;
     }
 
-    /* 로고 */
+    /* 로고: 우상향 심볼(↗) 및 영롱한 오로라 그라데이션 */
     .quantum-logo {
         font-family: 'Pretendard', 'Inter', sans-serif;
-        font-size: calc(1.1rem * 1.7568);
-        font-weight: 700;
-        color: var(--terminal-accent);
-        border-bottom: 2px solid var(--terminal-accent);
-        padding-bottom: 5px;
+        font-size: calc(1.1rem * 1.55);
+        font-weight: 800;
+        color: var(--terminal-text);
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 12px;
         margin-bottom: 20px;
+        position: relative;
     }
-    .quantum-logo span { color: #cccccc; font-weight: 400; }
+    .quantum-logo::after {
+        content: " ↗";
+        color: var(--terminal-accent);
+        font-weight: 900;
+        text-shadow: 0 0 8px rgba(0, 224, 255, 0.5);
+    }
 
-    @keyframes rainbow-glow {
+    @keyframes aurora-flow {
         0% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
         100% { background-position: 0% 50%; }
     }
     .rainbow-text {
         font-family: 'Pretendard', 'Inter', sans-serif !important;
-        background: linear-gradient(to right, #ff2a2b, #ff9900, #00ff00, #00ffff, #cc33ff, #ff2a2b);
-        background-size: 400% 400%;
+        background: linear-gradient(135deg, #00f0ff, #8b5cf6, #ec4899, #00f0ff);
+        background-size: 300% 300%;
         -webkit-background-clip: text !important;
         -webkit-text-fill-color: transparent !important;
         background-clip: text !important;
         color: transparent !important;
         font-weight: 900 !important;
-        animation: rainbow-glow 8s ease infinite;
+        animation: aurora-flow 6s ease infinite;
+        text-shadow: 0 0 20px rgba(0, 224, 255, 0.1);
     }
 
     /* 공통 버튼 스타일의 헤더 배지 */
@@ -182,94 +234,104 @@ st.markdown(
         justify-content: center !important;
         width: 100% !important;
         height: 38px !important;
-        background: var(--terminal-surface) !important;
-        border: 1px solid var(--terminal-border) !important;
-        color: #cccccc !important;
+        background: rgba(13, 17, 33, 0.4) !important;
+        border: 1px solid var(--glass-border) !important;
+        color: #94a3b8 !important;
         font-family: 'JetBrains Mono', monospace !important;
         font-size: 0.9rem !important;
         font-weight: 600 !important;
         text-align: center !important;
         box-sizing: border-box !important;
-        border-radius: 0px !important;
+        border-radius: 6px !important;
         white-space: nowrap !important;
     }
     .header-badge-live {
-        border-color: var(--terminal-green) !important;
+        border-color: rgba(16, 185, 129, 0.4) !important;
         color: var(--terminal-green) !important;
-        background: #001a00 !important;
+        background: rgba(16, 185, 129, 0.08) !important;
+        box-shadow: inset 0 0 8px rgba(16, 185, 129, 0.05) !important;
     }
     .header-badge-live .dot {
         width: 8px; height: 8px;
         background: var(--terminal-green) !important;
-        border-radius: 0% !important;
+        border-radius: 50% !important;
         margin-right: 8px !important;
         display: inline-block !important;
+        box-shadow: 0 0 6px var(--terminal-green);
     }
     .header-badge-stopped {
-        border-color: var(--terminal-red) !important;
+        border-color: rgba(239, 68, 68, 0.4) !important;
         color: var(--terminal-red) !important;
-        background: #1a0000 !important;
+        background: rgba(239, 68, 68, 0.08) !important;
     }
     .header-badge-stopped .dot {
         width: 8px; height: 8px;
         background: var(--terminal-red) !important;
-        border-radius: 0% !important;
+        border-radius: 50% !important;
         margin-right: 8px !important;
         display: inline-block !important;
+        box-shadow: 0 0 6px var(--terminal-red);
     }
 
     /* 시스템 로그 박스 */
     .log-box {
-        background: #000000;
-        border: 1px solid var(--terminal-border);
-        border-radius: 0px;
-        padding: 10px;
+        background: rgba(5, 7, 15, 0.85);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+        padding: 12px;
         font-family: 'JetBrains Mono', monospace;
         font-size: 0.9rem;
-        color: #cccccc;
+        color: #cbd5e1;
         height: 250px;
         overflow-y: auto;
         line-height: 1.5;
-        white-space: pre-wrap; /* 줄바꿈 보장 */
+        white-space: pre-wrap;
     }
     @keyframes log-yellow-blink {
         0% { opacity: 1; }
-        50% { opacity: 0.4; }
+        50% { opacity: 0.6; }
         100% { opacity: 1; }
     }
     .log-latest {
-        color: #ffcc00 !important;
+        color: #f59e0b !important;
         font-weight: bold;
-        background: #1e1e0a !important; /* Subtle dark warm background */
-        border-left: 3px solid #ffcc00;
+        background: rgba(245, 158, 11, 0.06) !important;
+        border-left: 3px solid #f59e0b;
         padding: 2px 8px;
         animation: log-yellow-blink 1.5s infinite ease-in-out;
     }
 
     /* 구분선 */
-    hr { border-color: var(--terminal-border) !important; margin: 15px 0 !important; }
+    hr { border-color: var(--glass-border) !important; margin: 15px 0 !important; }
 
     /* Wall Street Metric Bar */
     .metric-bar-container {
         display: flex;
         justify-content: space-between;
-        background: #050505;
-        border: 1px solid var(--terminal-border);
+        background: rgba(13, 17, 33, 0.35);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
         padding: 12px 0;
         margin-bottom: 20px;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
     }
     .terminal-metric-item {
         flex: 1;
-        border-right: 1px solid #1a1a1a;
+        border-right: 1px solid var(--glass-border);
         padding: 0 20px;
+        transition: all 0.3s ease;
     }
     .terminal-metric-item:last-child { border-right: none; }
+    .terminal-metric-item:hover {
+        background: rgba(255, 255, 255, 0.02);
+    }
     .terminal-metric-label {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem; /* 상향: 14px+ */
-        color: #cccccc; /* Bright Grey */
+        font-size: 0.85rem;
+        color: #94a3b8;
         text-transform: uppercase;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
         display: flex;
         align-items: center;
     }
@@ -285,21 +347,21 @@ st.markdown(
         font-weight: bold;
         margin-left: 6px;
         font-size: 0.8rem;
-        background: #1a1a1a;
-        border: 1px solid var(--terminal-border);
+        background: rgba(0, 224, 255, 0.1);
+        border: 1px solid rgba(0, 224, 255, 0.3);
         width: 16px;
         height: 16px;
-        border-radius: 0px;
+        border-radius: 4px;
     }
     .terminal-tooltip .tooltip-text {
         visibility: hidden;
         width: 250px;
-        background-color: var(--terminal-surface) !important;
-        color: var(--terminal-text) !important;
+        background-color: #0b0f19 !important;
+        color: #ffffff !important;
         text-align: center;
-        border: 1px solid var(--terminal-accent) !important;
-        border-radius: 0px !important;
-        padding: 6px 10px !important;
+        border: 1px solid rgba(0, 224, 255, 0.4) !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
         position: absolute;
         z-index: 9999 !important;
         bottom: 125%;
@@ -311,7 +373,7 @@ st.markdown(
         font-size: 0.8rem !important;
         font-weight: normal !important;
         text-transform: none !important;
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.9) !important;
+        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.5) !important;
     }
     .terminal-tooltip:hover .tooltip-text {
         visibility: visible;
@@ -319,53 +381,55 @@ st.markdown(
     }
     .terminal-metric-value {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 1.2rem;
+        font-size: 1.3rem;
         font-weight: 700;
-        color: #fff;
+        color: #ffffff;
         line-height: 1.1;
     }
     .terminal-metric-sub {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 0.85rem; /* 상향 */
-        margin-top: 2px;
+        font-size: 0.85rem;
+        margin-top: 4px;
         display: flex;
         align-items: center;
-        gap: 2px;
+        gap: 4px;
     }
 
-    /* 청산 버튼 특화 (상향 조정: 최소 14px 준수) */
+    /* 청산 버튼 특화 (최소 14px 준수, 글래스모피즘 스타일 조화) */
     .small-btn-marker + div.stButton button,
     .small-btn-marker + div[data-testid="stButton"] button,
     div.small-btn-marker ~ div.stButton button {
-        font-size: 14px !important; /* 최소 14px */
-        height: 26px !important;
-        min-height: 26px !important;
+        font-size: 14px !important;
+        height: 28px !important;
+        min-height: 28px !important;
         line-height: 1 !important;
-        padding: 0 8px !important;
+        padding: 0 10px !important;
         border-color: var(--terminal-red) !important;
         color: var(--terminal-red) !important;
-        border-radius: 0px !important;
-        background: transparent !important;
+        border-radius: 6px !important;
+        background: rgba(239, 68, 68, 0.05) !important;
         margin-top: -12px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        transition: all 0.2s ease !important;
     }
     .small-btn-marker + div.stButton button:hover,
     .small-btn-marker + div[data-testid="stButton"] button:hover {
         background: var(--terminal-red) !important;
         color: white !important;
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.4) !important;
     }
 
     /* 깜빡임 애니메이션 (터미널 스타일) */
     @keyframes terminal-blink {
         0% { opacity: 1; }
-        50% { opacity: 0.4; }
+        50% { opacity: 0.5; }
         100% { opacity: 1; }
     }
     .badge-pink-blink, .badge-green-blink, .badge-red-blink {
-        border-radius: 0px !important;
-        animation: terminal-blink 1s infinite steps(1);
+        border-radius: 4px !important;
+        animation: terminal-blink 1.2s infinite ease-in-out;
     }
     /* Streamlit Metric Delta Color Override (Profit: Red, Loss: Blue) */
     [data-testid="stMetricDelta"] > div {
