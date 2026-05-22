@@ -1,5 +1,10 @@
 # AI QUANTUM OKX Auto-Trader - Antigravity Agent Rules
 
+
+
+## 0.너는 매번 응답 전에 반드시 시스템 시각 기준으로 [년월일시분초]를 표기한다. 예, ‘2026-04-04 15:26:25’. 그리고, 코드 수정 시에는 항상 버전관리(커밋+태깅+푸시)를 한다. ver.md를 만들고 수정 시마다 버전 표기 및 설명/내용 표기한다.
+
+
 ## 1. Artifact-based Verification (Plan First)
 - Before making complex logic changes, ALWAYS use the `write_to_file` tool to create an `implementation_plan` artifact.
 - Wait for user feedback on the artifact if requested, ensuring alignment before actual codebase modification.

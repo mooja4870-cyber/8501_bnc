@@ -32,6 +32,8 @@ class TradingConfig:
     # ── 손익 설정 ──────────────────────────────────────
     STOP_LOSS_PCT: float = 0.01            # 손절 1.0% (기본값)
     TAKE_PROFIT_PCT: float = 0.015          # 익절 1.5% (기본값)
+    TRAILING_ACTIVATE_PCT: float = 0.015    # 트레일링 활성화 1.5% (기본값)
+    TRAILING_CALLBACK_PCT: float = 0.003    # 트레일링 콜백 0.3% (기본값)
     AUTO_TUNE_SL_TP: bool = False          # 최근 매매 기반 익절/손절 자동 피팅 활성화 (Auto-Tuning)
 
     # ── 리스크 한도 ────────────────────────────────────
@@ -54,6 +56,7 @@ class TradingConfig:
     MARKET_TYPE: str = "swap"             # 선물(영구 계약)
 
     # ── 지표 파라미터 ──────────────────────────────────
+    EMA_PERIOD: int = 200                  # EMA 트렌드 필터 기간 (기본값 200)
     BB_PERIOD: int = 20                    # AKMCD 볼린저밴드 기간 (기본값 20)
     BB_STD: float = 2.0                    # AKMCD 볼린저밴드 배수 (기본값 2.0)
     MACD_FAST: int = 12                    # AKMCD MACD Fast (기본값 12)

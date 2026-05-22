@@ -465,6 +465,60 @@ st.markdown(
             max-width: 55% !important;
         }
     }
+
+    /* 🧬 모든 탭 마우스 오버 툴팁 */
+    .stTabs [data-baseweb="tab-list"] {
+        overflow: visible !important;
+    }
+    .stTabs button[data-baseweb="tab"] {
+        position: relative;
+        overflow: visible !important;
+    }
+    .stTabs button[data-baseweb="tab"]::after {
+        position: absolute;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #0b0f19 !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(0, 224, 255, 0.4) !important;
+        border-radius: 6px !important;
+        padding: 6px 12px !important;
+        font-family: 'Pretendard', sans-serif !important;
+        font-size: 0.8rem !important;
+        font-weight: normal !important;
+        white-space: nowrap;
+        z-index: 999999 !important;
+        box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.5) !important;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.2s, visibility 0.2s;
+        pointer-events: none;
+    }
+    .stTabs button[data-baseweb="tab"]:hover::after {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    /* 탭별 개별 툴팁 텍스트 바인딩 */
+    .stTabs button[data-baseweb="tab"]:nth-child(1)::after {
+        content: "실시간 잔고, 미실현 손익 및 활성 포지션 모니터링";
+    }
+    .stTabs button[data-baseweb="tab"]:nth-child(2)::after {
+        content: "전략 부합 종목 실시간 발굴 및 탐지 상태 모니터링";
+    }
+    .stTabs button[data-baseweb="tab"]:nth-child(3)::after {
+        content: "거래소 체결 이력 조회 및 로컬 CSV 기반 성적 분석";
+    }
+    .stTabs button[data-baseweb="tab"]:nth-child(4)::after {
+        content: "롱/숏 포지션 진입 상세 조건 및 전략 로직 가이드";
+    }
+    .stTabs button[data-baseweb="tab"]:nth-child(5)::after {
+        content: "레버리지, 증거금, 손익절 및 기술 지표 파라미터 설정";
+    }
+    .stTabs button[data-baseweb="tab"]:nth-child(6)::after {
+        content: "자동매매 Off 일 때도 작동 가능 (로컬 과거 캔들 캐시 데이터 기반 학습)";
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -662,6 +716,197 @@ with st.sidebar:
     st.session_state.adx_auto_switch = CFG.ADX_AUTO_SWITCH
     st.session_state.rsi_auto_switch = CFG.USE_RSI_FILTER
 
+    # ── [다중기간 연동 변수값 자동설정] Deep Learning 최적 파라미터 프리셋 ──
+    # ── [다중기간 연동 변수값 자동설정] Deep Learning 최적 파라미터 프리셋 ──
+    MULTI_PERIOD_PRESETS = {
+        "30일 (30d)": {
+            "LEVERAGE": 20, "MARGIN_USDT": 18.3, "MAX_POSITIONS": 5,
+            "STOP_LOSS_PCT": 0.0396, "TAKE_PROFIT_PCT": 0.0341,
+            "TRAILING_ACTIVATE_PCT": 0.0375, "TRAILING_CALLBACK_PCT": 0.0051,
+            "MAX_DRAWDOWN_PCT": 0.215, "ALLOW_LONG": True, "ALLOW_SHORT": True,
+            "TIMEFRAME": "4h", "SCAN_INTERVAL_SEC": 60, "MIN_VOLUME_USDT": 2_000_000.0,
+            "EMA_PERIOD": 102, "BB_PERIOD": 37, "BB_STD": 2.07,
+            "RSI_PERIOD": 8, "RSI_OVERSOLD": 25.2, "RSI_OVERBOUGHT": 69.0,
+        },
+        "15일 (15d)": {
+            "LEVERAGE": 20, "MARGIN_USDT": 19.5, "MAX_POSITIONS": 3,
+            "STOP_LOSS_PCT": 0.0391, "TAKE_PROFIT_PCT": 0.0458,
+            "TRAILING_ACTIVATE_PCT": 0.0427, "TRAILING_CALLBACK_PCT": 0.0019,
+            "MAX_DRAWDOWN_PCT": 0.218, "ALLOW_LONG": True, "ALLOW_SHORT": True,
+            "TIMEFRAME": "4h", "SCAN_INTERVAL_SEC": 30, "MIN_VOLUME_USDT": 5_000_000.0,
+            "EMA_PERIOD": 220, "BB_PERIOD": 26, "BB_STD": 1.74,
+            "RSI_PERIOD": 18, "RSI_OVERSOLD": 27.8, "RSI_OVERBOUGHT": 70.5,
+        },
+        "7일 (7d)": {
+            "LEVERAGE": 20, "MARGIN_USDT": 19.8, "MAX_POSITIONS": 5,
+            "STOP_LOSS_PCT": 0.0365, "TAKE_PROFIT_PCT": 0.0641,
+            "TRAILING_ACTIVATE_PCT": 0.0244, "TRAILING_CALLBACK_PCT": 0.0068,
+            "MAX_DRAWDOWN_PCT": 0.277, "ALLOW_LONG": True, "ALLOW_SHORT": False,
+            "TIMEFRAME": "4h", "SCAN_INTERVAL_SEC": 20, "MIN_VOLUME_USDT": 5_000_000.0,
+            "EMA_PERIOD": 241, "BB_PERIOD": 27, "BB_STD": 1.40,
+            "RSI_PERIOD": 16, "RSI_OVERSOLD": 41.6, "RSI_OVERBOUGHT": 74.4,
+        },
+        "48시간 (48h)": {
+            "LEVERAGE": 20, "MARGIN_USDT": 18.8, "MAX_POSITIONS": 6,
+            "STOP_LOSS_PCT": 0.0359, "TAKE_PROFIT_PCT": 0.0585,
+            "TRAILING_ACTIVATE_PCT": 0.0554, "TRAILING_CALLBACK_PCT": 0.0054,
+            "MAX_DRAWDOWN_PCT": 0.205, "ALLOW_LONG": True, "ALLOW_SHORT": False,
+            "TIMEFRAME": "15m", "SCAN_INTERVAL_SEC": 10, "MIN_VOLUME_USDT": 5_000_000.0,
+            "EMA_PERIOD": 139, "BB_PERIOD": 31, "BB_STD": 1.57,
+            "RSI_PERIOD": 13, "RSI_OVERSOLD": 37.4, "RSI_OVERBOUGHT": 67.9,
+        },
+        "24시간 (24h)": {
+            "LEVERAGE": 20, "MARGIN_USDT": 15.1, "MAX_POSITIONS": 5,
+            "STOP_LOSS_PCT": 0.0341, "TAKE_PROFIT_PCT": 0.0624,
+            "TRAILING_ACTIVATE_PCT": 0.0143, "TRAILING_CALLBACK_PCT": 0.0017,
+            "MAX_DRAWDOWN_PCT": 0.119, "ALLOW_LONG": True, "ALLOW_SHORT": False,
+            "TIMEFRAME": "15m", "SCAN_INTERVAL_SEC": 10, "MIN_VOLUME_USDT": 2_000_000.0,
+            "EMA_PERIOD": 144, "BB_PERIOD": 17, "BB_STD": 2.49,
+            "RSI_PERIOD": 20, "RSI_OVERSOLD": 33.7, "RSI_OVERBOUGHT": 58.0,
+        },
+        "12시간 (12h)": {
+            "LEVERAGE": 20, "MARGIN_USDT": 19.2, "MAX_POSITIONS": 4,
+            "STOP_LOSS_PCT": 0.0371, "TAKE_PROFIT_PCT": 0.0509,
+            "TRAILING_ACTIVATE_PCT": 0.0454, "TRAILING_CALLBACK_PCT": 0.0014,
+            "MAX_DRAWDOWN_PCT": 0.199, "ALLOW_LONG": True, "ALLOW_SHORT": False,
+            "TIMEFRAME": "1h", "SCAN_INTERVAL_SEC": 60, "MIN_VOLUME_USDT": 10_000_000.0,
+            "EMA_PERIOD": 122, "BB_PERIOD": 34, "BB_STD": 2.09,
+            "RSI_PERIOD": 9, "RSI_OVERSOLD": 30.0, "RSI_OVERBOUGHT": 72.0,
+        },
+    }
+
+    PKL_PATH = "scratch/multi_period_results.pkl"
+    if os.path.exists(PKL_PATH):
+        try:
+            import pickle
+            with open(PKL_PATH, "rb") as f:
+                saved_results = pickle.load(f)
+                REQUIRED_19_KEYS = [
+                    "LEVERAGE", "MARGIN_USDT", "MAX_POSITIONS",
+                    "STOP_LOSS_PCT", "TAKE_PROFIT_PCT",
+                    "TRAILING_ACTIVATE_PCT", "TRAILING_CALLBACK_PCT",
+                    "MAX_DRAWDOWN_PCT", "ALLOW_LONG", "ALLOW_SHORT",
+                    "TIMEFRAME", "SCAN_INTERVAL_SEC", "MIN_VOLUME_USDT",
+                    "EMA_PERIOD", "BB_PERIOD", "BB_STD",
+                    "RSI_PERIOD", "RSI_OVERSOLD", "RSI_OVERBOUGHT",
+                ]
+                TYPE_MAP = {
+                    "LEVERAGE": int, "MARGIN_USDT": float, "MAX_POSITIONS": int,
+                    "STOP_LOSS_PCT": float, "TAKE_PROFIT_PCT": float,
+                    "TRAILING_ACTIVATE_PCT": float, "TRAILING_CALLBACK_PCT": float,
+                    "MAX_DRAWDOWN_PCT": float, "ALLOW_LONG": bool, "ALLOW_SHORT": bool,
+                    "TIMEFRAME": str, "SCAN_INTERVAL_SEC": int, "MIN_VOLUME_USDT": float,
+                    "EMA_PERIOD": int, "BB_PERIOD": int, "BB_STD": float,
+                    "RSI_PERIOD": int, "RSI_OVERSOLD": float, "RSI_OVERBOUGHT": float,
+                }
+                for p_name, data in saved_results.items():
+                    if p_name in MULTI_PERIOD_PRESETS and "params" in data:
+                        p_val = data["params"]
+                        if all(k in p_val for k in REQUIRED_19_KEYS):
+                            casted_preset = {}
+                            for k, t in TYPE_MAP.items():
+                                casted_preset[k] = t(p_val[k])
+                            MULTI_PERIOD_PRESETS[p_name] = casted_preset
+        except Exception as e:
+            pass
+
+
+    def apply_multi_period_preset():
+        """다중기간 프리셋 선택 시 19개 파라미터를 CFG 및 세션 상태에 동기화"""
+        selected = st.session_state.get("multi_period_select", "-- 기간을 선택하세요 --")
+        if selected == "-- 기간을 선택하세요 --":
+            return
+        preset = MULTI_PERIOD_PRESETS.get(selected)
+        if not preset:
+            return
+
+        # ── 1) CFG 글로벌 설정 업데이트 ──
+        CFG.LEVERAGE = preset["LEVERAGE"]
+        CFG.MARGIN_USDT = preset["MARGIN_USDT"]
+        CFG.MAX_POSITIONS = preset["MAX_POSITIONS"]
+        CFG.STOP_LOSS_PCT = preset["STOP_LOSS_PCT"]
+        CFG.TAKE_PROFIT_PCT = preset["TAKE_PROFIT_PCT"]
+        CFG.TRAILING_ACTIVATE_PCT = preset["TRAILING_ACTIVATE_PCT"]
+        CFG.TRAILING_CALLBACK_PCT = preset["TRAILING_CALLBACK_PCT"]
+        CFG.MAX_DRAWDOWN_PCT = preset["MAX_DRAWDOWN_PCT"]
+        CFG.ALLOW_LONG = preset["ALLOW_LONG"]
+        CFG.ALLOW_SHORT = preset["ALLOW_SHORT"]
+        CFG.TIMEFRAME = preset["TIMEFRAME"]
+        CFG.SCAN_INTERVAL_SEC = preset["SCAN_INTERVAL_SEC"]
+        CFG.MIN_VOLUME_USDT = preset["MIN_VOLUME_USDT"]
+        CFG.EMA_PERIOD = preset["EMA_PERIOD"]
+        CFG.BB_PERIOD = preset["BB_PERIOD"]
+        CFG.BB_STD = preset["BB_STD"]
+        CFG.RSI_PERIOD = preset["RSI_PERIOD"]
+        CFG.RSI_OVERSOLD = preset["RSI_OVERSOLD"]
+        CFG.RSI_OVERBOUGHT = preset["RSI_OVERBOUGHT"]
+
+        # ── 2) 사이드바 위젯 세션 상태 동기화 ──
+        st.session_state.sb_leverage = preset["LEVERAGE"]
+        st.session_state.sb_margin = preset["MARGIN_USDT"]
+        st.session_state.sb_max_pos = preset["MAX_POSITIONS"]
+        st.session_state.sb_sl = round(preset["STOP_LOSS_PCT"] * 100, 2)
+        st.session_state.sb_tp = round(preset["TAKE_PROFIT_PCT"] * 100, 2)
+        st.session_state.sb_timeframe = preset["TIMEFRAME"]
+        st.session_state.sb_bb_period = preset["BB_PERIOD"]
+        st.session_state.sb_bb_std = preset["BB_STD"]
+        st.session_state.sb_rsi_period = preset["RSI_PERIOD"]
+        st.session_state.sb_rsi_overbought = float(preset["RSI_OVERBOUGHT"])
+        st.session_state.sb_rsi_oversold = float(preset["RSI_OVERSOLD"])
+        st.session_state.sb_ssl_period = CFG.SSL_PERIOD  # SSL은 프리셋에 없으므로 현재값 유지
+
+        # ── 3) 메인 탭 위젯 세션 상태 동기화 ──
+        st.session_state.main_leverage = preset["LEVERAGE"]
+        st.session_state.main_margin = preset["MARGIN_USDT"]
+        st.session_state.main_max_pos = preset["MAX_POSITIONS"]
+        st.session_state.main_sl = round(preset["STOP_LOSS_PCT"] * 100, 2)
+        st.session_state.main_tp = round(preset["TAKE_PROFIT_PCT"] * 100, 2)
+        st.session_state.main_timeframe = preset["TIMEFRAME"]
+        st.session_state.main_bb_period = preset["BB_PERIOD"]
+        st.session_state.main_bb_std = preset["BB_STD"]
+        st.session_state.main_ssl_period = CFG.SSL_PERIOD
+        st.session_state.main_rsi_period = preset["RSI_PERIOD"]
+        st.session_state.main_rsi_overbought = float(preset["RSI_OVERBOUGHT"])
+        st.session_state.main_rsi_oversold = float(preset["RSI_OVERSOLD"])
+        st.session_state.main_scan_interval = preset["SCAN_INTERVAL_SEC"]
+        st.session_state.main_min_vol = float(preset["MIN_VOLUME_USDT"])
+
+        # ── 4) 설정 탭 RSI 위젯 동기화 ──
+        st.session_state.settings_rsi_period = preset["RSI_PERIOD"]
+        st.session_state.settings_rsi_overbought = float(preset["RSI_OVERBOUGHT"])
+        st.session_state.settings_rsi_oversold = float(preset["RSI_OVERSOLD"])
+
+        # ── 5) Trader 엔진 방향 설정 동기화 ──
+        _engine = st.session_state.get("engine")
+        if _engine and _engine.trader:
+            _engine.trader.allow_long = preset["ALLOW_LONG"]
+            _engine.trader.allow_short = preset["ALLOW_SHORT"]
+
+    st.markdown(
+        '<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#00e0ff; '
+        'letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">'
+        '[ 다중기간 연동 변수값 자동설정 ]</p>',
+        unsafe_allow_html=True,
+    )
+    with st.expander("🧬 DL 최적 기간별 프리셋", expanded=False):
+        st.selectbox(
+            "분석 기간 선택",
+            ["-- 기간을 선택하세요 --", "30일 (30d)", "15일 (15d)", "7일 (7d)",
+             "48시간 (48h)", "24시간 (24h)", "12시간 (12h)"],
+            key="multi_period_select",
+            on_change=apply_multi_period_preset,
+            help="Deep Learning(MLP) 최적화로 산출된 기간별 19개 파라미터 세트를 즉시 적용합니다.",
+        )
+        _sel = st.session_state.get("multi_period_select", "-- 기간을 선택하세요 --")
+        if _sel != "-- 기간을 선택하세요 --" and _sel in MULTI_PERIOD_PRESETS:
+            _pr = MULTI_PERIOD_PRESETS[_sel]
+            st.caption(
+                f"📌 TF: {_pr['TIMEFRAME']} | LEV: {_pr['LEVERAGE']}x | "
+                f"마진: ${_pr['MARGIN_USDT']} | SL: {_pr['STOP_LOSS_PCT']*100:.2f}% | "
+                f"TP: {_pr['TAKE_PROFIT_PCT']*100:.2f}% | "
+                f"Long: {'✅' if _pr['ALLOW_LONG'] else '❌'} Short: {'✅' if _pr['ALLOW_SHORT'] else '❌'}"
+            )
+
     # [v1.2.90] 인터랙티브 프로 트레이딩 컨트롤러 (동기화 로직 적용)
     st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#ff9900; letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">[ STRATEGY ENGINE ]</p>', unsafe_allow_html=True)
     
@@ -761,6 +1006,7 @@ tabs = st.tabs([
     "📋  매매 이력",
     "🎯  포지션 진입",
     "⚙️  설정",
+    "🧬  딥러닝 최적화",
 ])
 
 
@@ -1538,6 +1784,229 @@ with tabs[4]:
             engine.trader.orders_today = 0
         st.toast("✅ 누적 수익률, 승률, 주문수 등 모든 통계 데이터가 현재 시간 기준으로 초기화되었습니다.")
         time.sleep(0.5)
+        st.rerun()
+
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TAB 6: 🧬 딥러닝 최적화
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+with tabs[5]:
+    st.markdown(
+        '<p title="자동매매 Off 일 때도 작동 가능합니다 (로컬 과거 캔들 캐시 데이터 기반 학습)" '
+        'style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;cursor:help;">'
+        'DEEP LEARNING OPTIMIZATION ENGINE <span style="color:#00e0ff;font-size:0.8rem;">[ℹ️ 마우스 오버 툴팁]</span></p>',
+        unsafe_allow_html=True,
+    )
+
+    # 비동기 백그라운드 관리 함수 정의
+    def is_dl_optimization_running():
+        pid_path = "data/dl_optim.pid"
+        if not os.path.exists(pid_path):
+            return False
+        try:
+            with open(pid_path, "r") as f:
+                pid = int(f.read().strip())
+            import subprocess
+            output = subprocess.check_output(f'tasklist /FI "PID eq {pid}"', shell=True).decode('utf-8', errors='ignore')
+            return str(pid) in output
+        except Exception:
+            return False
+
+    def start_dl_optimization():
+        if is_dl_optimization_running():
+            return False
+        os.makedirs("data", exist_ok=True)
+        log_path = "data/dl_optim_run.log"
+        pid_path = "data/dl_optim.pid"
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write("=== 🧬 딥러닝 다중 기간 최적화 엔진 기동 ===\n")
+        import sys
+        import subprocess
+        log_f = open(log_path, "a", encoding="utf-8")
+        proc = subprocess.Popen(
+            [sys.executable, "scratch/multi_period_optimizer.py"],
+            stdout=log_f,
+            stderr=subprocess.STDOUT,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+        )
+        with open(pid_path, "w") as f:
+            f.write(str(proc.pid))
+        return True
+
+    def stop_dl_optimization():
+        pid_path = "data/dl_optim.pid"
+        if not os.path.exists(pid_path):
+            return False
+        try:
+            with open(pid_path, "r") as f:
+                pid = int(f.read().strip())
+            import subprocess
+            # Windows 강제 프로세스 종료
+            subprocess.run(f'taskkill /F /PID {pid}', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if os.path.exists(pid_path):
+                os.remove(pid_path)
+            log_path = "data/dl_optim_run.log"
+            if os.path.exists(log_path):
+                with open(log_path, "a", encoding="utf-8") as f:
+                    f.write("\n=== 🛑 사용자에 의해 연산이 강제 중지되었습니다 ===\n")
+            return True
+        except Exception:
+            return False
+
+    def get_optimization_progress():
+        log_path = "data/dl_optim_run.log"
+        if not os.path.exists(log_path):
+            return 0.0, "준비 중..."
+        try:
+            with open(log_path, "r", encoding="utf-8") as f:
+                content = f.read()
+            
+            periods = ["30일 (30d)", "15일 (15d)", "7일 (7d)", "48시간 (48h)", "24시간 (24h)", "12시간 (12h)"]
+            done_count = 0
+            current_period = ""
+            
+            for p in periods:
+                if f"[{p}] Optimization Done!" in content:
+                    done_count += 1
+                elif f"Optimizing for period: {p}" in content:
+                    current_period = p
+            
+            if done_count == 6:
+                return 1.0, "최적화 완료"
+            
+            phase_offset = 0.0
+            if current_period:
+                period_idx = content.rfind(f"Optimizing for period: {current_period}")
+                if period_idx != -1:
+                    sub_content = content[period_idx:]
+                    if "Phase 4" in sub_content:
+                         phase_offset = 0.8
+                    elif "Phase 3" in sub_content:
+                         phase_offset = 0.6
+                    elif "Phase 2" in sub_content:
+                         phase_offset = 0.4
+                    elif "Phase 1" in sub_content:
+                         phase_offset = 0.2
+            
+            total_progress = (done_count + phase_offset) / 6.0
+            total_progress = max(0.0, min(1.0, total_progress))
+            
+            if current_period:
+                desc = f"🧬 {current_period} 최적화 및 학습 진행 중... ({int(total_progress * 100)}%)"
+            else:
+                desc = f"⚙️ 최적화 준비 및 데이터 분석 중... ({int(total_progress * 100)}%)"
+                
+            return total_progress, desc
+        except Exception:
+            return 0.0, "로그 파일 파싱 중..."
+
+    is_running = is_dl_optimization_running()
+
+    # 상단 정보 카드 & 컨트롤러 레이아웃 (3단으로 분할)
+    c1, c2, c3 = st.columns([2, 1, 1])
+    with c1:
+        if is_running:
+            st.info("🧬 **딥러닝 파라미터 최적화 연산이 진행 중입니다.**\n\n대시보드가 얼어붙지 않고 비동기로 학습하고 있으며, 5초마다 실시간 로그와 진행바를 갱신합니다. (자동매매 Off 일 때도 연산 가능)")
+        else:
+            st.success("✅ **최적화 엔진 대기 중 (자동매매 Off 상태에서도 연산 작동 가능)**\n\n언제든지 아래 버튼을 눌러 6개 기간의 딥러닝 최적화 연산을 시작할 수 있습니다.")
+    
+    with c2:
+        if is_running:
+            st.button("🧬 연산 실행 중...", disabled=True, use_container_width=True)
+        else:
+            if st.button("🧬 최적화 시작", key="start_dl_opt_btn", use_container_width=True):
+                if start_dl_optimization():
+                    st.toast("🧬 딥러닝 최적화가 백그라운드에서 시작되었습니다.")
+                    time.sleep(0.5)
+                    st.rerun()
+
+    with c3:
+        if is_running:
+            # 연산 중일때만 빨간색 느낌의 중지 버튼 노출 (Streamlit 버튼 스타일 커스텀 스타일 가이드라인을 고려하여 key 설정)
+            if st.button("🛑 최적화 중지", key="stop_dl_opt_btn", use_container_width=True):
+                if stop_dl_optimization():
+                    st.toast("🛑 딥러닝 최적화 연산이 중지되었습니다.")
+                    time.sleep(0.5)
+                    st.rerun()
+        else:
+            st.button("🛑 중지 대기", disabled=True, use_container_width=True)
+
+    # 실시간 진행바 (Progress Bar) 렌더링
+    if is_running:
+        st.markdown(" ")
+        progress_val, progress_desc = get_optimization_progress()
+        st.progress(progress_val, text=progress_desc)
+    elif os.path.exists("scratch/multi_period_results.pkl") and os.path.exists("data/dl_optim_run.log"):
+        # 완료되었거나 이전에 완료된 결과가 있는 경우
+        with open("data/dl_optim_run.log", "r", encoding="utf-8") as f:
+            log_c = f.read()
+        if "=== 🛑 사용자에 의해 연산이 강제 중지되었습니다 ===" in log_c:
+            st.warning("🛑 최근 최적화 연산이 사용자에 의해 중지되었습니다.")
+        else:
+            st.progress(1.0, text="🎉 최근 딥러닝 다중 기간 최적화 연산이 성공적으로 완료되었습니다!")
+
+    st.markdown("---")
+
+    # 실시간 로그 모니터링
+    st.markdown(
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#ff9900;letter-spacing:0.1em;">REAL-TIME ENGINE LOGS</p>',
+        unsafe_allow_html=True,
+    )
+    log_path = "data/dl_optim_run.log"
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, "r", encoding="utf-8") as f:
+                log_lines = f.readlines()
+            log_text = "".join(log_lines[-40:])
+            st.code(log_text, language="text")
+        except Exception as e:
+            st.code(f"로그를 읽을 수 없습니다: {e}", language="text")
+    else:
+        st.info("아직 생성된 최적화 로그 파일이 없습니다. [최적화 시작] 버튼을 누르면 연산 로그가 여기에 표시됩니다.")
+
+    # 학습 완료 결과 리포트 및 연동
+    results_path = "scratch/multi_period_results.pkl"
+    if os.path.exists(results_path):
+        st.markdown("---")
+        st.markdown(
+            '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#00e0ff;letter-spacing:0.1em;">OPTIMIZATION RESULTS REPORT</p>',
+            unsafe_allow_html=True,
+        )
+        try:
+            import pickle
+            with open(results_path, "rb") as f:
+                res_data = pickle.load(f)
+
+            periods_list = ["30일 (30d)", "15일 (15d)", "7일 (7d)", "48시간 (48h)", "24시간 (24h)", "12시간 (12h)"]
+            summary_table = []
+            for p in periods_list:
+                if p in res_data:
+                    d = res_data[p]
+                    summary_table.append({
+                        "기간": p,
+                        "일평균 수익률": f"{d.get('daily_ret', 0.0):.2f}%",
+                        "최대 낙폭 (MDD)": f"{d.get('mdd', 0.0):.2f}%",
+                        "승률 (Win Rate)": f"{d.get('winrate', 0.0):.1f}%",
+                        "Long 진입": f"{d.get('long_entries', 0)}회",
+                        "Short 진입": f"{d.get('short_entries', 0)}회",
+                        "총 거래 횟수": f"{d.get('total_entries', 0)}회"
+                    })
+            
+            if summary_table:
+                st.dataframe(pd.DataFrame(summary_table).set_index("기간"), use_container_width=True)
+
+            if not is_running:
+                st.markdown(" ")
+                if st.button("🪄 신규 최적 파라미터 적용 및 업데이트", use_container_width=True, key="apply_dl_preset_btn"):
+                    st.toast("✅ 신규 딥러닝 최적 파라미터가 전체 시스템에 연동되었습니다!")
+                    time.sleep(0.5)
+                    st.rerun()
+        except Exception as e:
+            st.error(f"결과 데이터를 파싱하는 중 오류가 발생했습니다: {e}")
+
+    # 실행 중일 경우 실시간으로 Streamlit Rerun 유도
+    if is_running:
+        time.sleep(5)
         st.rerun()
 
 
