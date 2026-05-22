@@ -448,7 +448,7 @@ with st.sidebar:
         '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
         '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착&#10;'
         '4. RSI 과열/과매도 필터: 과매수권 롱 제한(RSI < 60) 및 과매도권 숏 제한(RSI > 40)으로 추격 매매 노이즈 필터링">'
-        '<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">v3.0.4</span></div>',
+        '<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">v3.0.5</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -1016,8 +1016,8 @@ with tabs[1]:
                 df_scan = df_scan[df_scan["signal"] == "none"]
 
             # 표시용 포맷
-            display = df_scan[["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","rsi","rsi_ok"]].copy()
-            display.columns = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","SSL 추세","AKMCD 영선","AKMCD 점전환","RSI 수치","RSI 필터"]
+            display = df_scan[["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","rsi_ok","rsi"]].copy()
+            display.columns = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","SSL 추세","AKMCD 영선","AKMCD 점전환","RSI 필터","RSI 수치"]
             display["신호"] = display["신호"].map({"long":"🟢 LONG","short":"🔴 SHORT","none":"— "})
             display["SSL 추세"] = display["SSL 추세"].map({True:"✅",False:"❌"})
             display["AKMCD 영선"] = display["AKMCD 영선"].map({True:"✅",False:"❌"})
