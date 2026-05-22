@@ -14,3 +14,9 @@
 - Maintain clean logic maps. Do not introduce confusing structural changes.
 - Always read `PROJECT_STATUS.md` first upon any new session or task.
 - Enforce strict git versioning (`git commit -m "vX.Y.Z: ..."`, `git tag vX.Y.Z`) after every logical completion. NEVER commit `.env` or sensitive logs.
+
+## 4. UI-Strategy Consistency & Cross-Verification Rule
+- **Actual Code - UI Consistency Enforced**: When editing UI elements, descriptions, or help tooltips that explain strategy parameters (e.g., ADX, RSI, EMA200, SSL), the agent MUST inspect the underlying strategy logic file ([trader.py](file:///d:/AI/project/1127_bnc/core/trader.py) or [config.py](file:///d:/AI/project/1127_bnc/core/config.py)) first.
+- **No Assumptions in Text**: Ensure all tooltip explanations state exactly what conditions are default vs. conditional (based on other settings or toggles).
+- **Double Verification Checklist**: Before finalizing any task, double-check that the UI description does not introduce logic discrepancies with actual engine behavior.
+
