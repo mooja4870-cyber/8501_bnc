@@ -53,6 +53,94 @@ class TestStrategySignals:
         sig = self.engine.generate_signal(df, "BTC/USDT:USDT")
         assert sig.reason and len(sig.reason) > 0
 
+    def test_entry_conditions_and_rsi_blocking(self, monkeypatch):
+        """
+        포지션 진입을 위한 5대 조건 및 RSI 차단 로직 검증:
+        1. 롱 진입 조건 100% 충족 및 RSI 정상 (< 60) -> 롱 진입 성공
+        2. 롱 진입 조건 100% 충족했으나 RSI 과열 (>= 60) -> 진입 차단 (direction = "none", rsi_ok = False)
+        3. 숏 진입 조건 100% 충족 및 RSI 정상 (> 40) -> 숏 진입 성공
+        4. 숏 진입 조건 100% 충족했으나 RSI 과매도 (<= 40) -> 진입 차단 (direction = "none", rsi_ok = False)
+        """
+        import pandas as pd
+        import numpy as np
+
+        timestamps = pd.date_range(end=pd.Timestamp.now(), periods=5, freq="15min")
+        df_base = pd.DataFrame({
+            "open": [100.0] * 5,
+            "high": [101.0] * 5,
+            "low": [99.0] * 5,
+            "close": [100.0] * 5,
+            "volume": [10000.0] * 5,
+        }, index=timestamps)
+
+        # 1. 롱 진입 100% 만족하는 지표 결과 Mocking
+        def mock_calc_long(df_input):
+            res = df_input.copy()
+            res['ssl_up'] = 90.0
+            res['ssl_down'] = 85.0
+            res['macd_hist'] = 1.5
+            res['dot_color'] = ['red', 'red', 'red', 'red', 'green']
+            res['candle_color'] = ['blue', 'blue', 'blue', 'blue', 'blue']
+            res['bb_upper'] = 2.0
+            res['bb_lower'] = -2.0
+            res['rsi'] = 50.0 # 정상
+            return res
+
+        # 2. 롱 진입 100% 만족 + RSI 과열 Mocking
+        def mock_calc_long_rsi_blocked(df_input):
+            res = mock_calc_long(df_input)
+            res.loc[res.index[-1], 'rsi'] = 65.0 # 과열
+            return res
+
+        # 3. 숏 진입 100% 만족하는 지표 결과 Mocking
+        def mock_calc_short(df_input):
+            res = df_input.copy()
+            res['ssl_up'] = 115.0
+            res['ssl_down'] = 110.0
+            res['macd_hist'] = -1.5
+            res['dot_color'] = ['green', 'green', 'green', 'green', 'red']
+            res['candle_color'] = ['red', 'red', 'red', 'red', 'red']
+            res['bb_upper'] = 2.0
+            res['bb_lower'] = -2.0
+            res['rsi'] = 50.0 # 정상
+            return res
+
+        # 4. 숏 진입 100% 만족 + RSI 과매도 Mocking
+        def mock_calc_short_rsi_blocked(df_input):
+            res = mock_calc_short(df_input)
+            res.loc[res.index[-1], 'rsi'] = 35.0 # 과매도
+            return res
+
+        # Case 1: 롱 진입조건 충족 + RSI 정상 (50.0) -> long 진입
+        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long)
+        sig_long_ok = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+        assert sig_long_ok.direction == "long"
+        assert sig_long_ok.rsi_ok is True
+        assert sig_long_ok.strength == 100
+
+        # Case 2: 롱 진입조건 충족 + RSI 과열 (65.0) -> none 진입차단
+        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long_rsi_blocked)
+        sig_long_blocked = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+        assert sig_long_blocked.direction == "none"
+        assert sig_long_blocked.rsi_ok is False
+        assert "RSI 과열" in sig_long_blocked.reason
+        assert sig_long_blocked.strength == 80
+
+        # Case 3: 숏 진입조건 충족 + RSI 정상 (50.0) -> short 진입
+        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short)
+        sig_short_ok = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+        assert sig_short_ok.direction == "short"
+        assert sig_short_ok.rsi_ok is True
+        assert sig_short_ok.strength == 100
+
+        # Case 4: 숏 진입조건 충족 + RSI 과매도 (35.0) -> none 진입차단
+        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short_rsi_blocked)
+        sig_short_blocked = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+        assert sig_short_blocked.direction == "none"
+        assert sig_short_blocked.rsi_ok is False
+        assert "RSI 과매도" in sig_short_blocked.reason
+        assert sig_short_blocked.strength == 80
+
 
 class TestMockDataGeneration:
     def setup_method(self):
