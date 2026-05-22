@@ -1,3 +1,4 @@
+| v3.0.8 | 2026-05-22 | [UI/UX] 사이드바 내 '지표 및 스캐너 설정' 안에 숨겨져 있던 RSI 필터 설정을 독립된 expander(⚡ RSI 필터 설정)로 분리 및 기본 펼침(expanded=True) 설정 | UI/UX |
 | v3.0.7 | 2026-05-22 | [UI/UX] 통계 초기화 시점의 총 잔고 금액을 '누적 수익률' 항목의 툴팁에 표시(초기화 시점의 총 잔고: {seed_money} USDT) 하도록 개선 | UI/UX |
 | v3.0.6 | 2026-05-22 | [Core/Test] 5대 진입 조건 및 RSI 과열/과매도 차단 조건 검증 단위 테스트(test_entry_conditions_and_rsi_blocking) 추가 및 검증 완료 | Core/Test |
 | v3.0.5 | 2026-05-22 | [UI/UX] 스캐너 결과 테이블 내 'RSI 필터'와 'RSI 수치' 컬럼 순서 스왑 (필터 여부 컬럼 우선 노출) | UI/UX |

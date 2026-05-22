@@ -448,7 +448,7 @@ with st.sidebar:
         '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
         '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착&#10;'
         '4. RSI 과열/과매도 필터: 과매수권 롱 제한(RSI < 60) 및 과매도권 숏 제한(RSI > 40)으로 추격 매매 노이즈 필터링">'
-        '<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">v3.0.7</span></div>',
+        '<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">v3.0.8</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -541,8 +541,7 @@ with st.sidebar:
             st.number_input("MACD 시그널", 2, 20, CFG.MACD_SIGNAL, key="sb_macd_signal",
                             on_change=sync_p, args=("sb_macd_signal", "main_macd_signal", "MACD_SIGNAL"))
 
-        st.markdown("---")
-        st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.8rem; color:#ff9900; margin-bottom:5px;">RSI 필터 설정</p>', unsafe_allow_html=True)
+    with st.expander("⚡ RSI 필터 설정", expanded=True):
         st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="sb_rsi_period",
                         on_change=sync_p, args=("sb_rsi_period", "main_rsi_period,settings_rsi_period", "RSI_PERIOD"))
         col_rsi1, col_rsi2 = st.columns(2)
