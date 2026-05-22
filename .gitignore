@@ -1,0 +1,26 @@
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment
+.env
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Runtime data
+data/stats.json
+data/trade_history.csv
+
+# Temporary
+tmp-*.out
+tmp-*.err
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
