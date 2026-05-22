@@ -1,0 +1,12 @@
+D:\AI\project\1127_okx\app.py:487: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now_kst = datetime.utcnow() + timedelta(hours=9)
+D:\AI\project\1127_okx\app.py:721: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now_kst = datetime.utcnow() + timedelta(hours=9)
+D:\AI\project\1127_okx\app.py:487: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now_kst = datetime.utcnow() + timedelta(hours=9)
+D:\AI\project\1127_okx\app.py:721: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now_kst = datetime.utcnow() + timedelta(hours=9)
+D:\AI\project\1127_okx\app.py:487: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now_kst = datetime.utcnow() + timedelta(hours=9)
+D:\AI\project\1127_okx\app.py:721: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now_kst = datetime.utcnow() + timedelta(hours=9)

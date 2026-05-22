@@ -1,3 +1,4 @@
+| v3.0.9 | 2026-05-22 | [Test] 테스트 환경 격리를 위해 conftest.py에서 stats.json 파일 경로 모킹 추가 (테스트 실행 시 실제 stats 데이터 오염 및 리스크 블락으로 인한 테스트 실패 차단) | Test |
 | v3.0.8 | 2026-05-22 | [UI/UX] 사이드바 내 '지표 및 스캐너 설정' 안에 숨겨져 있던 RSI 필터 설정을 독립된 expander(⚡ RSI 필터 설정)로 분리 및 기본 펼침(expanded=True) 설정 | UI/UX |
 | v3.0.7 | 2026-05-22 | [UI/UX] 통계 초기화 시점의 총 잔고 금액을 '누적 수익률' 항목의 툴팁에 표시(초기화 시점의 총 잔고: {seed_money} USDT) 하도록 개선 | UI/UX |
 | v3.0.6 | 2026-05-22 | [Core/Test] 5대 진입 조건 및 RSI 과열/과매도 차단 조건 검증 단위 테스트(test_entry_conditions_and_rsi_blocking) 추가 및 검증 완료 | Core/Test |
