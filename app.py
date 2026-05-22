@@ -36,6 +36,7 @@ st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap');
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 
     :root {
         --terminal-bg: #050505;
@@ -144,8 +145,8 @@ st.markdown(
 
     /* 로고 */
     .quantum-logo {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: calc(1.1rem * 1.44);
+        font-family: 'Pretendard', 'Inter', sans-serif;
+        font-size: calc(1.1rem * 1.7568);
         font-weight: 700;
         color: var(--terminal-accent);
         border-bottom: 2px solid var(--terminal-accent);
@@ -160,6 +161,7 @@ st.markdown(
         100% { background-position: 0% 50%; }
     }
     .rainbow-text {
+        font-family: 'Pretendard', 'Inter', sans-serif !important;
         background: linear-gradient(to right, #ff2a2b, #ff9900, #00ff00, #00ffff, #cc33ff, #ff2a2b);
         background-size: 400% 400%;
         -webkit-background-clip: text !important;
@@ -265,6 +267,52 @@ st.markdown(
         color: #cccccc; /* Bright Grey */
         text-transform: uppercase;
         margin-bottom: 2px;
+        display: flex;
+        align-items: center;
+    }
+
+    /* 커스텀 금융 터미널 툴팁 */
+    .terminal-tooltip {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: help;
+        color: var(--terminal-accent);
+        font-weight: bold;
+        margin-left: 6px;
+        font-size: 0.8rem;
+        background: #1a1a1a;
+        border: 1px solid var(--terminal-border);
+        width: 16px;
+        height: 16px;
+        border-radius: 0px;
+    }
+    .terminal-tooltip .tooltip-text {
+        visibility: hidden;
+        width: 250px;
+        background-color: var(--terminal-surface) !important;
+        color: var(--terminal-text) !important;
+        text-align: center;
+        border: 1px solid var(--terminal-accent) !important;
+        border-radius: 0px !important;
+        padding: 6px 10px !important;
+        position: absolute;
+        z-index: 9999 !important;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.2s;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.8rem !important;
+        font-weight: normal !important;
+        text-transform: none !important;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.9) !important;
+    }
+    .terminal-tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
     }
     .terminal-metric-value {
         font-family: 'JetBrains Mono', monospace;
@@ -346,20 +394,15 @@ def init_session():
     
     # 만약 엔진이 이미 실행 중이라면 그 상태에 맞추어 세션 상태 초기화
     is_trading = True
-    is_long = True
-    is_short = True
     if engine.is_ready:
         is_trading = (engine.state == EngineState.TRADING)
-        if engine.trader:
-            is_long = engine.trader.allow_long
-            is_short = engine.trader.allow_short
 
     defaults = {
         "engine": engine,
         "api_connected": engine.is_ready,
         "auto_trading": is_trading,
-        "allow_long": is_long,
-        "allow_short": is_short,
+        "adx_auto_switch": CFG.ADX_AUTO_SWITCH,
+        "rsi_auto_switch": CFG.USE_RSI_FILTER,
         "active_preset": "기본 (Stable)",
         "closing_symbols": set(), # [v1.2.52] 잔상 방지용 청산 대기 목록
     }
@@ -486,8 +529,16 @@ with st.sidebar:
     )
 
     auto = st.toggle("자동매매 ON/OFF", value=st.session_state.auto_trading)
-    longs = st.toggle("롱 포지션 허용", value=st.session_state.allow_long)
-    shorts = st.toggle("숏 포지션 허용", value=st.session_state.allow_short)
+    rsi_auto = st.toggle(
+        "⚡ RSI 자동 스위칭",
+        value=st.session_state.rsi_auto_switch,
+        help="ON: RSI 필터 활성화 (롱 < 60, 숏 > 40) 및 스캐너 노출 / OFF: RSI 필터 비활성화 및 스캐너 필드 숨김"
+    )
+    adx_auto = st.toggle(
+        "🧠 ADX 자동 스위칭",
+        value=st.session_state.adx_auto_switch,
+        help="ON: ADX값이 25 이상이면 추세장(롱 EMA200 위 / 숏 EMA200 아래), 25 미만이면 횡보장(가격 BB 바로 안쪽) 모드로 자동 필터 전환 / OFF: RSI+EMA200 기본 전략 고정"
+    )
 
     engine: QuantumEngine = st.session_state.engine
     
@@ -501,6 +552,16 @@ with st.sidebar:
                 engine.disable_trading()
                 engine.stop_scanner()
 
+    # ADX 자동 스위칭 토글 동기화
+    if adx_auto != st.session_state.adx_auto_switch:
+        st.session_state.adx_auto_switch = adx_auto
+        CFG.ADX_AUTO_SWITCH = adx_auto
+
+    # RSI 자동 스위칭 토글 동기화
+    if rsi_auto != st.session_state.rsi_auto_switch:
+        st.session_state.rsi_auto_switch = rsi_auto
+        CFG.USE_RSI_FILTER = rsi_auto
+
     # 자동매매 상태 동기화 및 강력 자동시작 보장 로직 (API 연결 후 즉시 스캔/매매 기동 보장)
     if engine.is_ready and st.session_state.auto_trading:
         if engine.trader and not engine.trader.enabled:
@@ -508,9 +569,9 @@ with st.sidebar:
         if engine.scanner and not engine.scanner.is_running:
             engine.start_scanner()
 
-    if engine.is_ready and engine.trader:
-        engine.trader.allow_long = longs
-        engine.trader.allow_short = shorts
+    # 사이드바 전략 상태를 ADX/RSI 설정에 포인터 동기화
+    st.session_state.adx_auto_switch = CFG.ADX_AUTO_SWITCH
+    st.session_state.rsi_auto_switch = CFG.USE_RSI_FILTER
 
     # [v1.2.90] 인터랙티브 프로 트레이딩 컨트롤러 (동기화 로직 적용)
     st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#ff9900; letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">[ STRATEGY ENGINE ]</p>', unsafe_allow_html=True)
@@ -894,7 +955,13 @@ with tabs[0]:
             <div class="metric-bar-container">
                 <!-- 누적 수익률 -->
                 <div class="terminal-metric-item">
-                    <div class="terminal-metric-label" title="초기화 시점의 총 잔고: {seed_money:,.2f} USDT">누적 수익률</div>
+                    <div class="terminal-metric-label">
+                        누적 수익률
+                        <span class="terminal-tooltip">
+                            ℹ
+                            <span class="tooltip-text">초기화 시점의 총 잔고: {seed_money:,.2f} USDT</span>
+                        </span>
+                    </div>
                     <div class="terminal-metric-value" style="color:{total_color};">{total_pnl_pct:+.2f}%</div>
                     <div class="terminal-metric-sub" style="color:#ffffff;">
                         <span>{daily_arrow}</span> {abs(daily_pnl_pct):.2f}% (24h)
@@ -938,7 +1005,7 @@ with tabs[0]:
         )
 
         # [v1.4.11] 누적 데이터 및 통계 초기화 긴 버튼 추가
-        if st.button("📊  수익율,승률 초기화", use_container_width=True, key="dashboard_stats_reset",
+        if st.button("📊  수익률,승률 초기화", use_container_width=True, key="dashboard_stats_reset",
                      help="이 버튼을 누르면 지금까지 쌓인 누적 수익률, 승률(W/L), 주문 횟수 등 모든 성적표가 싹 다 0으로 리셋됩니다. 현재 총 잔고를 새로운 '시드 머니'로 잡고 현재 시각부터 기록을 시작합니다."):
             d_data = engine.get_dashboard_data()
             current_bal = d_data.get("total_balance", 30.0)
@@ -1015,13 +1082,23 @@ with tabs[1]:
                 df_scan = df_scan[df_scan["signal"] == "none"]
 
             # 표시용 포맷
-            display = df_scan[["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","rsi_ok","rsi"]].copy()
-            display.columns = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","SSL 추세","AKMCD 영선","AKMCD 점전환","RSI 필터","RSI 수치"]
+            if CFG.USE_RSI_FILTER:
+                cols = ["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","ema200_ok","ema200","rsi_ok","rsi"]
+                col_names = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","SSL 추세","AKMCD 영선","AKMCD 점전환","EMA 200 필터","EMA 200 수치","RSI 필터","RSI 수치"]
+            else:
+                cols = ["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","ema200_ok","ema200"]
+                col_names = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","SSL 추세","AKMCD 영선","AKMCD 점전환","EMA 200 필터","EMA 200 수치"]
+
+            display = df_scan[cols].copy()
+            display.columns = col_names
             display["신호"] = display["신호"].map({"long":"🟢 LONG","short":"🔴 SHORT","none":"— "})
             display["SSL 추세"] = display["SSL 추세"].map({True:"✅",False:"❌"})
             display["AKMCD 영선"] = display["AKMCD 영선"].map({True:"✅",False:"❌"})
             display["AKMCD 점전환"] = display["AKMCD 점전환"].map({True:"✅",False:"❌"})
-            display["RSI 필터"] = display["RSI 필터"].map({True:"✅",False:"❌"})
+            display["EMA 200 필터"] = display["EMA 200 필터"].map({True:"✅",False:"❌"})
+            if "RSI 필터" in display.columns:
+                display["RSI 필터"] = display["RSI 필터"].map({True:"✅",False:"❌"})
+
 
             def style_pnl(val):
                 color = '#ef4444' if val >= 0 else '#3b82f6'
@@ -1137,7 +1214,7 @@ with tabs[2]:
 
 with tabs[3]:
     st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">ENTRY CONDITIONS</p>',
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">ENTRY CONDITIONS & STRATEGIC SYSTEM</p>',
         unsafe_allow_html=True,
     )
 
@@ -1146,35 +1223,67 @@ with tabs[3]:
         st.markdown("**🟢 LONG 포지션 진입 조건**")
         st.markdown(
             """
-            <div style="background:#0f0f0f; border:1px solid #444; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:5px;">
-                <p style="font-family:'Inter'; font-size:1.25rem; color:#ffcc00; margin:0; line-height:1.5; text-align:center; font-weight:600;">
-                "🌊 큰 파도(SSL)가 위에서 밀어주고, 🟢 AKMCD 점이 상승 전환되었으며, 🚀 히스토그램 강도마저 양수로 돌파하고, 🔵 캔들마저 양봉(Blue)일 때 롱 진입합니다!"
+            <div style="background:#0f0f0f; border:1px solid #ffcc00; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:0px;">
+                <p style="font-family:'Inter'; font-size:1.15rem; color:#ffcc00; margin:0; line-height:1.5; text-align:center; font-weight:600;">
+                "🌊 큰 파도(SSL)가 밀어주고, 🟢 AKMCD 점이 상승하며, 🚀 히스토그램이 영선을 돌파하고, 🔵 양봉(Blue)이면서 🛡️ EMA 200 위에 위치할 때 롱 진입합니다!"
                 </p>
             </div>
             """, 
             unsafe_allow_html=True
         )
-        st.markdown("- **추세:** 현재 종가가 SSL 파란선(ssl_up) 위 <span style='color:#ffcc00;'>☞ 대세 상승 추세인지 확인합니다.</span>", unsafe_allow_html=True)
-        st.markdown("- **반전:** AKMCD 도트 색상이 빨간색에서 초록색으로 변경 <span style='color:#ffcc00;'>☞ 단기 모멘텀이 상승으로 전환되었음을 의미합니다.</span>", unsafe_allow_html=True)
-        st.markdown("- **모멘텀:** MACD 히스토그램이 영선(0) 위 <span style='color:#ffcc00;'>☞ MACD가 시그널 선보다 높게 있어 힘이 실렸음을 나타냅니다.</span>", unsafe_allow_html=True)
-        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가보다 높은 양봉(Blue) <span style='color:#ffcc00;'>☞ 실시간 매수세가 우위임을 확인합니다.</span>", unsafe_allow_html=True)
+        st.markdown("- **추세:** 현재 종가가 SSL 파란선(ssl_up) 위 <span style='color:#ffcc00;'>☞ 대세 상승 추세 확인</span>", unsafe_allow_html=True)
+        st.markdown("- **반전:** AKMCD 도트 색상이 빨간색에서 초록색으로 변경 <span style='color:#ffcc00;'>☞ 단기 모멘텀 상승 전환</span>", unsafe_allow_html=True)
+        st.markdown("- **모멘텀:** MACD 히스토그램이 영선(0) 위 <span style='color:#ffcc00;'>☞ MACD 강도 양수 돌파</span>", unsafe_allow_html=True)
+        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가보다 높은 양봉(Blue) <span style='color:#ffcc00;'>☞ 실시간 매수세 우위</span>", unsafe_allow_html=True)
+        st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 위** <span style='color:#ffcc00;'>☞ 장기 대추세 부합 (필수)</span>", unsafe_allow_html=True)
 
     with c2:
         st.markdown("**🔴 SHORT 포지션 진입 조건**")
         st.markdown(
             """
-            <div style="background:#0f0f0f; border:1px solid #444; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:5px;">
-                <p style="font-family:'Inter'; font-size:1.25rem; color:#ffcc00; margin:0; line-height:1.5; text-align:center; font-weight:600;">
-                "📉 내리막길(SSL) 경사가 가파르고, 🔴 AKMCD 점이 하락 전환되었으며, 🌬 히스토그램 강도마저 음수로 떨어지고, 🔴 캔들마저 음봉(Red)일 때 숏 진입합니다!"
+            <div style="background:#0f0f0f; border:1px solid #ff3b30; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:0px;">
+                <p style="font-family:'Inter'; font-size:1.15rem; color:#ff3b30; margin:0; line-height:1.5; text-align:center; font-weight:600;">
+                "📉 내리막길(SSL) 경사 아래에서, 🔴 AKMCD 점이 하락하며, 🌬 히스토그램이 영선 아래로 떨어지고, 🔴 음봉(Red)이면서 🛡️ EMA 200 아래에 위치할 때 숏 진입합니다!"
                 </p>
             </div>
             """, 
             unsafe_allow_html=True
         )
-        st.markdown("- **추세:** 현재 종가가 SSL 빨간선(ssl_down) 아래 <span style='color:#ffcc00;'>☞ 대세 하락 추세인지 확인합니다.</span>", unsafe_allow_html=True)
-        st.markdown("- **반전:** AKMCD 도트 색상이 초록색에서 빨간색으로 변경 <span style='color:#ffcc00;'>☞ 단기 모멘텀이 하락으로 전환되었음을 의미합니다.</span>", unsafe_allow_html=True)
-        st.markdown("- **모멘텀:** MACD 히스토그램이 영선(0) 아래 <span style='color:#ffcc00;'>☞ MACD가 시그널 선보다 낮게 있어 낙폭이 예상됨을 나타냅니다.</span>", unsafe_allow_html=True)
-        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가 이하인 음봉(Red) <span style='color:#ffcc00;'>☞ 실시간 매도세가 우위임을 확인합니다.</span>", unsafe_allow_html=True)
+        st.markdown("- **추세:** 현재 종가가 SSL 빨간선(ssl_down) 아래 <span style='color:#ff3b30;'>☞ 대세 하락 추세 확인</span>", unsafe_allow_html=True)
+        st.markdown("- **반전:** AKMCD 도트 색상이 초록색에서 빨간색으로 변경 <span style='color:#ff3b30;'>☞ 단기 모멘텀 하락 전환</span>", unsafe_allow_html=True)
+        st.markdown("- **모멘텀:** MACD 히스토그램이 영선(0) 아래 <span style='color:#ff3b30;'>☞ MACD 강도 음수 돌파</span>", unsafe_allow_html=True)
+        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가 이하인 음봉(Red) <span style='color:#ff3b30;'>☞ 실시간 매도세 우위</span>", unsafe_allow_html=True)
+        st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 아래** <span style='color:#ff3b30;'>☞ 장기 대추세 부합 (필수)</span>", unsafe_allow_html=True)
+
+    st.markdown("---")
+    
+    # ── 대혁신적인 진입 필터/엔진 시각화 체계 ─────────────────────
+    st.markdown(
+        """
+        <div style="background:#0c0c0c; border:1px solid #262626; padding:20px; border-radius:0px; margin-bottom:20px;">
+            <h4 style="font-family:'JetBrains Mono'; color:#ff9900; margin-top:0; margin-bottom:15px; font-size:1.1rem; letter-spacing:0.05em;">⚙️ AI QUANTUM 복합 진입 필터 & 엔진 스위칭 아키텍처</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div style="background:#151515; padding:15px; border-left:4px solid #ffcc00;">
+                    <p style="font-weight:bold; font-size:0.95rem; color:#ffffff; margin-top:0; margin-bottom:10px;">🛠️ 핵심 필수 기반 조건 (Base Base Base - 100% 필수)</p>
+                    <ul style="font-size:0.85rem; color:#cccccc; line-height:1.6; padding-left:18px; margin:0;">
+                        <li><b>SSL 추세 동기화:</b> 상하위 선 배열 일치 여부 실시간 검증</li>
+                        <li><b>AKMCD Zero Line:</b> MACD 영선 상단(롱)/하단(숏) 진입 모멘텀</li>
+                        <li><b>AKMCD Dot Switch:</b> 모멘텀 마디 전환(빨->초 / 초->빨) 타이밍 포착</li>
+                        <li><b>EMA 200 장기 필터:</b> 장기 대이평 기준 가격 정배열/역배열 필터링</li>
+                    </ul>
+                </div>
+                <div style="background:#151515; padding:15px; border-left:4px solid #ff9900;">
+                    <p style="font-weight:bold; font-size:0.95rem; color:#ffffff; margin-top:0; margin-bottom:10px;">🚀 동적 전략 옵션 제어 (Optional Controls - 사이드바 토글)</p>
+                    <ul style="font-size:0.85rem; color:#cccccc; line-height:1.6; padding-left:18px; margin:0;">
+                        <li><b>⚡ RSI 자동 스위칭 (반필수):</b> 과열 진입 제한 롱 상한선(60) & 숏 하한선(40)을 적용해 노이즈를 완전 차단합니다. OFF 시 우회되며 스캐너에서도 제외됩니다.</li>
+                        <li><b>🧠 ADX 자동 스위칭 (완전 옵션):</b> <b>ADX ≥ 25 (추세장)</b> 시 장기이평선 필터로 작동하고, <b>ADX < 25 (횡보장)</b> 시 가격 BB 채널 내에서만 거래를 승인하는 능동형 체계 장치입니다.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.markdown("---")
     st.markdown(
@@ -1330,7 +1439,7 @@ with tabs[4]:
         unsafe_allow_html=True,
     )
     
-    if st.button("📊  수익율,승률 초기화", use_container_width=True,
+    if st.button("📊  수익률,승률 초기화", use_container_width=True,
                  help="이 버튼을 누르면 지금까지 쌓인 누적 수익률, 승률(몇 번 이기고 졌는지), 주문 횟수 같은 모든 성적표가 싹 다 0으로 리셋돼요! 현재 잔고를 새로운 '원금'으로 잡고 처음부터 다시 기록을 시작해요. 한 번 누르면 되돌릴 수 없으니 신중하게!"):
         d_data = engine.get_dashboard_data()
         current_bal = d_data.get("total_balance", 30.0)

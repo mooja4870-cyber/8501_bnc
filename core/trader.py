@@ -38,6 +38,9 @@ class AutoTrader:
         self.trade_log: List[Dict] = []
         self._today: date = date.today()
 
+        # API 갱신 지연(Execution/Replication Lag) 방지를 위한 최근 주문 종목 대기열
+        self.recently_entered: Dict[str, datetime] = {}
+
     # ── 제어 ───────────────────────────────────────────
 
     def enable(self):
@@ -78,17 +81,31 @@ class AutoTrader:
             if sig.direction == "short" and not self.allow_short:
                 return
 
+            # ── 최근 진입 중복 방지 캐시 정리 (120초 경과건 삭제) ───────
+            now_time = datetime.now()
+            self.recently_entered = {
+                sym: ts for sym, ts in self.recently_entered.items()
+                if (now_time - ts).total_seconds() < 120
+            }
+
             # ── 중복 포지션 체크 ──────────────────────
             try:
                 positions = self.client.get_positions()
-                symbols_held = [p["symbol"] for p in positions]
-                if sig.symbol in symbols_held:
-                    logger.info(f"[SKIP] {sig.symbol} — 이미 포지션 보유")
+                symbols_held = {p["symbol"] for p in positions}
+                
+                # 이미 실제로 포지션 목록에 올라와 있다면 대기열에서 삭제
+                for sym in list(self.recently_entered.keys()):
+                    if sym in symbols_held:
+                        self.recently_entered.pop(sym, None)
+
+                if sig.symbol in symbols_held or sig.symbol in self.recently_entered:
+                    logger.info(f"[SKIP] {sig.symbol} — 이미 포지션 보유 중이거나 진입 주문이 전송되었습니다.")
                     return
 
                 # ── 최대 포지션 수 체크 ───────────────────
-                if len(positions) >= self.cfg.MAX_POSITIONS:
-                    logger.info(f"[SKIP] 최대 포지션 수 도달: {len(positions)}/{self.cfg.MAX_POSITIONS}")
+                effective_count = len(symbols_held) + len(self.recently_entered)
+                if effective_count >= self.cfg.MAX_POSITIONS:
+                    logger.info(f"[SKIP] 최대 포지션 수 도달: {effective_count}/{self.cfg.MAX_POSITIONS} (보유: {len(symbols_held)}, 진입진행중: {len(self.recently_entered)})")
                     return
             except Exception as e:
                 logger.error(f"[TRADER ERROR] 포지션 체크 중 예외 발생: {e}")
@@ -111,6 +128,7 @@ class AutoTrader:
             )
 
             if result:
+                self.recently_entered[sig.symbol] = datetime.now()
                 self.orders_today += 1
                 stats_store.record_order()
                 self._log_trade(sig, status="EXECUTED", result=result)

@@ -207,9 +207,12 @@ class Scanner:
                     "bb_ok": sig.bb_ok,
                     "rsi": round(sig.rsi, 1),
                     "rsi_ok": sig.rsi_ok,
+                    "ema200": round(sig.ema200, 2) if sig.ema200 is not None else 0.0,
+                    "ema200_ok": sig.ema200_ok,
                     "reason": sig.reason,
                     "timestamp": datetime.now(),
                 })
+
 
                 if sig.direction in ("long", "short"):
                     signal_count += 1

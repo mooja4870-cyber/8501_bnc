@@ -141,6 +141,23 @@ class TestStrategySignals:
         assert "RSI 과매도" in sig_short_blocked.reason
         assert sig_short_blocked.strength == 80
 
+        # Case 5: USE_RSI_FILTER = False 일 때, 롱 진입조건 충족 + RSI 과열(65.0) 임에도 진입 허용 -> long 진입
+        self.engine.cfg.USE_RSI_FILTER = False
+        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long_rsi_blocked)
+        sig_long_bypass = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+        assert sig_long_bypass.direction == "long"
+        assert sig_long_bypass.rsi_ok is True
+
+        # Case 6: USE_RSI_FILTER = False 일 때, 숏 진입조건 충족 + RSI 과매도(35.0) 임에도 진입 허용 -> short 진입
+        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short_rsi_blocked)
+        sig_short_bypass = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+        assert sig_short_bypass.direction == "short"
+        assert sig_short_bypass.rsi_ok is True
+
+        # 원복
+        self.engine.cfg.USE_RSI_FILTER = True
+
+
 
 class TestMockDataGeneration:
     def setup_method(self):
