@@ -11,7 +11,7 @@ from core.strategy import Signal
 from core.config import CFG
 
 
-def _sig(symbol="BTC/USDT:USDT", direction="long", strength=90):
+def _sig(symbol="BTC/USDT:USDT", direction="long", strength=100):
     return Signal(
         symbol=symbol, direction=direction, strength=strength,
         ema_ok=True, bb_ok=True, macd_ok=True,

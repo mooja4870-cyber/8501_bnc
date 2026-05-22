@@ -307,15 +307,26 @@ class TestRiskGateParameters:
         assert "잔고 부족" in reason
 
     def test_signal_strength_minimum(self):
-        """신호 강도 < 60% → 차단"""
-        ok, reason = self.trader._risk_check(_make_signal(strength=40))
+        """신호 강도 < 100% → 차단 (4대 조건 미충족)"""
+        ok, reason = self.trader._risk_check(_make_signal(strength=80))
         assert ok is False
         assert "강도 부족" in reason
 
-    def test_signal_strength_60_pass(self):
-        """신호 강도 = 60% → 통과"""
-        ok, reason = self.trader._risk_check(_make_signal(strength=60))
+    def test_signal_strength_100_pass(self):
+        """신호 강도 = 100% → 통과"""
+        ok, reason = self.trader._risk_check(_make_signal(strength=100))
         assert ok is True
+
+    def test_max_drawdown_blocks(self):
+        """MAX_DRAWDOWN_PCT 초과 → 차단"""
+        import core.stats as stats_store
+        original_load = stats_store.load_stats
+        stats_store.load_stats = lambda: {"seed_money": 100.0}
+        self.mock._balance = {"total": 85.0, "free": 80.0, "used": 5.0}  # 15% 낙폭 > 10%
+        ok, reason = self.trader._risk_check(_make_signal())
+        assert ok is False
+        assert "최대 낙폭" in reason
+        stats_store.load_stats = original_load  # 원복
 
     def test_available_margin_insufficient(self):
         """가용 증거금 < MARGIN_USDT → 차단"""

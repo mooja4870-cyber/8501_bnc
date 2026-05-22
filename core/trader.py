@@ -158,18 +158,32 @@ class AutoTrader:
         if self.daily_pnl_usdt <= -self.cfg.DAILY_LOSS_LIMIT_USDT:
             return False, f"일일 손실 한도 초과: {self.daily_pnl_usdt:.2f} USDT"
 
-        # 2. 계좌 MDD 체크
+        # 2. 계좌 잔고 체크
         balance = self.client.get_balance()
         total = balance.get("total", 0)
-        # 초기 자금 대비 현재 낙폭 추정 (간략화)
         if total < 10:  # 잔고 임계값
             return False, "잔고 부족 (< 10 USDT)"
 
-        # 3. 신호 강도 최소치
-        if sig.strength < 60:
-            return False, f"신호 강도 부족: {sig.strength}% (최소 60%)"
+        # 3. MAX_DRAWDOWN_PCT — 초기 자금 대비 낙폭 체크
+        try:
+            _stats = stats_store.load_stats()
+            seed_money = _stats.get("seed_money", 0)
+            if seed_money > 0:
+                drawdown_pct = (seed_money - total) / seed_money
+                if drawdown_pct >= self.cfg.MAX_DRAWDOWN_PCT:
+                    return False, (
+                        f"최대 낙폭 초과: {drawdown_pct*100:.1f}% "
+                        f"(한도 {self.cfg.MAX_DRAWDOWN_PCT*100:.0f}%, "
+                        f"시드 {seed_money:.2f} → 현재 {total:.2f} USDT)"
+                    )
+        except Exception as e:
+            logger.warning(f"[RISK] MDD 체크 중 예외: {e}")
 
-        # 4. 가용 증거금 확인
+        # 4. 신호 강도 — 4대 조건 모두 충족(100%) 필수
+        if sig.strength < 100:
+            return False, f"신호 강도 부족: {sig.strength}% (4대 조건 모두 충족 필요)"
+
+        # 5. 가용 증거금 확인
         free = balance.get("free", 0)
         required_margin = self.cfg.MARGIN_USDT
         if free < required_margin:

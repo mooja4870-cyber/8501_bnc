@@ -34,7 +34,7 @@ def test_full_order_flow_e2e():
     long_signal = Signal(
         symbol="BTC/USDT:USDT",
         direction="long",
-        strength=95,
+        strength=100,
         ema_ok=True,
         bb_ok=True,
         macd_ok=True,
