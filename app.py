@@ -128,6 +128,11 @@ st.markdown(
         font-size: 0.9rem !important;
         transition: all 0.25s ease !important;
         box-shadow: 0 2px 8px rgba(0, 224, 255, 0.05) !important;
+        height: 38px !important;
+        margin-top: 0px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
     .stButton > button:hover {
         background: var(--terminal-accent) !important;
@@ -447,6 +452,19 @@ st.markdown(
     [data-testid="stMetricDelta"] > div[style*="color: #ff2b2b"] {
         color: #3b82f6 !important;
     }
+
+    /* 탭바와 헤더 배지 수평 정렬 */
+    @media (min-width: 1024px) {
+        .floating-header-wrapper + div[data-testid="stHorizontalBlock"] {
+            margin-bottom: -46px !important;
+            position: relative !important;
+            z-index: 9999 !important;
+            top: 4px !important;
+        }
+        .stTabs [data-baseweb="tab-list"] {
+            max-width: 55% !important;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -699,7 +717,8 @@ with st.sidebar:
 # ══════════════════════════════════════════════════════
 
 # [v3.0.4] 시간, 상태, 버튼을 우측에 동일한 크기의 버튼 스타일로 나란히 배치
-col_empty, col_time, col_status, col_refresh = st.columns([4.0, 2.0, 2.0, 2.0])
+st.markdown('<div class="floating-header-wrapper"></div>', unsafe_allow_html=True)
+col_empty, col_time, col_status, col_refresh = st.columns([5.5, 1.8, 1.5, 1.2])
 
 with col_time:
     now_kst = datetime.utcnow() + timedelta(hours=9)
@@ -726,9 +745,6 @@ with col_status:
 with col_refresh:
     if st.button("⟳ REFRESH", key="global_refresh", use_container_width=True):
         st.rerun()
-
-
-st.markdown('<hr style="margin: 8px 0 16px;">', unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════
