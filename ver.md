@@ -1,3 +1,4 @@
+| v3.0.2 | 2026-05-22 | [UI/UX] 설정(Settings) 탭에 RSI 필터 파라미터(기간, 상한선, 하한선) 노출 및 프리셋 동기화 개선 | UI/UX |
 | v3.0.1 | 2026-05-22 | [UI/UX] 대시보드 로고 'AKMCD-SSL-RSI' 텍스트 폰트 두께 상향 (font-weight: 900) | UI/UX |
 | v3.0.0 | 2026-05-22 | [Core/Strategy/UI] AKMCD-SSL-RSI 정식 릴리즈 및 대시보드 로고 무지개 텍스트 애니메이션 적용 | Core/Strategy/UI |
 | v2.1.0 | 2026-05-22 | [Core/Strategy/UI] RSI 필터 도입 (Long < 60, Short > 40) 및 사이드바/설정 화면 위젯 제어 연동, 프리셋 최적화 | Core/Strategy/UI |

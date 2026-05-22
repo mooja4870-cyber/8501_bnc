@@ -382,9 +382,18 @@ init_session()
 
 # ── [v1.2.90] 파라미터 동기화 엔진 (Sidebar <-> Main Tab) ──
 def sync_p(src_key: str, dst_key: str, cfg_attr: str, is_pct: bool = False):
-    """위젯 간 값 동기화 및 CFG 반영"""
+    """위젯 간 값 동기화 및 CFG 반영 (콤마 구분 다중 목적지 지원)"""
     val = st.session_state[src_key]
-    st.session_state[dst_key] = val
+    if isinstance(dst_key, str) and "," in dst_key:
+        dst_keys = [k.strip() for k in dst_key.split(",") if k.strip()]
+    elif isinstance(dst_key, (list, tuple)):
+        dst_keys = dst_key
+    else:
+        dst_keys = [dst_key]
+
+    for k in dst_keys:
+        st.session_state[k] = val
+
     if is_pct:
         setattr(CFG, cfg_attr, val / 100.0)
     else:
@@ -422,7 +431,7 @@ with st.sidebar:
         '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
         '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착&#10;'
         '4. RSI 과열/과매도 필터: 과매수권 롱 제한(RSI < 60) 및 과매도권 숏 제한(RSI > 40)으로 추격 매매 노이즈 필터링">'
-        '<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">v3.0.1</span></div>',
+        '<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">v3.0.2</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -518,14 +527,14 @@ with st.sidebar:
         st.markdown("---")
         st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.8rem; color:#ff9900; margin-bottom:5px;">RSI 필터 설정</p>', unsafe_allow_html=True)
         st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="sb_rsi_period",
-                        on_change=sync_p, args=("sb_rsi_period", "main_rsi_period", "RSI_PERIOD"))
+                        on_change=sync_p, args=("sb_rsi_period", "main_rsi_period,settings_rsi_period", "RSI_PERIOD"))
         col_rsi1, col_rsi2 = st.columns(2)
         with col_rsi1:
             st.number_input("RSI 롱 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="sb_rsi_overbought",
-                            on_change=sync_p, args=("sb_rsi_overbought", "main_rsi_overbought", "RSI_OVERBOUGHT"))
+                            on_change=sync_p, args=("sb_rsi_overbought", "main_rsi_overbought,settings_rsi_overbought", "RSI_OVERBOUGHT"))
         with col_rsi2:
             st.number_input("RSI 숏 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="sb_rsi_oversold",
-                            on_change=sync_p, args=("sb_rsi_oversold", "main_rsi_oversold", "RSI_OVERSOLD"))
+                            on_change=sync_p, args=("sb_rsi_oversold", "main_rsi_oversold,settings_rsi_oversold", "RSI_OVERSOLD"))
 
     with st.expander("⚡ 운용 및 포지션 설정", expanded=True):
         st.number_input("레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="sb_leverage",
@@ -1182,6 +1191,30 @@ with tabs[3]:
         CFG.RSI_PERIOD = p.get("rsi_p", 14)
         CFG.RSI_OVERBOUGHT = p.get("rsi_ob", 60.0)
         CFG.RSI_OVERSOLD = p.get("rsi_os", 40.0)
+        
+        # 세션 상태 위젯 키들도 명시적 업데이트
+        st.session_state.sb_ssl_period = p["ssl_p"]
+        st.session_state.main_ssl_period = p["ssl_p"]
+        st.session_state.sb_bb_period = p["bb_p"]
+        st.session_state.main_bb_period = p["bb_p"]
+        st.session_state.sb_bb_std = p["bb_s"]
+        st.session_state.main_bb_std = p["bb_s"]
+        st.session_state.sb_macd_fast = p["macd_f"]
+        st.session_state.main_macd_fast = p["macd_f"]
+        st.session_state.sb_macd_slow = p["macd_sl"]
+        st.session_state.main_macd_slow = p["macd_sl"]
+        st.session_state.sb_macd_signal = p["macd_si"]
+        st.session_state.main_macd_signal = p["macd_si"]
+        st.session_state.sb_rsi_period = p.get("rsi_p", 14)
+        st.session_state.main_rsi_period = p.get("rsi_p", 14)
+        st.session_state.settings_rsi_period = p.get("rsi_p", 14)
+        st.session_state.sb_rsi_overbought = p.get("rsi_ob", 60.0)
+        st.session_state.main_rsi_overbought = p.get("rsi_ob", 60.0)
+        st.session_state.settings_rsi_overbought = p.get("rsi_ob", 60.0)
+        st.session_state.sb_rsi_oversold = p.get("rsi_os", 40.0)
+        st.session_state.main_rsi_oversold = p.get("rsi_os", 40.0)
+        st.session_state.settings_rsi_oversold = p.get("rsi_os", 40.0)
+
         st.toast(f"✅ {preset_name} 파라미터 적용됨")
         time.sleep(0.5)
         st.rerun()
@@ -1195,14 +1228,14 @@ with tabs[3]:
         st.selectbox("타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="main_timeframe",
                      on_change=sync_p, args=("main_timeframe", "sb_timeframe", "TIMEFRAME"))
         st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="main_rsi_period",
-                        on_change=sync_p, args=("main_rsi_period", "sb_rsi_period", "RSI_PERIOD"))
+                        on_change=sync_p, args=("main_rsi_period", "sb_rsi_period,settings_rsi_period", "RSI_PERIOD"))
     with p2:
         st.number_input("BB 기간", 5, 100, CFG.BB_PERIOD, step=5, key="main_bb_period",
                         on_change=sync_p, args=("main_bb_period", "sb_bb_period", "BB_PERIOD"))
         st.number_input("BB 편차 (x)", 1.0, 5.0, float(CFG.BB_STD), step=0.1, key="main_bb_std",
                         on_change=sync_p, args=("main_bb_std", "sb_bb_std", "BB_STD"))
         st.number_input("RSI 롱 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="main_rsi_overbought",
-                        on_change=sync_p, args=("main_rsi_overbought", "sb_rsi_overbought", "RSI_OVERBOUGHT"))
+                        on_change=sync_p, args=("main_rsi_overbought", "sb_rsi_overbought,settings_rsi_overbought", "RSI_OVERBOUGHT"))
     with p3:
         st.number_input("MACD 단기", 1, 50, CFG.MACD_FAST, step=1, key="main_macd_fast",
                         on_change=sync_p, args=("main_macd_fast", "sb_macd_fast", "MACD_FAST"))
@@ -1211,7 +1244,7 @@ with tabs[3]:
         st.number_input("MACD 시그널", 1, 50, CFG.MACD_SIGNAL, step=1, key="main_macd_signal",
                         on_change=sync_p, args=("main_macd_signal", "sb_macd_signal", "MACD_SIGNAL"))
         st.number_input("RSI 숏 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="main_rsi_oversold",
-                        on_change=sync_p, args=("main_rsi_oversold", "sb_rsi_oversold", "RSI_OVERSOLD"))
+                        on_change=sync_p, args=("main_rsi_oversold", "sb_rsi_oversold,settings_rsi_oversold", "RSI_OVERSOLD"))
 
 # TAB 5: 설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1243,10 +1276,29 @@ with tabs[4]:
 
     st.markdown("---")
     st.markdown(
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#ff9900;letter-spacing:0.1em;margin-top:10px;">RSI FILTER PARAMETERS (AKMCD-SSL-RSI)</p>',
+        unsafe_allow_html=True,
+    )
+    r1, r2, r3 = st.columns(3)
+    with r1:
+        st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="settings_rsi_period",
+                        on_change=sync_p, args=("settings_rsi_period", "sb_rsi_period,main_rsi_period", "RSI_PERIOD"))
+    with r2:
+        st.number_input("RSI 롱 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="settings_rsi_overbought",
+                        on_change=sync_p, args=("settings_rsi_overbought", "sb_rsi_overbought,main_rsi_overbought", "RSI_OVERBOUGHT"))
+    with r3:
+        st.number_input("RSI 숏 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="settings_rsi_oversold",
+                        on_change=sync_p, args=("settings_rsi_oversold", "sb_rsi_oversold,main_rsi_oversold", "RSI_OVERSOLD"))
+
+    st.markdown("---")
+    st.markdown(
         f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.92rem;color:#cccccc;line-height:2;">
         손익비: 1 : {CFG.TAKE_PROFIT_PCT / CFG.STOP_LOSS_PCT:.1f} &nbsp;|&nbsp;
         증거금/종목: ${CFG.MARGIN_USDT:.2f} USDT &nbsp;|&nbsp;
-        최대 노출: ${CFG.MARGIN_USDT * CFG.LEVERAGE * CFG.MAX_POSITIONS:.2f} USDT
+        최대 노출: ${CFG.MARGIN_USDT * CFG.LEVERAGE * CFG.MAX_POSITIONS:.2f} USDT <br>
+        RSI 설정: 기간 {CFG.RSI_PERIOD} &nbsp;|&nbsp;
+        롱 진입 상한: {CFG.RSI_OVERBOUGHT:.1f} &nbsp;|&nbsp;
+        숏 진입 하한: {CFG.RSI_OVERSOLD:.1f}
         </div>""",
         unsafe_allow_html=True,
     )
