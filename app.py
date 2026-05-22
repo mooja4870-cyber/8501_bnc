@@ -170,30 +170,47 @@ st.markdown(
         animation: rainbow-glow 8s ease infinite;
     }
 
-    /* 상태 뱃지 */
-    .badge-live {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: #003300;
-        border: 1px solid var(--terminal-green);
-        padding: 4px 12px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem;
-        font-weight: 700;
-        color: var(--terminal-green);
+    /* 공통 버튼 스타일의 헤더 배지 */
+    .header-btn-like {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        height: 38px !important;
+        background: var(--terminal-surface) !important;
+        border: 1px solid var(--terminal-border) !important;
+        color: #cccccc !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+        border-radius: 0px !important;
+        white-space: nowrap !important;
     }
-    .badge-live .dot {
+    .header-badge-live {
+        border-color: var(--terminal-green) !important;
+        color: var(--terminal-green) !important;
+        background: #001a00 !important;
+    }
+    .header-badge-live .dot {
         width: 8px; height: 8px;
-        background: var(--terminal-green);
-        border-radius: 0%; /* Sharp dot */
+        background: var(--terminal-green) !important;
+        border-radius: 0% !important;
+        margin-right: 8px !important;
+        display: inline-block !important;
     }
-    .badge-stopped {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: #330000;
-        border: 1px solid var(--terminal-red);
-        padding: 4px 12px;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem;
-        color: var(--terminal-red);
+    .header-badge-stopped {
+        border-color: var(--terminal-red) !important;
+        color: var(--terminal-red) !important;
+        background: #1a0000 !important;
+    }
+    .header-badge-stopped .dot {
+        width: 8px; height: 8px;
+        background: var(--terminal-red) !important;
+        border-radius: 0% !important;
+        margin-right: 8px !important;
+        display: inline-block !important;
     }
 
     /* 시스템 로그 박스 */
@@ -431,7 +448,7 @@ with st.sidebar:
         '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
         '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착&#10;'
         '4. RSI 과열/과매도 필터: 과매수권 롱 제한(RSI < 60) 및 과매도권 숏 제한(RSI > 40)으로 추격 매매 노이즈 필터링">'
-        '<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">v3.0.3</span></div>',
+        '<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">v3.0.4</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -554,30 +571,34 @@ with st.sidebar:
 # 메인 헤더 (한 줄 배치)
 # ══════════════════════════════════════════════════════
 
-# [v1.2.98] 시간, 상태, 버튼을 우측 정렬 및 균등 배치
-col_empty, col_time, col_status, col_refresh = st.columns([5, 2.2, 1.4, 1.2])
+# [v3.0.4] 시간, 상태, 버튼을 우측에 동일한 크기의 버튼 스타일로 나란히 배치
+col_empty, col_time, col_status, col_refresh = st.columns([4.0, 2.0, 2.0, 2.0])
 
 with col_time:
     now_kst = datetime.utcnow() + timedelta(hours=9)
     st.markdown(
-        f'<p style="font-family:\'JetBrains Mono\',monospace; font-size:0.95rem; color:#cccccc; margin-top:14px; margin-bottom:0px; text-align:right;">'
-        f'{now_kst.strftime("%Y-%m-%d %H:%M:%S")} KST</p>',
+        f'<div class="header-btn-like">'
+        f'{now_kst.strftime("%Y-%m-%d %H:%M:%S")} KST</div>',
         unsafe_allow_html=True,
     )
 
 with col_status:
-    # 수직 중앙 정렬 및 우측 정렬을 위한 컨테이너 구성
-    st.markdown('<div style="margin-top:8px;"></div>', unsafe_allow_html=True)
     if st.session_state.auto_trading:
-        st.markdown('<div style="display:flex; justify-content:flex-end;"><div class="badge-live"><span class="dot"></span><span>LIVE CONNECTION</span></div></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="header-btn-like header-badge-live">'
+            '<span class="dot"></span>LIVE CONNECTION</div>',
+            unsafe_allow_html=True,
+        )
     else:
-        st.markdown('<div style="display:flex; justify-content:flex-end;"><div class="badge-stopped">● STOPPED</div></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="header-btn-like header-badge-stopped">'
+            '<span class="dot"></span>STOPPED</div>',
+            unsafe_allow_html=True,
+        )
 
 with col_refresh:
-    st.markdown('<div class="refresh-btn" style="margin-top:6px;">', unsafe_allow_html=True)
     if st.button("⟳ REFRESH", key="global_refresh", use_container_width=True):
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
 
 st.markdown('<hr style="margin: 8px 0 16px;">', unsafe_allow_html=True)
