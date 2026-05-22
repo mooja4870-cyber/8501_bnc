@@ -166,6 +166,7 @@ st.markdown(
         -webkit-text-fill-color: transparent !important;
         background-clip: text !important;
         color: transparent !important;
+        font-weight: 900 !important;
         animation: rainbow-glow 8s ease infinite;
     }
 
@@ -421,7 +422,7 @@ with st.sidebar:
         '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
         '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착&#10;'
         '4. RSI 과열/과매도 필터: 과매수권 롱 제한(RSI < 60) 및 과매도권 숏 제한(RSI > 40)으로 추격 매매 노이즈 필터링">'
-        '<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">v3.0.0</span></div>',
+        '<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">v3.0.1</span></div>',
         unsafe_allow_html=True,
     )
 

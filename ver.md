@@ -1,3 +1,4 @@
+| v3.0.1 | 2026-05-22 | [UI/UX] 대시보드 로고 'AKMCD-SSL-RSI' 텍스트 폰트 두께 상향 (font-weight: 900) | UI/UX |
 | v3.0.0 | 2026-05-22 | [Core/Strategy/UI] AKMCD-SSL-RSI 정식 릴리즈 및 대시보드 로고 무지개 텍스트 애니메이션 적용 | Core/Strategy/UI |
 | v2.1.0 | 2026-05-22 | [Core/Strategy/UI] RSI 필터 도입 (Long < 60, Short > 40) 및 사이드바/설정 화면 위젯 제어 연동, 프리셋 최적화 | Core/Strategy/UI |
 | v2.0.8 | 2026-05-22 | [Core/Scanner] OHLCV 캐시 구현(최초 300봉, 이후 3봉 증분 업데이트) 및 거래대금 상위 80개 스캔 제한으로 REST API 호출 95% 절감 / Binance IP 차단 근본 방지 | Core/Scanner |
