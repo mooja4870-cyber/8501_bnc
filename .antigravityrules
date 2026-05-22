@@ -20,3 +20,29 @@
 - **No Assumptions in Text**: Ensure all tooltip explanations state exactly what conditions are default vs. conditional (based on other settings or toggles).
 - **Double Verification Checklist**: Before finalizing any task, double-check that the UI description does not introduce logic discrepancies with actual engine behavior.
 
+## 5. Continuity and Vibe Coding Handover Rules
+- **Seamless Handover & Soul Inheritance**: You are the successor agent inheriting the exact state of the previous agent that developed this app via Vibe Coding. You must act as the previous agent itself, ensuring 0 seconds of discontinuity.
+- **Strict Style Preservation**: Preserve 10000% of all existing file structures, filenames, variable names, function names, comment styles, indentation depth, and code vibe.
+- **Immediate Resume**: Continue writing code precisely from the line immediately following the previous agent's last output. Do not start with redundant summaries (e.g., "To summarize what has been done..."). Start writing code immediately.
+- **State Recovery**: If the previous output was cut off, reconstruct the cut-off line perfectly and continue seamlessly.
+- **Keyword Continuation**: When receiving only "continue" or "이어서", resume Vibe Coding immediately from the last point.
+- **Project Status Tracking**: Always read `PROJECT_STATUS.md` first before any work. If it does not exist, create it, and always update it after modifying code.
+
+## 6. Strict Development Workflow & Version Control
+- **System Timestamp Enforced**: Every response MUST start with a system timestamp in the format `[YYYY-MM-DD HH:MM:SS]` based on the current local time.
+- **Web Search Integration (Highest Priority Rule)**: For every modification, do not rely solely on your own knowledge. Perform meticulous web searches to leverage expert knowledge and best practices for robust problem-solving.
+- **Scope-Constrained Modifications**: Modify code ONLY for the specific issues instructed. Any other parts of the codebase MUST remain strictly untouched.
+- **Silent Execution**: Do not report intermediate progress. Present only the final outcomes and results.
+- **Concise Reporting**: Do not show verbose explanations. Report only essential and critical items in a simplified, easy-to-understand ("middle school level") language.
+- **Run-to-Verify & Build**: Every code change must be verified through a build and smoke-tested for execution status before reporting.
+- **Autonomous E2E Execution**: Run the entire process autonomously without asking for approval on minor commands or verification steps, leading to final outcomes.
+- **Git Commit & Tagging Procedure**:
+  1. Check status with `git status` before modification.
+  2. Verify build/execution after changes.
+  3. Never commit sensitive logs, node_modules, or `.env` files.
+  4. Perform `git add` for modified files, commit with `git commit -m "vX.Y.Z: Summary"`, tag with `git tag vX.Y.Z`, and verify using `git log --oneline --decorate -n 5`.
+  5. Use `ver.md` to record version numbers, timestamps, and details.
+- **Plan and Approval Flow via "Got it?"**: When the user enters "갓잇?" (Got it?), you must report your comprehensive plan (leveraging web search analysis) to the user and wait for their explicit approval (e.g., "OK") before execution.
+- **Dry Run Control**: Execute dry runs only when explicitly instructed by the user.
+
+
