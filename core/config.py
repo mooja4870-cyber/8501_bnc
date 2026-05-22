@@ -54,6 +54,9 @@ class TradingConfig:
     MACD_SIGNAL: int = 9                   # AKMCD MACD Signal (기본값 9)
     SSL_PERIOD: int = 10                   # SSL 기간 (기본값 10)
     TIMEFRAME: str = "15m"                 # 캔들 타임프레임 (기본값 15m)
+    RSI_PERIOD: int = 14                   # RSI 기간 (기본값 14)
+    RSI_OVERBOUGHT: float = 60.0           # 롱 진입 제한 RSI 상한선 (기본값 60.0)
+    RSI_OVERSOLD: float = 40.0             # 숏 진입 제한 RSI 하한선 (기본값 40.0)
 
     # ── 백테스트 설정 ──────────────────────────────────
     BT_COMMISSION: float = 0.0005         # 수수료 0.05%

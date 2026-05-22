@@ -27,6 +27,7 @@ class Signal:
     bb_lower: float         # AKMCD 볼린저 밴드 하단
     macd_hist: float        # AKMCD 히스토그램 값
     reason: str
+    rsi: float = 50.0       # RSI 값 (기본값 50.0)
 
 
 class StrategyEngine:
@@ -112,6 +113,14 @@ class StrategyEngine:
         df['ssl_trend'] = ssl_trend
         df['candle_color'] = candle_color
 
+        # 3. RSI 계산
+        delta = close.diff()
+        gain = (delta.where(delta > 0, 0)).rolling(self.cfg.RSI_PERIOD).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(self.cfg.RSI_PERIOD).mean()
+        rs = gain / loss
+        df['rsi'] = 100 - (100 / (1 + rs))
+        df['rsi'] = df['rsi'].fillna(50.0)
+
         return df.dropna()
 
     def generate_signal(self, df: pd.DataFrame, symbol: str) -> Signal:
@@ -122,7 +131,7 @@ class StrategyEngine:
             symbol=symbol, direction="none", strength=0,
             ema_ok=False, bb_ok=False, macd_ok=False,
             close=0, ema200=0, bb_upper=0, bb_lower=0,
-            macd_hist=0, reason="데이터 부족"
+            macd_hist=0, reason="데이터 부족", rsi=50.0
         )
 
         if df.empty or len(df) < 3:
@@ -142,6 +151,7 @@ class StrategyEngine:
         cond_long_3 = macd_hist > 0                      # AKMCD 영선 위
         cond_long_4 = (prev['dot_color'] == 'red' and    # 이전: 빨강 -> 현재: 초록
                        curr['dot_color'] == 'green')
+        cond_long_rsi = curr['rsi'] < self.cfg.RSI_OVERBOUGHT
 
         # ── 숏 조건 체크 ──
         cond_short_1 = close < ssl_down                  # SSL 빨간선 아래
@@ -149,6 +159,7 @@ class StrategyEngine:
         cond_short_3 = macd_hist < 0                     # AKMCD 영선 아래
         cond_short_4 = (prev['dot_color'] == 'green' and  # 이전: 초록 -> 현재: 빨강
                         curr['dot_color'] == 'red')
+        cond_short_rsi = curr['rsi'] > self.cfg.RSI_OVERSOLD
 
         # 신호 강도 계산 (4가지 조건 각각 점수 배분)
         # SSL 추세 일치(35점), 영선 돌파(25점), 캔들 색상 일치(20점), 점 색상 전환 완료(20점)
@@ -162,26 +173,44 @@ class StrategyEngine:
 
         # 롱 신호
         if cond_long_1 and cond_long_2 and cond_long_3 and cond_long_4 and self.cfg.ALLOW_LONG:
+            if not cond_long_rsi:
+                return Signal(
+                    symbol=symbol, direction="none", strength=80,
+                    ema_ok=cond_long_1, bb_ok=cond_long_4, macd_ok=cond_long_3,
+                    close=close, ema200=ssl_up,
+                    bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
+                    macd_hist=macd_hist, rsi=curr['rsi'],
+                    reason=f"롱 조건 충족했으나 RSI 과열({curr['rsi']:.1f} >= {self.cfg.RSI_OVERBOUGHT})로 진입 차단"
+                )
             strength = compute_strength(cond_long_1, cond_long_2, cond_long_3, cond_long_4)
             return Signal(
                 symbol=symbol, direction="long", strength=strength,
                 ema_ok=cond_long_1, bb_ok=cond_long_4, macd_ok=cond_long_3,
                 close=close, ema200=ssl_up,
                 bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-                macd_hist=macd_hist,
-                reason=f"SSL 롱 추세 + AKMCD 초록점 전환 완료 (강도 {strength}%)"
+                macd_hist=macd_hist, rsi=curr['rsi'],
+                reason=f"SSL 롱 추세 + AKMCD 초록점 전환 완료 (강도 {strength}%, RSI {curr['rsi']:.1f})"
             )
 
         # 숏 신호
         if cond_short_1 and cond_short_2 and cond_short_3 and cond_short_4 and self.cfg.ALLOW_SHORT:
+            if not cond_short_rsi:
+                return Signal(
+                    symbol=symbol, direction="none", strength=80,
+                    ema_ok=cond_short_1, bb_ok=cond_short_4, macd_ok=cond_short_3,
+                    close=close, ema200=ssl_down,
+                    bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
+                    macd_hist=macd_hist, rsi=curr['rsi'],
+                    reason=f"숏 조건 충족했으나 RSI 과매도({curr['rsi']:.1f} <= {self.cfg.RSI_OVERSOLD})로 진입 차단"
+                )
             strength = compute_strength(cond_short_1, cond_short_2, cond_short_3, cond_short_4)
             return Signal(
                 symbol=symbol, direction="short", strength=strength,
                 ema_ok=cond_short_1, bb_ok=cond_short_4, macd_ok=cond_short_3,
                 close=close, ema200=ssl_down,
                 bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-                macd_hist=macd_hist,
-                reason=f"SSL 숏 추세 + AKMCD 빨간점 전환 완료 (강도 {strength}%)"
+                macd_hist=macd_hist, rsi=curr['rsi'],
+                reason=f"SSL 숏 추세 + AKMCD 빨간점 전환 완료 (강도 {strength}%, RSI {curr['rsi']:.1f})"
             )
 
         # 부분 신호 강도 계산 (스캐너 표시용)
@@ -193,7 +222,8 @@ class StrategyEngine:
                 ema_ok=cond_long_1, bb_ok=cond_long_4, macd_ok=cond_long_3,
                 close=close, ema200=ssl_up,
                 bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-                macd_hist=macd_hist, reason="조건 일부 미충족 (LONG 추세)"
+                macd_hist=macd_hist, rsi=curr['rsi'],
+                reason="조건 일부 미충족 (LONG 추세)"
             )
 
         # 숏 방향 추세인 경우
@@ -204,7 +234,8 @@ class StrategyEngine:
                 ema_ok=cond_short_1, bb_ok=cond_short_4, macd_ok=cond_short_3,
                 close=close, ema200=ssl_down,
                 bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-                macd_hist=macd_hist, reason="조건 일부 미충족 (SHORT 추세)"
+                macd_hist=macd_hist, rsi=curr['rsi'],
+                reason="조건 일부 미충족 (SHORT 추세)"
             )
 
         return Signal(
@@ -212,5 +243,6 @@ class StrategyEngine:
             ema_ok=False, bb_ok=False, macd_ok=False,
             close=close, ema200=ssl_up,
             bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-            macd_hist=macd_hist, reason="SSL 중립 추세 — 신호 없음"
+            macd_hist=macd_hist, rsi=curr['rsi'],
+            reason="SSL 중립 추세 — 신호 없음"
         )

@@ -19,6 +19,7 @@ from core.trader import AutoTrader
 from core.engine import QuantumEngine, EngineState
 from core.config import CFG
 import core.stats as stats_store
+from core.history_helper import load_local_trade_history, aggregate_and_pair_trades
 
 load_dotenv(override=True)
 
@@ -404,7 +405,7 @@ with st.sidebar:
         '1. SSL 채널: 전체 추세 필터링 (파란선 위: 롱, 빨간선 아래: 숏)&#10;'
         '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
         '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착">'
-        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.0.8</span></div>',
+        'AKMCD-SSL-HYBRID<br><span style="font-size:calc(0.75rem * 1.33);">v2.1.0</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -496,6 +497,18 @@ with st.sidebar:
         with col_m3:
             st.number_input("MACD 시그널", 2, 20, CFG.MACD_SIGNAL, key="sb_macd_signal",
                             on_change=sync_p, args=("sb_macd_signal", "main_macd_signal", "MACD_SIGNAL"))
+
+        st.markdown("---")
+        st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.8rem; color:#ff9900; margin-bottom:5px;">RSI 필터 설정</p>', unsafe_allow_html=True)
+        st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="sb_rsi_period",
+                        on_change=sync_p, args=("sb_rsi_period", "main_rsi_period", "RSI_PERIOD"))
+        col_rsi1, col_rsi2 = st.columns(2)
+        with col_rsi1:
+            st.number_input("RSI 롱 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="sb_rsi_overbought",
+                            on_change=sync_p, args=("sb_rsi_overbought", "main_rsi_overbought", "RSI_OVERBOUGHT"))
+        with col_rsi2:
+            st.number_input("RSI 숏 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="sb_rsi_oversold",
+                            on_change=sync_p, args=("sb_rsi_oversold", "main_rsi_oversold", "RSI_OVERSOLD"))
 
     with st.expander("⚡ 운용 및 포지션 설정", expanded=True):
         st.number_input("레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="sb_leverage",
@@ -987,100 +1000,89 @@ with tabs[1]:
 with tabs[2]:
     engine: QuantumEngine = st.session_state.engine
 
-    if not st.session_state.api_connected or not engine.is_ready:
-        st.info("사이드바에서 Binance API를 연결하세요.")
-    else:
-        h1, h2 = st.columns([2, 1])
-        with h1:
-            hist_symbol = st.selectbox("종목 필터", ["전체"] + [
-                "BTC/USDT:USDT","ETH/USDT:USDT","SOL/USDT:USDT"
-            ], key="hist_sym")
-        with h2:
-            if st.button("🔄  이력 새로고침", use_container_width=True):
-                st.rerun()
+    # [v2.0.8] 로컬 CSV 이력 로드 및 진입/청산 페어링 (API 미연결 시에도 로컬 이력 항시 조회 허용)
+    raw_trades = load_local_trade_history()
+    paired_history = aggregate_and_pair_trades(raw_trades)
 
-        sym_filter = None if hist_symbol == "전체" else hist_symbol
-        history = engine.get_trade_history(symbol=sym_filter, limit=100)
+    # 동적 종목 필터 리스트 구성
+    history_symbols = sorted(list(set([x["symbol"] for x in paired_history])))
 
-        if history:
-            df_hist = pd.DataFrame(history[::-1])
-            df_hist["timestamp"] = df_hist["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
-            # 컬럼 재구성
-            df_hist = df_hist[["timestamp", "symbol", "category", "side", "price", "amount", "cost", "pnl", "pnl_pct", "fee"]]
-            df_hist.columns = ["시각", "종목", "구분", "방향", "체결가", "수량", "금액(USDT)", "손익", "%", "수수료"]
-            
-            # 포맷팅
-            df_hist["구분"] = df_hist["구분"].map({"진입": "*진입", "청산": "청산"})
-            
-            def map_direction(row):
-                side = str(row["방향"]).lower()
-                cat = row["구분"]
-                if side in ("long", "l"):
-                    return "🟢 LONG"
-                if side in ("short", "s"):
-                    return "🔴 SHORT"
-                
-                # buy/sell인 경우 진입/청산 구분에 따라 포지션 방향(LONG/SHORT) 판별
-                if cat in ("*진입", "진입"):
-                    if side == "buy":
-                        return "🟢 LONG"
-                    elif side == "sell":
-                        return "🔴 SHORT"
-                elif cat == "청산":
-                    if side == "sell":
-                        return "🟢 LONG"
-                    elif side == "buy":
-                        return "🔴 SHORT"
-                
-                # fallback
-                if side == "buy":
-                    return "🟢 LONG"
-                elif side == "sell":
-                    return "🔴 SHORT"
-                return row["방향"]
+    h1, h2 = st.columns([2, 1])
+    with h1:
+        hist_symbol = st.selectbox("종목 필터", ["전체"] + history_symbols, key="hist_sym")
+    with h2:
+        sync_disabled = not st.session_state.api_connected or not engine.is_ready
+        help_msg = "실시간 거래소 이력을 반영하려면 사이드바에서 API를 연결하세요." if sync_disabled else "거래소에서 최근 100개 체결 이력을 받아와 로컬 CSV로 동기화합니다."
+        if st.button("🔄  이력 새로고침", use_container_width=True, disabled=sync_disabled, help=help_msg):
+            try:
+                engine.sync_trades_to_csv()
+            except Exception:
+                pass
+            st.rerun()
 
-            df_hist["방향"] = df_hist.apply(map_direction, axis=1)
+    # 필터링 적용
+    if hist_symbol != "전체":
+        paired_history = [x for x in paired_history if x["symbol"] == hist_symbol]
+
+    if paired_history:
+        df_hist = pd.DataFrame(paired_history)
+        
+        # 시간 형식 변환 및 예외 처리
+        df_hist["entry_time"] = df_hist["entry_time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M:%S") if pd.notnull(x) else "-")
+        df_hist["exit_time"] = df_hist["exit_time"].apply(lambda x: x.strftime("%Y-%m-%d %H:%M:%S") if pd.notnull(x) else "-")
+        
+        # 컬럼 재구성 및 한글화
+        df_hist = df_hist[[
+            "entry_time", "exit_time", "symbol", "direction", 
+            "entry_price", "exit_price", "amount", "pnl_usdt", "pnl_pct", "status"
+        ]]
+        df_hist.columns = [
+            "진입시각", "청산시각", "종목", "포지션", 
+            "진입가", "청산가", "수량", "손익 (USDT)", "수익률 (%)", "상태"
+        ]
+
+        def style_history(row):
+            styles = [''] * len(row)
+            status = row["상태"]
+            pnl_val = row["손익 (USDT)"]
             
-            # 진입 시 손익/% 데이터 제거 (표시 안 함)
-            df_hist.loc[df_hist["구분"] == "*진입", ["손익", "%"]] = np.nan
-            
-            def style_history(row):
-                styles = [''] * len(row)
-                if row["구분"] == "청산":
-                    pnl_val = row["손익"]
+            if status == "보유 중":
+                # 보유 중인 행은 노란색 bold 강조
+                for i in range(len(styles)):
+                    styles[i] = 'color: #ffcc00; font-weight: bold;'
+            else:
+                if pd.notnull(pnl_val):
+                    # 실현 손익 색상 입히기 (수익 빨강, 손실 파랑)
                     color = '#ef4444' if pnl_val >= 0 else '#3b82f6'
                     styles[7] = f'color: {color}; font-weight: bold;'
                     styles[8] = f'color: {color}; font-weight: bold;'
-                elif row["구분"] == "*진입":
-                    # 진입 행 전체 노란색 볼드 강조
-                    for i in range(len(styles)):
-                        styles[i] = 'color: #ffcc00; font-weight: bold;'
-                return styles
+            return styles
 
-            st.dataframe(
-                df_hist.style.apply(style_history, axis=1).format({
-                    "수량": "{:,.2f}",
-                    "금액(USDT)": "{:,.2f}",
-                    "손익": lambda x: "{:,.2f}".format(x) if pd.notnull(x) else "-",
-                    "%": lambda x: "{:,.2f}".format(x) if pd.notnull(x) else "-"
-                }),
-                use_container_width=True,
-                hide_index=True,
-                height=500
-            )
-        else:
-            # 자동매매 엔진 로그 표시
-            if engine.trader:
-                logs = engine.trader.get_trade_log()
-                if logs:
-                    df_engine = pd.DataFrame(logs)
-                    df_engine["timestamp"] = df_engine["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
-                    st.dataframe(df_engine, use_container_width=True, hide_index=True)
-                else:
-                    st.markdown(
-                        '<p style="color:#555;font-family:\'IBM Plex Mono\',monospace;">거래 이력 없음</p>',
-                        unsafe_allow_html=True,
-                    )
+        st.dataframe(
+            df_hist.style.apply(style_history, axis=1).format({
+                "진입가": lambda x: f"{x:,.4f}" if pd.notnull(x) and isinstance(x, (int, float)) else "-",
+                "청산가": lambda x: f"{x:,.4f}" if pd.notnull(x) and isinstance(x, (int, float)) else "-",
+                "수량": "{:,.4f}",
+                "손익 (USDT)": lambda x: f"{x:+,.4f}" if pd.notnull(x) and isinstance(x, (int, float)) else "-",
+                "수익률 (%)": lambda x: f"{x:+,.2f}%" if pd.notnull(x) and isinstance(x, (int, float)) else "-"
+            }),
+            use_container_width=True,
+            hide_index=True,
+            height=550
+        )
+    else:
+        # 자동매매 엔진 로그 표시
+        if engine.trader:
+            logs = engine.trader.get_trade_log()
+            if logs:
+                df_engine = pd.DataFrame(logs)
+                df_engine["timestamp"] = df_engine["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
+                st.dataframe(df_engine, use_container_width=True, hide_index=True)
+            else:
+                st.markdown(
+                    '<p style="color:#555;font-family:\'IBM Plex Mono\',monospace;">거래 이력 없음</p>',
+                    unsafe_allow_html=True,
+                )
 
 
 # TAB 4: 포지션 진입
@@ -1136,13 +1138,16 @@ with tabs[3]:
     # 프리셋 정의
     PRESETS = {
         "기본 (Stable)": {
-            "ssl_p": 10, "bb_p": 20, "bb_s": 2.0, "macd_f": 12, "macd_sl": 26, "macd_si": 9
+            "ssl_p": 10, "bb_p": 20, "bb_s": 2.0, "macd_f": 12, "macd_sl": 26, "macd_si": 9,
+            "rsi_p": 14, "rsi_ob": 60.0, "rsi_os": 40.0
         },
         "1차 공격적 (Trend)": {
-            "ssl_p": 8, "bb_p": 20, "bb_s": 1.8, "macd_f": 10, "macd_sl": 22, "macd_si": 7
+            "ssl_p": 8, "bb_p": 20, "bb_s": 1.8, "macd_f": 10, "macd_sl": 22, "macd_si": 7,
+            "rsi_p": 14, "rsi_ob": 65.0, "rsi_os": 35.0
         },
         "2차 공격적 (Scalping)": {
-            "ssl_p": 6, "bb_p": 14, "bb_s": 1.5, "macd_f": 8, "macd_sl": 18, "macd_si": 5
+            "ssl_p": 6, "bb_p": 14, "bb_s": 1.5, "macd_f": 8, "macd_sl": 18, "macd_si": 5,
+            "rsi_p": 14, "rsi_ob": 70.0, "rsi_os": 30.0
         }
     }
 
@@ -1157,6 +1162,9 @@ with tabs[3]:
         CFG.MACD_FAST = p["macd_f"]
         CFG.MACD_SLOW = p["macd_sl"]
         CFG.MACD_SIGNAL = p["macd_si"]
+        CFG.RSI_PERIOD = p.get("rsi_p", 14)
+        CFG.RSI_OVERBOUGHT = p.get("rsi_ob", 60.0)
+        CFG.RSI_OVERSOLD = p.get("rsi_os", 40.0)
         st.toast(f"✅ {preset_name} 파라미터 적용됨")
         time.sleep(0.5)
         st.rerun()
@@ -1169,11 +1177,15 @@ with tabs[3]:
         tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
         st.selectbox("타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="main_timeframe",
                      on_change=sync_p, args=("main_timeframe", "sb_timeframe", "TIMEFRAME"))
+        st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="main_rsi_period",
+                        on_change=sync_p, args=("main_rsi_period", "sb_rsi_period", "RSI_PERIOD"))
     with p2:
         st.number_input("BB 기간", 5, 100, CFG.BB_PERIOD, step=5, key="main_bb_period",
                         on_change=sync_p, args=("main_bb_period", "sb_bb_period", "BB_PERIOD"))
         st.number_input("BB 편차 (x)", 1.0, 5.0, float(CFG.BB_STD), step=0.1, key="main_bb_std",
                         on_change=sync_p, args=("main_bb_std", "sb_bb_std", "BB_STD"))
+        st.number_input("RSI 롱 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="main_rsi_overbought",
+                        on_change=sync_p, args=("main_rsi_overbought", "sb_rsi_overbought", "RSI_OVERBOUGHT"))
     with p3:
         st.number_input("MACD 단기", 1, 50, CFG.MACD_FAST, step=1, key="main_macd_fast",
                         on_change=sync_p, args=("main_macd_fast", "sb_macd_fast", "MACD_FAST"))
@@ -1181,6 +1193,8 @@ with tabs[3]:
                         on_change=sync_p, args=("main_macd_slow", "sb_macd_slow", "MACD_SLOW"))
         st.number_input("MACD 시그널", 1, 50, CFG.MACD_SIGNAL, step=1, key="main_macd_signal",
                         on_change=sync_p, args=("main_macd_signal", "sb_macd_signal", "MACD_SIGNAL"))
+        st.number_input("RSI 숏 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="main_rsi_oversold",
+                        on_change=sync_p, args=("main_rsi_oversold", "sb_rsi_oversold", "RSI_OVERSOLD"))
 
 # TAB 5: 설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
