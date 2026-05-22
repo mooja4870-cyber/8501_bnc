@@ -28,7 +28,7 @@ st.set_page_config(
     page_title="AI QUANTUM · Binance Trader",
     page_icon="⚡",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ── Wall Street Professional Terminal CSS ─────────────────────────────
@@ -602,7 +602,7 @@ with st.sidebar:
             st.number_input("MACD 시그널", 2, 20, CFG.MACD_SIGNAL, key="sb_macd_signal",
                             on_change=sync_p, args=("sb_macd_signal", "main_macd_signal", "MACD_SIGNAL"))
 
-    with st.expander("⚡ RSI 필터 설정", expanded=True):
+    with st.expander("⚡ RSI 필터 설정", expanded=False):
         st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="sb_rsi_period",
                         on_change=sync_p, args=("sb_rsi_period", "main_rsi_period,settings_rsi_period", "RSI_PERIOD"))
         col_rsi1, col_rsi2 = st.columns(2)
@@ -613,7 +613,7 @@ with st.sidebar:
             st.number_input("RSI 숏 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="sb_rsi_oversold",
                             on_change=sync_p, args=("sb_rsi_oversold", "main_rsi_oversold,settings_rsi_oversold", "RSI_OVERSOLD"))
 
-    with st.expander("⚡ 운용 및 포지션 설정", expanded=True):
+    with st.expander("⚡ 운용 및 포지션 설정", expanded=False):
         st.number_input("레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="sb_leverage",
                         on_change=sync_p, args=("sb_leverage", "main_leverage", "LEVERAGE"))
         st.number_input("1회 진입 증거금 (USDT)", 1.0, 100.0, CFG.MARGIN_USDT, step=0.5, key="sb_margin",
@@ -621,7 +621,7 @@ with st.sidebar:
         st.number_input("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="sb_max_pos",
                         on_change=sync_p, args=("sb_max_pos", "main_max_pos", "MAX_POSITIONS"))
 
-    with st.expander("🛡️ 리스크 및 한도 설정", expanded=True):
+    with st.expander("🛡️ 리스크 및 한도 설정", expanded=False):
         st.number_input("익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="sb_tp",
                         on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True))
         st.number_input("손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
