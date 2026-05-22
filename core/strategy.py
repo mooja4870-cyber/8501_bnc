@@ -28,6 +28,7 @@ class Signal:
     macd_hist: float        # AKMCD 히스토그램 값
     reason: str
     rsi: float = 50.0       # RSI 값 (기본값 50.0)
+    rsi_ok: bool = True     # RSI 필터 충족 여부 (기본값 True)
 
 
 class StrategyEngine:
@@ -131,7 +132,7 @@ class StrategyEngine:
             symbol=symbol, direction="none", strength=0,
             ema_ok=False, bb_ok=False, macd_ok=False,
             close=0, ema200=0, bb_upper=0, bb_lower=0,
-            macd_hist=0, reason="데이터 부족", rsi=50.0
+            macd_hist=0, reason="데이터 부족", rsi=50.0, rsi_ok=False
         )
 
         if df.empty or len(df) < 3:
@@ -179,7 +180,7 @@ class StrategyEngine:
                     ema_ok=cond_long_1, bb_ok=cond_long_4, macd_ok=cond_long_3,
                     close=close, ema200=ssl_up,
                     bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-                    macd_hist=macd_hist, rsi=curr['rsi'],
+                    macd_hist=macd_hist, rsi=curr['rsi'], rsi_ok=False,
                     reason=f"롱 조건 충족했으나 RSI 과열({curr['rsi']:.1f} >= {self.cfg.RSI_OVERBOUGHT})로 진입 차단"
                 )
             strength = compute_strength(cond_long_1, cond_long_2, cond_long_3, cond_long_4)
@@ -188,7 +189,7 @@ class StrategyEngine:
                 ema_ok=cond_long_1, bb_ok=cond_long_4, macd_ok=cond_long_3,
                 close=close, ema200=ssl_up,
                 bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-                macd_hist=macd_hist, rsi=curr['rsi'],
+                macd_hist=macd_hist, rsi=curr['rsi'], rsi_ok=True,
                 reason=f"SSL 롱 추세 + AKMCD 초록점 전환 완료 (강도 {strength}%, RSI {curr['rsi']:.1f})"
             )
 
@@ -200,7 +201,7 @@ class StrategyEngine:
                     ema_ok=cond_short_1, bb_ok=cond_short_4, macd_ok=cond_short_3,
                     close=close, ema200=ssl_down,
                     bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-                    macd_hist=macd_hist, rsi=curr['rsi'],
+                    macd_hist=macd_hist, rsi=curr['rsi'], rsi_ok=False,
                     reason=f"숏 조건 충족했으나 RSI 과매도({curr['rsi']:.1f} <= {self.cfg.RSI_OVERSOLD})로 진입 차단"
                 )
             strength = compute_strength(cond_short_1, cond_short_2, cond_short_3, cond_short_4)
@@ -209,7 +210,7 @@ class StrategyEngine:
                 ema_ok=cond_short_1, bb_ok=cond_short_4, macd_ok=cond_short_3,
                 close=close, ema200=ssl_down,
                 bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-                macd_hist=macd_hist, rsi=curr['rsi'],
+                macd_hist=macd_hist, rsi=curr['rsi'], rsi_ok=True,
                 reason=f"SSL 숏 추세 + AKMCD 빨간점 전환 완료 (강도 {strength}%, RSI {curr['rsi']:.1f})"
             )
 
@@ -222,7 +223,7 @@ class StrategyEngine:
                 ema_ok=cond_long_1, bb_ok=cond_long_4, macd_ok=cond_long_3,
                 close=close, ema200=ssl_up,
                 bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-                macd_hist=macd_hist, rsi=curr['rsi'],
+                macd_hist=macd_hist, rsi=curr['rsi'], rsi_ok=cond_long_rsi,
                 reason="조건 일부 미충족 (LONG 추세)"
             )
 
@@ -234,7 +235,7 @@ class StrategyEngine:
                 ema_ok=cond_short_1, bb_ok=cond_short_4, macd_ok=cond_short_3,
                 close=close, ema200=ssl_down,
                 bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-                macd_hist=macd_hist, rsi=curr['rsi'],
+                macd_hist=macd_hist, rsi=curr['rsi'], rsi_ok=cond_short_rsi,
                 reason="조건 일부 미충족 (SHORT 추세)"
             )
 
@@ -243,6 +244,6 @@ class StrategyEngine:
             ema_ok=False, bb_ok=False, macd_ok=False,
             close=close, ema200=ssl_up,
             bb_upper=curr['bb_upper'], bb_lower=curr['bb_lower'],
-            macd_hist=macd_hist, rsi=curr['rsi'],
+            macd_hist=macd_hist, rsi=curr['rsi'], rsi_ok=True,
             reason="SSL 중립 추세 — 신호 없음"
         )

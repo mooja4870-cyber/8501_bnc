@@ -205,6 +205,8 @@ class Scanner:
                     "ema_ok": sig.ema_ok,
                     "macd_ok": sig.macd_ok,
                     "bb_ok": sig.bb_ok,
+                    "rsi": round(sig.rsi, 1),
+                    "rsi_ok": sig.rsi_ok,
                     "reason": sig.reason,
                     "timestamp": datetime.now(),
                 })
