@@ -1,3 +1,4 @@
+| v3.1.7 | 2026-05-22 | [Test] 포지션 진입 파라미터 개별 격리 검증 테스트 33개 추가 (전략 4대 조건, EMA200/RSI 필터, 리스크 게이트, 포지션 가드, MAX_POSITIONS 레이스컨디션) | Test |
 | v3.1.6 | 2026-05-22 | [UI/UX] 사이드바 기본 상태를 expanded로 변경, STRATEGY ENGINE 하위 expander(RSI 필터/운용 및 포지션/리스크 및 한도) 기본 접힘(collapsed)으로 통일 | UI/UX |
 | v3.1.5 | 2026-05-22 | [UI/UX] 대시보드 로고 'AKMCD-SSL-RSI' 텍스트 폰트를 Pretendard로 변경 (CDN: pretendard@v1.3.9) | UI/UX |
 | v3.1.4 | 2026-05-22 | [Core/UI] 1회 진입 증거금 기본값 4.0 USDT로 하향 조정, 대시보드 내 '수익율' 오탈자를 '수익률'로 일괄 교정 및 누적 수익률 우측에 툴팁 아이콘(ℹ)을 추가하여 초기화 시점 잔고를 즉시 팝오버 렌더링하도록 개선 | Core/UI |
