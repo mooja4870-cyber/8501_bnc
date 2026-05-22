@@ -1,3 +1,4 @@
+| v3.1.9 | 2026-05-22 | [UI/Core] 사이드바 로고 버전을 APP_VERSION 상수로 분리 (하드코딩 v3.0.8 제거), git tag와 자동 동기화 구조 적용 | UI/Core |
 | v3.1.8 | 2026-05-22 | [Core/Risk] MAX_DRAWDOWN_PCT 실제 낙폭 체크 로직 구현 (seed_money 대비 잔고 낙폭 ≥ 10% 시 진입 차단), Dead Code 정리 (strength<60 → strength<100, 4대 조건 완전 충족 필수) | Core/Risk |
 | v3.1.7 | 2026-05-22 | [Test] 포지션 진입 파라미터 개별 격리 검증 테스트 33개 추가 (전략 4대 조건, EMA200/RSI 필터, 리스크 게이트, 포지션 가드, MAX_POSITIONS 레이스컨디션) | Test |
 | v3.1.6 | 2026-05-22 | [UI/UX] 사이드바 기본 상태를 expanded로 변경, STRATEGY ENGINE 하위 expander(RSI 필터/운용 및 포지션/리스크 및 한도) 기본 접힘(collapsed)으로 통일 | UI/UX |
