@@ -1,3 +1,4 @@
+| v2.0.8 | 2026-05-22 | [Core/Scanner] OHLCV 캐시 구현(최초 300봉, 이후 3봉 증분 업데이트) 및 거래대금 상위 80개 스캔 제한으로 REST API 호출 95% 절감 / Binance IP 차단 근본 방지 | Core/Scanner |
 | v2.0.7 | 2026-05-22 | [Core/Scanner/UI] Tickers 키 매핑 보정, 스캐너 개별 API 호출 차단, 대시보드 조회 실패 시 Fallback 사전 예방(KeyError 방지) | Core/Scanner/UI |
 | v2.0.6 | 2026-05-21 | [Core/Engine] Streamlit 다중 탭 접속 시 중복 스캔 스레드 실행 방지를 위한 Singleton 패턴 및 초기화 가드 구현 | Core/Engine |
 | v2.0.5 | 2026-05-21 | [Core/Scanner] Scanner Ticker 일괄 조회(fetch_tickers) 도입으로 REST API 호출 횟수 최적화 및 API Ban(Rate Limit 418) 차단 | Core/Scanner |

@@ -42,6 +42,7 @@ class TradingConfig:
     SCAN_INTERVAL_SEC: int = 30           # 스캔 주기(초)
     MIN_VOLUME_USDT: float = 1_000_000.0   # 최소 24h 거래대금 (1백만 USDT)
     MAX_SPREAD_PCT: float = 0.3            # 최대 허용 스프레드 (%) — 초과 시 진입 스킵
+    SCAN_TOP_N: int = 80                   # 거래대금 상위 N개만 스캔 (0 = 전체)
     QUOTE_CURRENCY: str = "USDT"
     MARKET_TYPE: str = "swap"             # 선물(영구 계약)
 
