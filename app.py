@@ -616,7 +616,7 @@ with st.sidebar:
     auto = st.toggle(
         "자동매매 ON/OFF",
         value=st.session_state.auto_trading,
-        help="ON: 실시간 마켓 스캐너 및 자동 매매 엔진을 기동하여 AKMCD+SSL+RSI+EMA200 하이브리드 전략 조건 충족 시 포지션을 자동으로 진입/청산합니다. / OFF: 실시간 스캔을 즉시 중단하고 신규 자동 진입을 차단합니다. (기존 보유 포지션은 유지됩니다)"
+        help="ON: 실시간 마켓 스캐너 및 자동 매매 엔진을 기동하여 AKMCD+SSL+EMA200(하단 개별 스위칭 활성화 시 RSI/ADX 필터 추가 적용) 하이브리드 전략 조건 충족 시 포지션을 자동으로 진입/청산합니다. / OFF: 실시간 스캔을 즉시 중단하고 신규 자동 진입을 차단합니다. (기존 보유 포지션은 유지됩니다)"
     )
     rsi_auto = st.toggle(
         "⚡ RSI 자동 스위칭",
