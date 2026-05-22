@@ -1,6 +1,10 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v3.2.8] Binance API Time Synchronization & Stability Fix:**
+  - [Core/API] 윈도우 로컬 시스템 시각 차이로 발생하는 바이낸스 `-1021` (Timestamp ahead of server's time) 오류 자동 동기화 대응.
+  - [Core/API] CCXT 바이낸스 연동 옵션에 `recvWindow: 60000` 설정 적용으로 오차 허용 격차 범위 확장.
+  - [Core/API] API 호출 중 시간 비동기화 오류 감지 시 백오프 단계에서 `load_time_difference()`를 강제 실행하여 동적으로 서버 시각과 로컬 시각 오차 재계산 후 자동 재시도 루프 탑재.
 - **[v1.4.02] Auto-Tuning Persistence & Multi-Tab Layout Refresh:**
   - [Feature] 자동 피팅 이력 영구 기록 시스템 (`data/autotune_history.csv`) 구축 — 앱 업데이트, 서버 재시작 등에도 영구 보존.
   - [UI/UX] 대시보드 탭 레이아웃 재배치 — 7단 탭 구조 (`대시보드`, `스캐너`, `매매 이력`, `포지션 진입`, `TP/SL 최적화기`, `오토피팅 이력`, `설정`) 완성.

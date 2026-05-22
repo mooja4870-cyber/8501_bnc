@@ -22,6 +22,7 @@ class BinanceClient:
             "secret": secret_key,
             "options": {
                 "adjustForTimeDifference": True,
+                "recvWindow": 60000,
             },
             "enableRateLimit": True,
             "rateLimit": 200,              # ms 단위
@@ -45,6 +46,17 @@ class BinanceClient:
                 logger.warning(f"[API NetworkError] {func.__name__} 호출 중 네트워크 오류 감지. 시도 {attempt + 1}/{max_retries}. {delay}초 대기... 오류: {e}")
                 time.sleep(delay)
                 delay *= 1.5
+            except ccxt.ExchangeError as e:
+                err_msg = str(e)
+                if "-1021" in err_msg or "Timestamp for this request" in err_msg:
+                    logger.warning(f"[Time Sync Error] {func.__name__} 호출 중 시간 비동기화 감지 (-1021). 시도 {attempt + 1}/{max_retries}. 서버 시간 차이 재계산 및 1초 대기... 오류: {e}")
+                    try:
+                        self.exchange.load_time_difference()
+                    except Exception as te:
+                        logger.error(f"시간 차이 재계산 실패: {te}")
+                    time.sleep(1.0)
+                    continue
+                raise e
         # 최종 시도에서는 예외를 전파
         return func(*args, **kwargs)
 
