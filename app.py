@@ -519,6 +519,13 @@ st.markdown(
     .stTabs button[data-baseweb="tab"]:nth-child(6)::after {
         content: "자동매매 Off 일 때도 작동 가능 (로컬 과거 캔들 캐시 데이터 기반 학습)";
     }
+    
+    /* stButton의 상위 컨테이너 마진 제거하여 수평 정렬 맞춤 */
+    [data-testid="stHorizontalBlock"] div[data-testid="stButton"] {
+        margin-top: 0px !important;
+        display: flex;
+        align-items: center;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -636,18 +643,18 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown(
-        '<p style="font-family:IBM Plex Mono;font-size:0.9rem;color:#cccccc;letter-spacing:0.08em;">API 연결 설정</p>',
+        '<p style="font-family:IBM Plex Mono;font-size:0.9rem;color:#cccccc;letter-spacing:0.08em;">🔌 API 연결 설정</p>',
         unsafe_allow_html=True,
     )
 
     api_key = st.text_input(
-        "API Key", value=os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY", ""), type="password", key="api_key_input"
+        "🔑 API Key", value=os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY", ""), type="password", key="api_key_input"
     )
     secret_key = st.text_input(
-        "Secret Key", value=os.getenv("BINANCE_SECRET_KEY") or os.getenv("OKX_SECRET_KEY", ""), type="password", key="secret_input"
+        "🔑 Secret Key", value=os.getenv("BINANCE_SECRET_KEY") or os.getenv("OKX_SECRET_KEY", ""), type="password", key="secret_input"
     )
     passphrase = st.text_input(
-        "Passphrase (Optional)", value=os.getenv("BINANCE_PASSPHRASE") or os.getenv("OKX_PASSPHRASE", ""), type="password", key="pass_input"
+        "🔑 Passphrase (Optional)", value=os.getenv("BINANCE_PASSPHRASE") or os.getenv("OKX_PASSPHRASE", ""), type="password", key="pass_input"
     )
 
     if st.button("🔗  Binance 연결", use_container_width=True):
@@ -663,12 +670,12 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown(
-        '<p style="font-family:IBM Plex Mono;font-size:0.9rem;color:#cccccc;letter-spacing:0.08em;">매매 제어</p>',
+        '<p style="font-family:IBM Plex Mono;font-size:0.9rem;color:#cccccc;letter-spacing:0.08em;">🕹️ 매매 제어</p>',
         unsafe_allow_html=True,
     )
 
     auto = st.toggle(
-        "자동매매 ON/OFF",
+        "🤖 자동매매 가동 (ON/OFF)",
         value=st.session_state.auto_trading,
         help="ON: 실시간 마켓 스캐너 및 자동 매매 엔진을 기동하여 AKMCD+SSL+EMA200(하단 개별 스위칭 활성화 시 RSI/ADX 필터 추가 적용) 하이브리드 전략 조건 충족 시 포지션을 자동으로 진입/청산합니다. / OFF: 실시간 스캔을 즉시 중단하고 신규 자동 진입을 차단합니다. (기존 보유 포지션은 유지됩니다)"
     )
@@ -885,7 +892,7 @@ with st.sidebar:
     st.markdown(
         '<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#00e0ff; '
         'letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">'
-        '[ 다중기간 연동 변수값 자동설정 ]</p>',
+        '🧬 다중기간 변수 자동 연동</p>',
         unsafe_allow_html=True,
     )
     with st.expander("🧬 DL 최적 기간별 프리셋", expanded=False):
@@ -908,57 +915,57 @@ with st.sidebar:
             )
 
     # [v1.2.90] 인터랙티브 프로 트레이딩 컨트롤러 (동기화 로직 적용)
-    st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#ff9900; letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">[ STRATEGY ENGINE ]</p>', unsafe_allow_html=True)
+    st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#ff9900; letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">📊 STRATEGY ENGINE PARAMETERS</p>', unsafe_allow_html=True)
     
     with st.expander("📊 지표 및 스캐너 설정", expanded=False):
-        st.number_input("SSL 기간", 2, 100, CFG.SSL_PERIOD, step=1, key="sb_ssl_period", 
+        st.number_input("🛡️ SSL 기간", 2, 100, CFG.SSL_PERIOD, step=1, key="sb_ssl_period", 
                         on_change=sync_p, args=("sb_ssl_period", "main_ssl_period", "SSL_PERIOD"))
         # [v1.3.02] 타임프레임 원격 제어 추가
         tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
-        st.selectbox("타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="sb_timeframe",
+        st.selectbox("⏱️ 타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="sb_timeframe",
                      on_change=sync_p, args=("sb_timeframe", "main_timeframe", "TIMEFRAME"))
         col_bb1, col_bb2 = st.columns(2)
         with col_bb1:
-            st.number_input("BB 기간", 5, 100, CFG.BB_PERIOD, key="sb_bb_period",
+            st.number_input("📈 BB 기간", 5, 100, CFG.BB_PERIOD, key="sb_bb_period",
                             on_change=sync_p, args=("sb_bb_period", "main_bb_period", "BB_PERIOD"))
         with col_bb2:
-            st.number_input("BB 편차", 1.0, 5.0, CFG.BB_STD, step=0.1, key="sb_bb_std",
+            st.number_input("📏 BB 편차 배수", 1.0, 5.0, CFG.BB_STD, step=0.1, key="sb_bb_std",
                             on_change=sync_p, args=("sb_bb_std", "main_bb_std", "BB_STD"))
         
         col_m1, col_m2, col_m3 = st.columns(3)
         with col_m1:
-            st.number_input("MACD 단기", 5, 50, CFG.MACD_FAST, key="sb_macd_fast",
+            st.number_input("📉 MACD Fast", 5, 50, CFG.MACD_FAST, key="sb_macd_fast",
                             on_change=sync_p, args=("sb_macd_fast", "main_macd_fast", "MACD_FAST"))
         with col_m2:
-            st.number_input("MACD 장기", 10, 100, CFG.MACD_SLOW, key="sb_macd_slow",
+            st.number_input("📉 MACD Slow", 10, 100, CFG.MACD_SLOW, key="sb_macd_slow",
                             on_change=sync_p, args=("sb_macd_slow", "main_macd_slow", "MACD_SLOW"))
         with col_m3:
-            st.number_input("MACD 시그널", 2, 20, CFG.MACD_SIGNAL, key="sb_macd_signal",
+            st.number_input("📉 MACD Signal", 2, 20, CFG.MACD_SIGNAL, key="sb_macd_signal",
                             on_change=sync_p, args=("sb_macd_signal", "main_macd_signal", "MACD_SIGNAL"))
 
     with st.expander("⚡ RSI 필터 설정", expanded=False):
-        st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="sb_rsi_period",
+        st.number_input("⚡ RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="sb_rsi_period",
                         on_change=sync_p, args=("sb_rsi_period", "main_rsi_period,settings_rsi_period", "RSI_PERIOD"))
         col_rsi1, col_rsi2 = st.columns(2)
         with col_rsi1:
-            st.number_input("RSI 롱 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="sb_rsi_overbought",
+            st.number_input("🟢 RSI 롱 진입 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="sb_rsi_overbought",
                             on_change=sync_p, args=("sb_rsi_overbought", "main_rsi_overbought,settings_rsi_overbought", "RSI_OVERBOUGHT"))
         with col_rsi2:
-            st.number_input("RSI 숏 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="sb_rsi_oversold",
+            st.number_input("🔴 RSI 숏 진입 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="sb_rsi_oversold",
                             on_change=sync_p, args=("sb_rsi_oversold", "main_rsi_oversold,settings_rsi_oversold", "RSI_OVERSOLD"))
 
-    with st.expander("⚡ 운용 및 포지션 설정", expanded=False):
-        st.number_input("레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="sb_leverage",
+    with st.expander("⚙️ 운용 및 포지션 설정", expanded=False):
+        st.number_input("🚀 레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="sb_leverage",
                         on_change=sync_p, args=("sb_leverage", "main_leverage", "LEVERAGE"))
-        st.number_input("1회 진입 증거금 (USDT)", 1.0, 100.0, CFG.MARGIN_USDT, step=0.5, key="sb_margin",
+        st.number_input("💵 1회 진입 증거금 (USDT)", 1.0, 100.0, CFG.MARGIN_USDT, step=0.5, key="sb_margin",
                         on_change=sync_p, args=("sb_margin", "main_margin", "MARGIN_USDT"))
-        st.number_input("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="sb_max_pos",
+        st.number_input("👥 최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="sb_max_pos",
                         on_change=sync_p, args=("sb_max_pos", "main_max_pos", "MAX_POSITIONS"))
 
     with st.expander("🛡️ 리스크 및 한도 설정", expanded=False):
-        st.number_input("익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="sb_tp",
+        st.number_input("🎯 익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="sb_tp",
                         on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True))
-        st.number_input("손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
+        st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
                         on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True))
 
 # ══════════════════════════════════════════════════════
@@ -1060,20 +1067,23 @@ with tabs[0]:
             if is_pnl:
                 val_num = float(str(value).replace('$','').replace(',','').replace('+',''))
                 color = "#ef4444" if val_num >= 0 else "#3b82f6"
+                border_glow = "rgba(239, 68, 68, 0.15)" if val_num >= 0 else "rgba(59, 130, 246, 0.15)"
             else:
                 color = "#ffffff" # 일반 지표는 중립 색상(White) 적용
+                border_glow = "rgba(0, 224, 255, 0.12)" # 아쿠아 블루
             
             delta_html = ""
             if delta is not None:
                 d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
                 d_color = "#ef4444" if d_num >= 0 else "#3b82f6"
-                delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px;">{delta}</div>'
+                delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px; font-family:\'JetBrains Mono\';">{delta}</div>'
                 
             st.markdown(
                 f"""
-                <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:0px; height:105px;">
-                    <div style="color:#cccccc; font-size:0.9rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
-                    <div style="color:{color}; font-size:1.46rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
+                <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:8px; height:105px;
+                            box-shadow: 0 4px 20px {border_glow}; transition: all 0.3s ease;">
+                    <div style="color:#cccccc; font-size:0.85rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
+                    <div style="color:{color}; font-size:1.5rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
                     {delta_html}
                 </div>
                 """,
@@ -1132,20 +1142,20 @@ with tabs[0]:
                         with pc1:
                             st.markdown(
                                 f"""
-                                <div style="background:#161616;border:1px solid rgba(255,255,255,0.07);
-                                            border-radius:8px;padding:12px 14px;margin-bottom:8px;">
-                                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-                                    <span style="font-family:'IBM Plex Mono';font-size:0.95rem;font-weight:600;">{p['symbol']}</span>
-                                    <span style="font-family:'IBM Plex Mono';font-size:0.95rem;font-weight:600;color:{pnl_color};">
+                                <div style="background:rgba(20, 24, 43, 0.85); border:1px solid rgba(0, 224, 255, 0.2);
+                                            border-radius:8px; padding:12px 14px; margin-bottom:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                                  <div style="display:flex; justify-content:space-between; margin-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">
+                                    <span style="font-family:'JetBrains Mono'; font-size:1.0rem; font-weight:700; color:#ffffff;">{p['symbol']}</span>
+                                    <span style="font-family:'JetBrains Mono'; font-size:1.0rem; font-weight:700; color:{pnl_color}; text-shadow: 0 0 8px {pnl_color}40;">
                                       {p['pnl_usdt']:+.4f} USDT ({p['pnl_pct']:+.1f}%)
                                     </span>
                                   </div>
-                                  <div style="font-family:'IBM Plex Mono';font-size:0.9rem;color:#cccccc;display:flex;gap:16px;">
-                                    <span>{side_badge}</span>
-                                    <span>진입가 ${p['entry_price']:,.4f}</span>
-                                    <span>현재가 ${p['mark_price']:,.4f}</span>
-                                    <span>{p['leverage']}x LEV</span>
-                                    <span>Amount ${p['amount_usdt']:,.2f}</span>
+                                  <div style="font-family:'JetBrains Mono'; font-size:0.85rem; color:#e2e8f0; display:flex; flex-wrap:wrap; gap:12px;">
+                                    <span style="background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px; font-weight:600;">{side_badge}</span>
+                                    <span>진입가: <b>${p['entry_price']:,.4f}</b></span>
+                                    <span>현재가: <b>${p['mark_price']:,.4f}</b></span>
+                                    <span>레버리지: <b>{p['leverage']}x</b></span>
+                                    <span>평가금: <b>${p['amount_usdt']:,.2f}</b></span>
                                   </div>
                                 </div>
                                 """,
@@ -1402,9 +1412,8 @@ with tabs[1]:
 
             # 신호 필터
             signal_filter = st.selectbox(
-                "신호 필터",
+                "🔍 신호 필터 선택",
                 ["전체", "LONG 신호", "SHORT 신호", "신호 없음"],
-                label_visibility="collapsed",
                 key="scanner_signal_filter"
             )
             if signal_filter == "LONG 신호":
@@ -1478,10 +1487,11 @@ with tabs[2]:
 
     h1, h2 = st.columns([2, 1])
     with h1:
-        hist_symbol = st.selectbox("종목 필터", ["전체"] + history_symbols, key="hist_sym")
+        hist_symbol = st.selectbox("📁 종목 필터 선택", ["전체"] + history_symbols, key="hist_sym")
     with h2:
         sync_disabled = not st.session_state.api_connected or not engine.is_ready
         help_msg = "실시간 거래소 이력을 반영하려면 사이드바에서 API를 연결하세요." if sync_disabled else "거래소에서 최근 100개 체결 이력을 받아와 로컬 CSV로 동기화합니다."
+        st.markdown("<div style='height:28px;'></div>", unsafe_allow_html=True)
         if st.button("🔄  이력 새로고침", use_container_width=True, disabled=sync_disabled, help=help_msg):
             try:
                 engine.sync_trades_to_csv()
@@ -1568,9 +1578,9 @@ with tabs[3]:
         st.markdown("**🟢 LONG 포지션 진입 조건**")
         st.markdown(
             """
-            <div style="background:#0f0f0f; border:1px solid #ffcc00; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:0px;">
+            <div style="background:#0f0f0f; border:1px solid #ffcc00; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:8px;">
                 <p style="font-family:'Inter'; font-size:1.15rem; color:#ffcc00; margin:0; line-height:1.5; text-align:center; font-weight:600;">
-                "🌊 큰 파도(SSL)가 밀어주고, 🟢 AKMCD 점이 상승하며, 🚀 히스토그램이 영선을 돌파하고, 🔵 양봉(Blue)이면서 🛡️ EMA 200 위에 위치할 때 롱 진입합니다!"
+                "🌊 큰 파도(SSL)가 밀어주고, 🟢 AKMCD 점이 상승하며, 🚀 히스토그램이 영선을 돌파하고, 🟢 양봉(초록/Green)이면서 🛡️ EMA 200 위에 위치할 때 롱 진입합니다!"
                 </p>
             </div>
             """, 
@@ -1579,16 +1589,16 @@ with tabs[3]:
         st.markdown("- **추세:** 현재 종가가 SSL 파란선(ssl_up) 위 <span style='color:#ffcc00;'>☞ 대세 상승 추세 확인</span>", unsafe_allow_html=True)
         st.markdown("- **반전:** AKMCD 도트 색상이 빨간색에서 초록색으로 변경 <span style='color:#ffcc00;'>☞ 단기 모멘텀 상승 전환</span>", unsafe_allow_html=True)
         st.markdown("- **모멘텀:** MACD 히스토그램이 영선(0) 위 <span style='color:#ffcc00;'>☞ MACD 강도 양수 돌파</span>", unsafe_allow_html=True)
-        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가보다 높은 양봉(Blue) <span style='color:#ffcc00;'>☞ 실시간 매수세 우위</span>", unsafe_allow_html=True)
+        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가보다 높은 양봉(초록/Green) <span style='color:#ffcc00;'>☞ 실시간 매수세 우위</span>", unsafe_allow_html=True)
         st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 위** <span style='color:#ffcc00;'>☞ 장기 대추세 부합 (필수)</span>", unsafe_allow_html=True)
 
     with c2:
         st.markdown("**🔴 SHORT 포지션 진입 조건**")
         st.markdown(
             """
-            <div style="background:#0f0f0f; border:1px solid #ff3b30; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:0px;">
+            <div style="background:#0f0f0f; border:1px solid #ff3b30; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:8px;">
                 <p style="font-family:'Inter'; font-size:1.15rem; color:#ff3b30; margin:0; line-height:1.5; text-align:center; font-weight:600;">
-                "📉 내리막길(SSL) 경사 아래에서, 🔴 AKMCD 점이 하락하며, 🌬 히스토그램이 영선 아래로 떨어지고, 🔴 음봉(Red)이면서 🛡️ EMA 200 아래에 위치할 때 숏 진입합니다!"
+                "📉 내리막길(SSL) 경사 아래에서, 🔴 AKMCD 점이 하락하며, 🌬 히스토그램이 영선 아래로 떨어지고, 🔴 음봉(빨강/Red)이면서 🛡️ EMA 200 아래에 위치할 때 숏 진입합니다!"
                 </p>
             </div>
             """, 
@@ -1597,7 +1607,7 @@ with tabs[3]:
         st.markdown("- **추세:** 현재 종가가 SSL 빨간선(ssl_down) 아래 <span style='color:#ff3b30;'>☞ 대세 하락 추세 확인</span>", unsafe_allow_html=True)
         st.markdown("- **반전:** AKMCD 도트 색상이 초록색에서 빨간색으로 변경 <span style='color:#ff3b30;'>☞ 단기 모멘텀 하락 전환</span>", unsafe_allow_html=True)
         st.markdown("- **모멘텀:** MACD 히스토그램이 영선(0) 아래 <span style='color:#ff3b30;'>☞ MACD 강도 음수 돌파</span>", unsafe_allow_html=True)
-        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가 이하인 음봉(Red) <span style='color:#ff3b30;'>☞ 실시간 매도세 우위</span>", unsafe_allow_html=True)
+        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가 이하인 음봉(빨강/Red) <span style='color:#ff3b30;'>☞ 실시간 매도세 우위</span>", unsafe_allow_html=True)
         st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 아래** <span style='color:#ff3b30;'>☞ 장기 대추세 부합 (필수)</span>", unsafe_allow_html=True)
 
     st.markdown("---")
@@ -1605,10 +1615,10 @@ with tabs[3]:
     # ── 대혁신적인 진입 필터/엔진 시각화 체계 ─────────────────────
     st.markdown(
         """
-        <div style="background:#0c0c0c; border:1px solid #262626; padding:20px; border-radius:0px; margin-bottom:20px;">
+        <div style="background:#0c0c0c; border:1px solid #262626; padding:20px; border-radius:8px; margin-bottom:20px;">
             <h4 style="font-family:'JetBrains Mono'; color:#ff9900; margin-top:0; margin-bottom:15px; font-size:1.1rem; letter-spacing:0.05em;">⚙️ AI QUANTUM 복합 진입 필터 & 엔진 스위칭 아키텍처</h4>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div style="background:#151515; padding:15px; border-left:4px solid #ffcc00;">
+                <div style="background:#151515; padding:15px; border-left:4px solid #ffcc00; border-radius:6px;">
                     <p style="font-weight:bold; font-size:0.95rem; color:#ffffff; margin-top:0; margin-bottom:10px;">🛠️ 핵심 필수 기반 조건 (Base Base Base - 100% 필수)</p>
                     <ul style="font-size:0.85rem; color:#cccccc; line-height:1.6; padding-left:18px; margin:0;">
                         <li><b>SSL 추세 동기화:</b> 상하위 선 배열 일치 여부 실시간 검증</li>
@@ -1617,7 +1627,7 @@ with tabs[3]:
                         <li><b>EMA 200 장기 필터:</b> 장기 대이평 기준 가격 정배열/역배열 필터링</li>
                     </ul>
                 </div>
-                <div style="background:#151515; padding:15px; border-left:4px solid #ff9900;">
+                <div style="background:#151515; padding:15px; border-left:4px solid #ff9900; border-radius:6px;">
                     <p style="font-weight:bold; font-size:0.95rem; color:#ffffff; margin-top:0; margin-bottom:10px;">🚀 동적 전략 옵션 제어 (Optional Controls - 사이드바 토글)</p>
                     <ul style="font-size:0.85rem; color:#cccccc; line-height:1.6; padding-left:18px; margin:0;">
                         <li><b>⚡ RSI 자동 스위칭 (반필수):</b> 과열 진입 제한 롱 상한선(60) & 숏 하한선(40)을 적용해 노이즈를 완전 차단합니다. OFF 시 우회되며 스캐너에서도 제외됩니다.</li>
@@ -1732,21 +1742,21 @@ with tabs[4]:
 
     s1, s2 = st.columns(2)
     with s1:
-        st.number_input("레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="main_leverage",
+        st.number_input("🚀 레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="main_leverage",
                         on_change=sync_p, args=("main_leverage", "sb_leverage", "LEVERAGE"))
-        st.number_input("1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0, key="main_margin",
+        st.number_input("💵 1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0, key="main_margin",
                         on_change=sync_p, args=("main_margin", "sb_margin", "MARGIN_USDT"))
-        st.number_input("최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="main_max_pos",
+        st.number_input("👥 최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="main_max_pos",
                         on_change=sync_p, args=("main_max_pos", "sb_max_pos", "MAX_POSITIONS"))
-        st.number_input("*** 스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10, key="main_scan_interval",
+        st.number_input("⏱️ 스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10, key="main_scan_interval",
                         on_change=sync_p, args=("main_scan_interval", "sb_scan_interval", "SCAN_INTERVAL_SEC"))
 
     with s2:
-        st.number_input("익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",
+        st.number_input("🎯 익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",
                         on_change=sync_p, args=("main_tp", "sb_tp", "TAKE_PROFIT_PCT", True))
-        st.number_input("손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
+        st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
                         on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True))
-        st.number_input("*** 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
+        st.number_input("💵 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
                         on_change=sync_p, args=("main_min_vol", "sb_min_vol", "MIN_VOLUME_USDT"))
 
     st.markdown("---")
