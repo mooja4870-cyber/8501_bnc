@@ -17,8 +17,15 @@ from core.exchange import BinanceClient
 from core.scanner import Scanner
 from core.trader import AutoTrader
 from core.engine import QuantumEngine, EngineState
+import importlib
+import core.config
+importlib.reload(core.config)
 from core.config import CFG
+
 import core.stats as stats_store
+
+import core.history_helper
+importlib.reload(core.history_helper)
 from core.history_helper import load_local_trade_history, aggregate_and_pair_trades
 
 load_dotenv(override=True)
@@ -32,7 +39,7 @@ def get_git_tag():
             return tag
     except Exception:
         pass
-    return "v3.2.0" # Fallback 하드코딩
+    return "v3.3.4" # Fallback 하드코딩
 
 APP_VERSION = get_git_tag()
 

@@ -1,3 +1,4 @@
+| v3.3.4 | 2026-05-23 | [Core/Bugfix] 매매 이력 페어링 로직 고도화 및 캐싱 방지. 동일 분(minute)에 속한 분할 체결(Split-Fill) 건의 단일 행 병합, 1개 청산 주문에 대한 N개 진입 주문 가중평균 FIFO 매칭(1:N) 적용으로 수익률/손익의 거래소 일치성 확보. Streamlit의 모듈 캐싱에 따른 구버전 렌더링 방지를 위해 `importlib.reload` 구문 적용 | Core/Bugfix |
 | v3.3.3 | 2026-05-23 | [UI/UX] 툴팁(st.help)의 물음표(stTooltipIcon) 아이콘의 색상과 투명도가 어두운 테마에서 가독성이 떨어지는 문제를 해결하기 위해 흰색(#ffffff) 및 opacity 1 강제 적용 CSS 추가 | UI/UX |
 | v3.3.2 | 2026-05-23 | [UI/UX] 사이드바 내 토글(st.toggle) 위젯 라벨의 글자 색상이 어두운 배경에 의해 묻히는 문제를 해결하기 위해 흰색(#ffffff) 강제 적용 CSS 룰 추가 | UI/UX |
 | v3.3.1 | 2026-05-23 | [Core/Bugfix] 매매 이력 누락 및 유실 버그 수정. sync_trades_to_csv()의 파괴적인 CSV 삭제 및 덮어쓰기 방식을 폐지하고 중복 주문(order_id) 가드 기반 증분 추가(Append) 동기화로 변경. symbol=None 조회 시 바이낸스 API 예외 발생을 예방하는 안전 가드 추가 및 현재 활성 포지션 심볼과 로컬 이력 심볼 목록을 분석해 필요한 종목만 지능적으로 거래소 체결을 수집해 메우도록 보강 | Core/Bugfix |
