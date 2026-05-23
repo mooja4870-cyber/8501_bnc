@@ -167,6 +167,9 @@ class BinanceClient:
 
     def get_trade_history(self, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
         """체결 이력 조회"""
+        if symbol is None:
+            logger.warning("[API] Binance fetch_my_trades requires a symbol. symbol=None query is skipped.")
+            return []
         try:
             trades = self._execute_with_retry(self.exchange.fetch_my_trades, symbol=symbol, limit=limit)
             result = []

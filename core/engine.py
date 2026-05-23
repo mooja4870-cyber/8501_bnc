@@ -491,26 +491,65 @@ class QuantumEngine:
         return opt.run_optimization()
 
     def sync_trades_to_csv(self):
-        """거래소의 최근 100개 거래 기록을 로컬 CSV로 동기화 (기록 누락 복구용)"""
+        """거래소의 최근 거래 기록을 로컬 CSV로 안전하게 추가 동기화 (기록 누락 복구용, 중복 및 덮어쓰기 방지)"""
         if not self.client:
             return
         try:
-            trades = self.get_trade_history(limit=100)
+            # 1) 동기화 대상 심볼 추출
+            target_symbols = set()
+            
+            # 현재 포지션 심볼들 추가
+            try:
+                positions = self.client.get_positions()
+                for p in positions:
+                    target_symbols.add(p["symbol"])
+            except Exception as pe:
+                logger.error(f"동기화 대상 포지션 조회 실패: {pe}")
+            
+            # 로컬 매매 이력에 있는 최근 거래들의 심볼들 추가
+            local_trades = []
+            try:
+                from core.history_helper import load_local_trade_history
+                local_trades = load_local_trade_history()
+                # 최근 20개 거래의 심볼들을 대상에 추가하여 최근 체결의 동기화 보장
+                for lt in local_trades[-20:]:
+                    target_symbols.add(lt["symbol"])
+            except Exception as le:
+                logger.error(f"동기화 대상 로컬 이력 로드 실패: {le}")
+
+            # 2) 각 심볼별로 최근 체결 내역 통합 수집
+            trades = []
+            for sym in target_symbols:
+                try:
+                    sym_trades = self.client.get_trade_history(symbol=sym, limit=20)
+                    if sym_trades:
+                        trades.extend(sym_trades)
+                    time.sleep(0.1)  # API Rate Limit 방지용 미세 대기
+                except Exception as se:
+                    logger.error(f"{sym} 거래소 체결 이력 조회 실패: {se}")
+
             if not trades:
                 return
             
+            # 3) 기존 로컬 이력에 기록된 order_id 목록 추출 (중복 저장 가드)
+            existing_ids = set()
+            try:
+                for lt in local_trades:
+                    oid = lt.get("order_id")
+                    if oid:
+                        existing_ids.add(str(oid).strip())
+            except Exception:
+                pass
+
             # 시간 오름차순으로 정렬해서 순차 기록
             trades = sorted(trades, key=lambda x: x["timestamp"])
             
-            # 기존 CSV 파일 초기화 후 재작성
-            import os
-            from core.logger import LOG_FILE, _ensure_file
-            
-            if os.path.exists(LOG_FILE):
-                os.remove(LOG_FILE)
-            _ensure_file()
-            
+            new_count = 0
             for t in trades:
+                t_order_id = str(t.get("order_id", "")).strip()
+                if t_order_id and t_order_id in existing_ids:
+                    continue  # 이미 기록된 거래 건너뜀
+                
                 csv_log({
                     "timestamp": t["timestamp"],
                     "symbol": t["symbol"],
@@ -521,8 +560,12 @@ class QuantumEngine:
                     "pnl_usdt": t["pnl"],
                     "pnl_pct": t["pnl_pct"],
                     "leverage": self.cfg.LEVERAGE,
-                    "order_id": t["order_id"],
+                    "order_id": t_order_id,
                 })
-            logger.info(f"로컬 CSV에 {len(trades)}개의 거래 내역을 성공적으로 동기화했습니다.")
+                existing_ids.add(t_order_id)
+                new_count += 1
+                
+            if new_count > 0:
+                logger.info(f"로컬 CSV에 {new_count}개의 새로운 거래 내역을 추가 동기화했습니다.")
         except Exception as e:
             logger.error(f"거래 내역 CSV 동기화 실패: {e}")
