@@ -189,6 +189,13 @@ st.markdown(
         box-shadow: 0 0 8px rgba(0, 224, 255, 0.2) !important;
     }
 
+    /* 토글/체크박스 라벨 글자 색상 흰색 강제 적용 */
+    div[data-testid="stCheckbox"] label,
+    div[data-testid="stCheckbox"] span,
+    div[data-testid="stCheckbox"] p {
+        color: #ffffff !important;
+    }
+
     /* 데이터프레임 */
     [data-testid="stDataFrame"] {
         border: 1px solid var(--glass-border) !important;
