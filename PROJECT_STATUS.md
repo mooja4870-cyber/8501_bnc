@@ -1,6 +1,10 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v3.2.9] Ghost Holding Positions Resolution:**
+  - [Core/UI] 실제 보유하지 않은 포지션이 로컬 기록 상의 미청산 상태로 인해 '보유 중'으로 계속 남아있던 심각한 데이터 불일치 버그 해결.
+  - [Core/UI] `core/history_helper.py` 내 진입/청산 페어링 로직에 `active_positions_set` 크로스체크 프로세스 결합.
+  - [Core/UI] 실시간 거래소 포지션 정보를 대조하여, 실제 보유하고 있지 않은 종목에 대해 가상으로 진입가와 동일한 청산가를 부여하고 손익 0.0의 `청산 완료 (미기록)` 상태로 자동 보정 처리.
 - **[v3.2.8] Binance API Time Synchronization & Stability Fix:**
   - [Core/API] 윈도우 로컬 시스템 시각 차이로 발생하는 바이낸스 `-1021` (Timestamp ahead of server's time) 오류 자동 동기화 대응.
   - [Core/API] CCXT 바이낸스 연동 옵션에 `recvWindow: 60000` 설정 적용으로 오차 허용 격차 범위 확장.

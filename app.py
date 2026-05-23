@@ -1457,9 +1457,21 @@ with tabs[1]:
 with tabs[2]:
     engine: QuantumEngine = st.session_state.engine
 
+    # 실제 보유 중인 포지션 세트 추출
+    active_positions_set = None
+    if st.session_state.api_connected and engine.is_ready:
+        try:
+            live_pos = engine.client.get_positions()
+            active_positions_set = {
+                (p["symbol"], p["side"].upper())
+                for p in live_pos if abs(p["size"]) > 0
+            }
+        except Exception:
+            pass
+
     # [v2.0.8] 로컬 CSV 이력 로드 및 진입/청산 페어링 (API 미연결 시에도 로컬 이력 항시 조회 허용)
     raw_trades = load_local_trade_history()
-    paired_history = aggregate_and_pair_trades(raw_trades)
+    paired_history = aggregate_and_pair_trades(raw_trades, active_positions_set=active_positions_set)
 
     # 동적 종목 필터 리스트 구성
     history_symbols = sorted(list(set([x["symbol"] for x in paired_history])))

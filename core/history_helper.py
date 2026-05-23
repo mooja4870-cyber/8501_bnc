@@ -60,7 +60,7 @@ def load_local_trade_history() -> List[Dict]:
         print(f"[HISTORY_HELPER] 로컬 CSV 로드 실패: {e}")
         return []
 
-def aggregate_and_pair_trades(trades: List[Dict]) -> List[Dict]:
+def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional[set] = None) -> List[Dict]:
     """
     1. 동일 주문ID(order_id)의 개별 체결(fill)들을 하나의 주문 단위로 합산(weighted average price 등).
     2. 동일 종목(symbol)에 대해 시간순으로 진입(Entry)과 청산(Exit)을 짝지어(Pairing) 반환.
@@ -150,17 +150,26 @@ def aggregate_and_pair_trades(trades: List[Dict]) -> List[Dict]:
         
         # 스캔 후 남은 진입중인 포지션 표시
         for entry in active_entries:
+            entry_dir = get_position_direction(entry["category"], entry["side"])
+            
+            # 실시간 실제 보유 중인지 크로스 체크
+            is_actually_holding = True
+            if active_positions_set is not None:
+                is_actually_holding = ((sym, entry_dir) in active_positions_set)
+                
+            status_str = "보유 중" if is_actually_holding else "청산 완료 (미기록)"
+            
             paired_cycles.append({
                 "entry_time": entry["timestamp"],
-                "exit_time": None,
+                "exit_time": None if is_actually_holding else entry["timestamp"],
                 "symbol": sym,
-                "direction": "🟢 LONG" if get_position_direction(entry["category"], entry["side"]) == "LONG" else "🔴 SHORT",
+                "direction": "🟢 LONG" if entry_dir == "LONG" else "🔴 SHORT",
                 "entry_price": entry["price"],
-                "exit_price": None,
+                "exit_price": entry["price"] if not is_actually_holding else None,
                 "amount": entry["amount"],
-                "pnl_usdt": None,
-                "pnl_pct": None,
-                "status": "보유 중"
+                "pnl_usdt": 0.0 if not is_actually_holding else None,
+                "pnl_pct": 0.0 if not is_actually_holding else None,
+                "status": status_str
             })
 
     # 전체 사이클을 최신 종료 시각(exit_time이 없으면 entry_time) 기준으로 내림차순 정렬

@@ -192,3 +192,34 @@ def test_aggregate_and_pair_trades_orphan_exit():
     assert cycle["pnl_usdt"] == -10.0
     assert cycle["pnl_pct"] == -3.33
     assert cycle["status"] == "청산 완료 (진입유실)"
+
+def test_aggregate_and_pair_trades_cross_check():
+    t1 = datetime(2026, 5, 20, 10, 0, 0)
+    trades = [
+        {
+            "timestamp": t1,
+            "symbol": "ETH/USDT:USDT",
+            "category": "진입",
+            "side": "sell",
+            "price": 3000.0,
+            "amount": 1.0,
+            "pnl": 0.0,
+            "pnl_pct": 0.0,
+            "leverage": 10,
+            "order_id": "200"
+        }
+    ]
+    
+    # 1. 실제 보유하지 않고 있을 때 (빈 세트 전달)
+    paired_not_held = aggregate_and_pair_trades(trades, active_positions_set=set())
+    assert len(paired_not_held) == 1
+    assert paired_not_held[0]["status"] == "청산 완료 (미기록)"
+    assert paired_not_held[0]["exit_price"] == 3000.0
+    assert paired_not_held[0]["pnl_usdt"] == 0.0
+    assert paired_not_held[0]["exit_time"] == t1
+    
+    # 2. 실제 보유 중일 때 (세트에 포함시켜 전달)
+    paired_held = aggregate_and_pair_trades(trades, active_positions_set={("ETH/USDT:USDT", "SHORT")})
+    assert len(paired_held) == 1
+    assert paired_held[0]["status"] == "보유 중"
+    assert paired_held[0]["exit_time"] is None
