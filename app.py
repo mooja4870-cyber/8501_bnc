@@ -196,6 +196,15 @@ st.markdown(
         color: #ffffff !important;
     }
 
+    /* 툴팁 (물음표) 아이콘 가시성 개선 (흰색) */
+    div[data-testid="stTooltipIcon"] svg,
+    div[data-testid="stTooltipIcon"] button,
+    div[data-testid="stTooltipIcon"] {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+        opacity: 1 !important;
+    }
+
     /* 데이터프레임 */
     [data-testid="stDataFrame"] {
         border: 1px solid var(--glass-border) !important;
