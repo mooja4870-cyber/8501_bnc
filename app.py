@@ -32,14 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    import subprocess
-    try:
-        tag = subprocess.check_output(["git", "describe", "--tags", "--always"], stderr=subprocess.DEVNULL).decode("utf-8").strip()
-        if tag:
-            return tag
-    except Exception:
-        pass
-    return "v3.3.5" # Fallback 하드코딩
+    return "v1.0.0"
 
 APP_VERSION = get_git_tag()
 
@@ -662,12 +655,12 @@ PLOT_LAYOUT = dict(
 with st.sidebar:
     st.markdown(
         '<div class="quantum-logo" style="letter-spacing:-0.5px;" '
-        'title="[AKMCD + SSL + RSI 하이브리드 전략]&#10;'
-        '1. SSL 채널: 전체 추세 필터링 (파란선 위: 롱, 빨간선 아래: 숏)&#10;'
-        '2. AKMCD 영선 돌파: 히스토그램이 영선(0) 위/아래인지 확인하여 진입 모멘텀 확인&#10;'
-        '3. AKMCD 기울기(점 색상 전환): 이전 봉 대비 히스토그램 상승/하락에 따른 점 색깔 전환(초록/빨강)으로 타점 포착&#10;'
-        '4. RSI 과열/과매도 필터: 과매수권 롱 제한(RSI < 60) 및 과매도권 숏 제한(RSI > 40)으로 추격 매매 노이즈 필터링">'
-        f'<span class="rainbow-text">AKMCD-SSL-RSI</span><br><span style="font-size:calc(0.75rem * 1.33);">{APP_VERSION}</span></div>',
+        'title="[TTM Squeeze + 200 EMA 전략]&#10;'
+        '1. 200 EMA 필터: 장기 추세 방향성 확인 (Long: 가격 > 200 EMA, Short: 가격 < 200 EMA)&#10;'
+        '2. TTM Squeeze 돌파: 볼린저 밴드와 켈트너 채널의 변동성 돌파 감지 (Squeeze OFF 시 진입)&#10;'
+        '3. 모멘텀 및 캔들 색상 필터: 선행 추세 확증 (Momentum 히스토그램 및 캔들 색상 일치)&#10;'
+        '4. RSI 필터: 과열권 진입 제한 및 추격 매매 노이즈 필터링">'
+        f'<span class="rainbow-text">TTM-Squeeze-EMA</span><br><span style="font-size:calc(0.75rem * 1.33);">{APP_VERSION}</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -707,17 +700,7 @@ with st.sidebar:
     auto = st.toggle(
         "🤖 자동매매 가동 (ON/OFF)",
         value=st.session_state.auto_trading,
-        help="ON: 실시간 마켓 스캐너 및 자동 매매 엔진을 기동하여 AKMCD+SSL+EMA200(하단 개별 스위칭 활성화 시 RSI/ADX 필터 추가 적용) 하이브리드 전략 조건 충족 시 포지션을 자동으로 진입/청산합니다. / OFF: 실시간 스캔을 즉시 중단하고 신규 자동 진입을 차단합니다. (기존 보유 포지션은 유지됩니다)"
-    )
-    rsi_auto = st.toggle(
-        "⚡ RSI 자동 스위칭",
-        value=st.session_state.rsi_auto_switch,
-        help="ON: RSI 필터 활성화 (롱 < 60, 숏 > 40) 및 스캐너 노출 / OFF: RSI 필터 비활성화 및 스캐너 필드 숨김"
-    )
-    adx_auto = st.toggle(
-        "🧠 ADX 자동 스위칭",
-        value=st.session_state.adx_auto_switch,
-        help="ON: ADX값이 25 이상이면 추세장(롱 EMA200 위 / 숏 EMA200 아래), 25 미만이면 횡보장(가격 BB 바로 안쪽) 모드로 자동 필터 전환 / OFF: RSI+EMA200 기본 전략 고정"
+        help="ON: 실시간 마켓 스캐너 및 자동 매매 엔진을 기동하여 TTM Squeeze + 200 EMA 전략 조건 충족 시 포지션을 자동으로 진입/청산합니다. / OFF: 실시간 스캔을 즉시 중단하고 신규 자동 진입을 차단합니다. (기존 보유 포지션은 유지됩니다)"
     )
 
     engine: QuantumEngine = st.session_state.engine
@@ -732,22 +715,18 @@ with st.sidebar:
                 engine.disable_trading()
                 engine.stop_scanner()
 
-    # ADX 자동 스위칭 토글 동기화
-    if adx_auto != st.session_state.adx_auto_switch:
-        st.session_state.adx_auto_switch = adx_auto
-        CFG.ADX_AUTO_SWITCH = adx_auto
-
-    # RSI 자동 스위칭 토글 동기화
-    if rsi_auto != st.session_state.rsi_auto_switch:
-        st.session_state.rsi_auto_switch = rsi_auto
-        CFG.USE_RSI_FILTER = rsi_auto
-
-    # 자동매매 상태 동기화 및 강력 자동시작 보장 로직 (API 연결 후 즉시 스캔/매매 기동 보장)
-    if engine.is_ready and st.session_state.auto_trading:
-        if engine.trader and not engine.trader.enabled:
-            engine.enable_trading()
-        if engine.scanner and not engine.scanner.is_running:
-            engine.start_scanner()
+    # 자동매매 상태 동기화 및 강력 자동시작/종료 보장 로직 (UI 상태와 백엔드 엔진 상태의 완벽한 일치 보장)
+    if engine.is_ready:
+        if st.session_state.auto_trading:
+            if engine.trader and not engine.trader.enabled:
+                engine.enable_trading()
+            if engine.scanner and not engine.scanner.is_running:
+                engine.start_scanner()
+        else:
+            if engine.trader and engine.trader.enabled:
+                engine.disable_trading()
+            if engine.scanner and engine.scanner.is_running:
+                engine.stop_scanner()
 
     # 사이드바 전략 상태를 ADX/RSI 설정에 포인터 동기화
     st.session_state.adx_auto_switch = CFG.ADX_AUTO_SWITCH
@@ -919,37 +898,12 @@ with st.sidebar:
             _engine.trader.allow_long = preset["ALLOW_LONG"]
             _engine.trader.allow_short = preset["ALLOW_SHORT"]
 
-    st.markdown(
-        '<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#00e0ff; '
-        'letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">'
-        '🧬 다중기간 변수 자동 연동</p>',
-        unsafe_allow_html=True,
-    )
-    with st.expander("🧬 DL 최적 기간별 프리셋", expanded=False):
-        st.selectbox(
-            "분석 기간 선택",
-            ["-- 기간을 선택하세요 --", "30일 (30d)", "15일 (15d)", "7일 (7d)",
-             "48시간 (48h)", "24시간 (24h)", "12시간 (12h)"],
-            key="multi_period_select",
-            on_change=apply_multi_period_preset,
-            help="Deep Learning(MLP) 최적화로 산출된 기간별 19개 파라미터 세트를 즉시 적용합니다.",
-        )
-        _sel = st.session_state.get("multi_period_select", "-- 기간을 선택하세요 --")
-        if _sel != "-- 기간을 선택하세요 --" and _sel in MULTI_PERIOD_PRESETS:
-            _pr = MULTI_PERIOD_PRESETS[_sel]
-            st.caption(
-                f"📌 TF: {_pr['TIMEFRAME']} | LEV: {_pr['LEVERAGE']}x | "
-                f"마진: ${_pr['MARGIN_USDT']} | SL: {_pr['STOP_LOSS_PCT']*100:.2f}% | "
-                f"TP: {_pr['TAKE_PROFIT_PCT']*100:.2f}% | "
-                f"Long: {'✅' if _pr['ALLOW_LONG'] else '❌'} Short: {'✅' if _pr['ALLOW_SHORT'] else '❌'}"
-            )
-
     # [v1.2.90] 인터랙티브 프로 트레이딩 컨트롤러 (동기화 로직 적용)
     st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#ff9900; letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">📊 STRATEGY ENGINE PARAMETERS</p>', unsafe_allow_html=True)
     
     with st.expander("📊 지표 및 스캐너 설정", expanded=False):
-        st.number_input("🛡️ SSL 기간", 2, 100, CFG.SSL_PERIOD, step=1, key="sb_ssl_period", 
-                        on_change=sync_p, args=("sb_ssl_period", "main_ssl_period", "SSL_PERIOD"))
+        st.number_input("📏 KC ATR 배수", 0.5, 5.0, float(CFG.TTM_KC_MULT), step=0.1, key="sb_kc_mult",
+                        on_change=sync_p, args=("sb_kc_mult", "main_kc_mult", "TTM_KC_MULT"))
         # [v1.3.02] 타임프레임 원격 제어 추가
         tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
         st.selectbox("⏱️ 타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="sb_timeframe",
@@ -962,16 +916,8 @@ with st.sidebar:
             st.number_input("📏 BB 편차 배수", 1.0, 5.0, CFG.BB_STD, step=0.1, key="sb_bb_std",
                             on_change=sync_p, args=("sb_bb_std", "main_bb_std", "BB_STD"))
         
-        col_m1, col_m2, col_m3 = st.columns(3)
-        with col_m1:
-            st.number_input("📉 MACD Fast", 5, 50, CFG.MACD_FAST, key="sb_macd_fast",
-                            on_change=sync_p, args=("sb_macd_fast", "main_macd_fast", "MACD_FAST"))
-        with col_m2:
-            st.number_input("📉 MACD Slow", 10, 100, CFG.MACD_SLOW, key="sb_macd_slow",
-                            on_change=sync_p, args=("sb_macd_slow", "main_macd_slow", "MACD_SLOW"))
-        with col_m3:
-            st.number_input("📉 MACD Signal", 2, 20, CFG.MACD_SIGNAL, key="sb_macd_signal",
-                            on_change=sync_p, args=("sb_macd_signal", "main_macd_signal", "MACD_SIGNAL"))
+        st.number_input("⏱️ TTM 모멘텀 기간", 5, 100, CFG.TTM_MOM_PERIOD, step=1, key="sb_ttm_mom_period",
+                        on_change=sync_p, args=("sb_ttm_mom_period", "main_ttm_mom_period", "TTM_MOM_PERIOD"))
 
     with st.expander("⚡ RSI 필터 설정", expanded=False):
         st.number_input("⚡ RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="sb_rsi_period",
@@ -997,6 +943,8 @@ with st.sidebar:
                         on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True))
         st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
                         on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True))
+        st.number_input("💵 일일 익절 잠금 (USDT)", 0.1, 100.0, float(CFG.DAILY_PROFIT_LIMIT_USDT), step=0.1, key="sb_daily_profit_limit",
+                        on_change=sync_p, args=("sb_daily_profit_limit", "main_daily_profit_limit", "DAILY_PROFIT_LIMIT_USDT"))
 
 # ══════════════════════════════════════════════════════
 # 메인 헤더 (한 줄 배치)
@@ -1043,7 +991,6 @@ tabs = st.tabs([
     "📋  매매 이력",
     "🎯  포지션 진입",
     "⚙️  설정",
-    "🧬  딥러닝 최적화",
 ])
 
 
@@ -1091,11 +1038,14 @@ with tabs[0]:
         }
 
         # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
-        m1, m2, m3, m4, m5 = st.columns(5)
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
         
         def render_terminal_metric(label, value, delta=None, is_pnl=False):
             if is_pnl:
-                val_num = float(str(value).replace('$','').replace(',','').replace('+',''))
+                try:
+                    val_num = float(str(value).split('/')[0].replace('$','').replace(',','').replace('+',''))
+                except ValueError:
+                    val_num = 0.0
                 color = "#ef4444" if val_num >= 0 else "#3b82f6"
                 border_glow = "rgba(239, 68, 68, 0.15)" if val_num >= 0 else "rgba(59, 130, 246, 0.15)"
             else:
@@ -1104,9 +1054,13 @@ with tabs[0]:
             
             delta_html = ""
             if delta is not None:
-                d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
-                d_color = "#ef4444" if d_num >= 0 else "#3b82f6"
-                delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px; font-family:\'JetBrains Mono\';">{delta}</div>'
+                try:
+                    d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
+                    d_color = "#ef4444" if d_num >= 0 else "#3b82f6"
+                    delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px; font-family:\'JetBrains Mono\';">{delta}</div>'
+                except ValueError:
+                    d_color = "#ef4444" if "🔴" in str(delta) or "LOCKED" in str(delta) else "#10b981"
+                    delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px; font-family:\'JetBrains Mono\'; font-weight:700;">{delta}</div>'
                 
             st.markdown(
                 f"""
@@ -1132,6 +1086,11 @@ with tabs[0]:
             render_terminal_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}")
         with m5:
             render_terminal_metric("가용 증거금", f"${dash['free_margin']:,.2f}")
+        with m6:
+            daily_target = CFG.DAILY_PROFIT_LIMIT_USDT
+            is_locked = dpnl >= daily_target
+            lock_status_text = "🔴 LOCKED (진입 차단)" if is_locked else "🟢 RUNNING (감시 중)"
+            render_terminal_metric("목표 익절 잠금", f"+${dpnl:.2f} / ${daily_target:.2f}", delta=lock_status_text, is_pnl=True)
 
         st.markdown("---")
 
@@ -1326,6 +1285,13 @@ with tabs[0]:
         total_arrow = "↑" if total_pnl_pct >= 0 else "↓"
         avg_arrow = "↑" if daily_avg_roi >= 0 else "↓"
         win_arrow = "↑" if win_rate > 50.0 else "↓"
+
+        # 일일 익절 잠금 계산
+        daily_profit_limit = CFG.DAILY_PROFIT_LIMIT_USDT
+        is_locked = daily_pnl >= daily_profit_limit
+        lock_status = "🔴 LOCKED" if is_locked else "🟢 RUNNING"
+        lock_status_color = "#ef4444" if is_locked else "#10b981"
+        lock_value_color = "#ef4444" if daily_pnl >= 0 else "#3b82f6"
         
         st.markdown(
             f"""
@@ -1358,6 +1324,20 @@ with tabs[0]:
                     <div class="terminal-metric-value" style="color:{win_color};">{win_rate:.1f}%</div>
                     <div class="terminal-metric-sub" style="color:#cccccc;">
                         <span style="font-size:0.7rem;">{win_arrow}</span> {wins}W / {losses}L
+                    </div>
+                </div>
+                <!-- 일일 익절 잠금 -->
+                <div class="terminal-metric-item">
+                    <div class="terminal-metric-label">
+                        일일 익절 잠금
+                        <span class="terminal-tooltip">
+                            ℹ
+                            <span class="tooltip-text">목표 도달 시 당일 추가 진입 잠금 ({CFG.DAILY_PROFIT_LIMIT_USDT:.2f} USDT)</span>
+                        </span>
+                    </div>
+                    <div class="terminal-metric-value" style="color:{lock_value_color};">{daily_pnl:+.2f} / {daily_profit_limit:.2f}</div>
+                    <div class="terminal-metric-sub" style="color:{lock_status_color}; font-weight:bold;">
+                        <span style="font-size:0.7rem;">●</span> {lock_status}
                     </div>
                 </div>
                 <!-- MDD 한도 -->
@@ -1460,18 +1440,18 @@ with tabs[1]:
             # 표시용 포맷
             if CFG.USE_RSI_FILTER:
                 cols = ["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","ema200_ok","ema200","rsi_ok","rsi"]
-                col_names = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","SSL 추세","AKMCD 영선","AKMCD 점전환","EMA 200 필터","EMA 200 수치","RSI 필터","RSI 수치"]
+                col_names = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","추세 방향 일치","스퀴즈 돌파","모멘텀 방향","EMA 200 가드","EMA 200 가격","RSI 필터","RSI 수치"]
             else:
                 cols = ["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","ema200_ok","ema200"]
-                col_names = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","SSL 추세","AKMCD 영선","AKMCD 점전환","EMA 200 필터","EMA 200 수치"]
+                col_names = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","추세 방향 일치","스퀴즈 돌파","모멘텀 방향","EMA 200 가드","EMA 200 가격"]
 
             display = df_scan[cols].copy()
             display.columns = col_names
             display["신호"] = display["신호"].map({"long":"🟢 LONG","short":"🔴 SHORT","none":"— "})
-            display["SSL 추세"] = display["SSL 추세"].map({True:"✅",False:"❌"})
-            display["AKMCD 영선"] = display["AKMCD 영선"].map({True:"✅",False:"❌"})
-            display["AKMCD 점전환"] = display["AKMCD 점전환"].map({True:"✅",False:"❌"})
-            display["EMA 200 필터"] = display["EMA 200 필터"].map({True:"✅",False:"❌"})
+            display["추세 방향 일치"] = display["추세 방향 일치"].map({True:"✅",False:"❌"})
+            display["스퀴즈 돌파"] = display["스퀴즈 돌파"].map({True:"✅",False:"❌"})
+            display["모멘텀 방향"] = display["모멘텀 방향"].map({True:"✅",False:"❌"})
+            display["EMA 200 가드"] = display["EMA 200 가드"].map({True:"✅",False:"❌"})
             if "RSI 필터" in display.columns:
                 display["RSI 필터"] = display["RSI 필터"].map({True:"✅",False:"❌"})
 
@@ -1603,7 +1583,7 @@ with tabs[2]:
 
 with tabs[3]:
     st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">ENTRY CONDITIONS & STRATEGIC SYSTEM</p>',
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">TTM SQUEEZE STRATEGY SYSTEM GUIDE</p>',
         unsafe_allow_html=True,
     )
 
@@ -1614,17 +1594,17 @@ with tabs[3]:
             """
             <div style="background:#0f0f0f; border:1px solid #ffcc00; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:8px;">
                 <p style="font-family:'Inter'; font-size:1.15rem; color:#ffcc00; margin:0; line-height:1.5; text-align:center; font-weight:600;">
-                "🌊 큰 파도(SSL)가 밀어주고, 🟢 AKMCD 점이 상승하며, 🚀 히스토그램이 영선을 돌파하고, 🟢 양봉(초록/Green)이면서 🛡️ EMA 200 위에 위치할 때 롱 진입합니다!"
+                "에너지가 압축된 스퀴즈가 해제(Fired)되고, 선형회귀 모멘텀이 0선 위로 상승하며, 종가가 🛡️ EMA 200 위에 위치할 때 롱 진입합니다!"
                 </p>
             </div>
             """, 
             unsafe_allow_html=True
         )
-        st.markdown("- **추세:** 현재 종가가 SSL 파란선(ssl_up) 위 <span style='color:#ffcc00;'>☞ 대세 상승 추세 확인</span>", unsafe_allow_html=True)
-        st.markdown("- **반전:** AKMCD 도트 색상이 빨간색에서 초록색으로 변경 <span style='color:#ffcc00;'>☞ 단기 모멘텀 상승 전환</span>", unsafe_allow_html=True)
-        st.markdown("- **모멘텀:** MACD 히스토그램이 영선(0) 위 <span style='color:#ffcc00;'>☞ MACD 강도 양수 돌파</span>", unsafe_allow_html=True)
-        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가보다 높은 양봉(초록/Green) <span style='color:#ffcc00;'>☞ 실시간 매수세 우위</span>", unsafe_allow_html=True)
-        st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 위** <span style='color:#ffcc00;'>☞ 장기 대추세 부합 (필수)</span>", unsafe_allow_html=True)
+        st.markdown("- **스퀴즈 해제 (Fired):** 볼린저 밴드가 켈트너 채널 밖으로 팽창하며 에너지가 분출됨 <span style='color:#ffcc00;'>☞ 스캐너 신호등 초록색 전환 확인</span>", unsafe_allow_html=True)
+        st.markdown("- **모멘텀:** TTM 모멘텀 선형회귀 값이 영선(0) 위 <span style='color:#ffcc00;'>☞ 매수세 가속화 확인</span>", unsafe_allow_html=True)
+        st.markdown("- **캔들 색상:** 현재 봉의 종가가 이전 봉보다 높은 상승 상태 <span style='color:#ffcc00;'>☞ 양봉 모멘텀 동기화</span>", unsafe_allow_html=True)
+        st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 위** <span style='color:#ffcc00;'>☞ 상승 대세 부합 (필수)</span>", unsafe_allow_html=True)
+        st.markdown("- **RSI 진입 가드:** RSI가 60 미만인 안전 구간 <span style='color:#ffcc00;'>☞ 추격 매수 노이즈 필터링</span>", unsafe_allow_html=True)
 
     with c2:
         st.markdown("**🔴 SHORT 포지션 진입 조건**")
@@ -1632,138 +1612,44 @@ with tabs[3]:
             """
             <div style="background:#0f0f0f; border:1px solid #ff3b30; padding:15px; margin-top:5px; margin-bottom:15px; border-radius:8px;">
                 <p style="font-family:'Inter'; font-size:1.15rem; color:#ff3b30; margin:0; line-height:1.5; text-align:center; font-weight:600;">
-                "📉 내리막길(SSL) 경사 아래에서, 🔴 AKMCD 점이 하락하며, 🌬 히스토그램이 영선 아래로 떨어지고, 🔴 음봉(빨강/Red)이면서 🛡️ EMA 200 아래에 위치할 때 숏 진입합니다!"
+                "에너지가 압축된 스퀴즈가 해제(Fired)되고, 선형회귀 모멘텀이 0선 아래로 하락하며, 종가가 🛡️ EMA 200 아래에 위치할 때 숏 진입합니다!"
                 </p>
             </div>
             """, 
             unsafe_allow_html=True
         )
-        st.markdown("- **추세:** 현재 종가가 SSL 빨간선(ssl_down) 아래 <span style='color:#ff3b30;'>☞ 대세 하락 추세 확인</span>", unsafe_allow_html=True)
-        st.markdown("- **반전:** AKMCD 도트 색상이 초록색에서 빨간색으로 변경 <span style='color:#ff3b30;'>☞ 단기 모멘텀 하락 전환</span>", unsafe_allow_html=True)
-        st.markdown("- **모멘텀:** MACD 히스토그램이 영선(0) 아래 <span style='color:#ff3b30;'>☞ MACD 강도 음수 돌파</span>", unsafe_allow_html=True)
-        st.markdown("- **캔들:** 현재 봉의 종가가 직전 봉의 종가 이하인 음봉(빨강/Red) <span style='color:#ff3b30;'>☞ 실시간 매도세 우위</span>", unsafe_allow_html=True)
-        st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 아래** <span style='color:#ff3b30;'>☞ 장기 대추세 부합 (필수)</span>", unsafe_allow_html=True)
+        st.markdown("- **스퀴즈 해제 (Fired):** 볼린저 밴드가 켈트너 채널 밖으로 팽창하며 에너지가 분출됨 <span style='color:#ff3b30;'>☞ 스캐너 신호등 초록색 전환 확인</span>", unsafe_allow_html=True)
+        st.markdown("- **모멘텀:** TTM 모멘텀 선형회귀 값이 영선(0) 아래 <span style='color:#ff3b30;'>☞ 매도세 가속화 확인</span>", unsafe_allow_html=True)
+        st.markdown("- **캔들 색상:** 현재 봉의 종가가 이전 봉보다 낮은 하락 상태 <span style='color:#ff3b30;'>☞ 음봉 모멘텀 동기화</span>", unsafe_allow_html=True)
+        st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 아래** <span style='color:#ff3b30;'>☞ 하락 대세 부합 (필수)</span>", unsafe_allow_html=True)
+        st.markdown("- **RSI 진입 가드:** RSI가 40 초과인 안전 구간 <span style='color:#ff3b30;'>☞ 추격 매도 노이즈 필터링</span>", unsafe_allow_html=True)
 
     st.markdown("---")
     
-    # ── 대혁신적인 진입 필터/엔진 시각화 체계 ─────────────────────
     st.markdown(
         """
         <div style="background:#0c0c0c; border:1px solid #262626; padding:20px; border-radius:8px; margin-bottom:20px;">
-            <h4 style="font-family:'JetBrains Mono'; color:#ff9900; margin-top:0; margin-bottom:15px; font-size:1.1rem; letter-spacing:0.05em;">⚙️ AI QUANTUM 복합 진입 필터 & 엔진 스위칭 아키텍처</h4>
+            <h4 style="font-family:'JetBrains Mono'; color:#00e0ff; margin-top:0; margin-bottom:15px; font-size:1.1rem; letter-spacing:0.05em;">⚙️ TTM Squeeze 전략 핵심 메커니즘</h4>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div style="background:#151515; padding:15px; border-left:4px solid #ffcc00; border-radius:6px;">
-                    <p style="font-weight:bold; font-size:0.95rem; color:#ffffff; margin-top:0; margin-bottom:10px;">🛠️ 핵심 필수 기반 조건 (Base Base Base - 100% 필수)</p>
-                    <ul style="font-size:0.85rem; color:#cccccc; line-height:1.6; padding-left:18px; margin:0;">
-                        <li><b>SSL 추세 동기화:</b> 상하위 선 배열 일치 여부 실시간 검증</li>
-                        <li><b>AKMCD Zero Line:</b> MACD 영선 상단(롱)/하단(숏) 진입 모멘텀</li>
-                        <li><b>AKMCD Dot Switch:</b> 모멘텀 마디 전환(빨->초 / 초->빨) 타이밍 포착</li>
-                        <li><b>EMA 200 장기 필터:</b> 장기 대이평 기준 가격 정배열/역배열 필터링</li>
-                    </ul>
+                <div style="background:#151515; padding:15px; border-left:4px solid #00e0ff; border-radius:6px;">
+                    <p style="font-weight:bold; font-size:0.95rem; color:#ffffff; margin-top:0; margin-bottom:10px;">📊 1단계: 변동성 압축 (Squeeze Phase)</p>
+                    <p style="font-size:0.85rem; color:#cccccc; line-height:1.6; margin:0;">
+                    볼린저 밴드가 켈트너 채널 내부로 수축하면 시장의 변동성이 최저조에 달했음을 뜻합니다. 
+                    이때 에너지가 강하게 축적되며, 스캐너 표에서 스퀴즈(Squeeze) 신호가 활성화됩니다.
+                    </p>
                 </div>
-                <div style="background:#151515; padding:15px; border-left:4px solid #ff9900; border-radius:6px;">
-                    <p style="font-weight:bold; font-size:0.95rem; color:#ffffff; margin-top:0; margin-bottom:10px;">🚀 동적 전략 옵션 제어 (Optional Controls - 사이드바 토글)</p>
-                    <ul style="font-size:0.85rem; color:#cccccc; line-height:1.6; padding-left:18px; margin:0;">
-                        <li><b>⚡ RSI 자동 스위칭 (반필수):</b> 과열 진입 제한 롱 상한선(60) & 숏 하한선(40)을 적용해 노이즈를 완전 차단합니다. OFF 시 우회되며 스캐너에서도 제외됩니다.</li>
-                        <li><b>🧠 ADX 자동 스위칭 (완전 옵션):</b> <b>ADX ≥ 25 (추세장)</b> 시 장기이평선 필터로 작동하고, <b>ADX < 25 (횡보장)</b> 시 가격 BB 채널 내에서만 거래를 승인하는 능동형 체계 장치입니다.</li>
-                    </ul>
+                <div style="background:#151515; padding:15px; border-left:4px solid #10b981; border-radius:6px;">
+                    <p style="font-weight:bold; font-size:0.95rem; color:#ffffff; margin-top:0; margin-bottom:10px;">🚀 2단계: 변동성 분출 및 진입 (Breakout Phase)</p>
+                    <p style="font-size:0.85rem; color:#cccccc; line-height:1.6; margin:0;">
+                    볼린저 밴드가 켈트너 채널 바깥으로 확장되는 순간 에너지가 분출(Squeeze Fired)됩니다. 
+                    이 시점의 TTM 모멘텀 방향(선형회귀 값)과 장기 200 EMA 필터 조건을 확인하여 추세 돌파 방향으로 포지션을 진입합니다.
+                    </p>
                 </div>
             </div>
         </div>
         """,
         unsafe_allow_html=True
     )
-
-    st.markdown("---")
-    st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.7rem;color:#555;letter-spacing:0.1em;">INDICATOR PARAMETERS & PRESETS</p>',
-        unsafe_allow_html=True,
-    )
-
-    # 프리셋 정의
-    PRESETS = {
-        "기본 (Stable)": {
-            "ssl_p": 10, "bb_p": 20, "bb_s": 2.0, "macd_f": 12, "macd_sl": 26, "macd_si": 9,
-            "rsi_p": 14, "rsi_ob": 60.0, "rsi_os": 40.0
-        },
-        "1차 공격적 (Trend)": {
-            "ssl_p": 8, "bb_p": 20, "bb_s": 1.8, "macd_f": 10, "macd_sl": 22, "macd_si": 7,
-            "rsi_p": 14, "rsi_ob": 65.0, "rsi_os": 35.0
-        },
-        "2차 공격적 (Scalping)": {
-            "ssl_p": 6, "bb_p": 14, "bb_s": 1.5, "macd_f": 8, "macd_sl": 18, "macd_si": 5,
-            "rsi_p": 14, "rsi_ob": 70.0, "rsi_os": 30.0
-        }
-    }
-
-    preset_name = st.selectbox("전략 프리셋 선택", list(PRESETS.keys()), index=0)
-    
-    if st.button("🪄 프리셋 적용"):
-        p = PRESETS[preset_name]
-        st.session_state.active_preset = preset_name
-        CFG.SSL_PERIOD = p["ssl_p"]
-        CFG.BB_PERIOD = p["bb_p"]
-        CFG.BB_STD = p["bb_s"]
-        CFG.MACD_FAST = p["macd_f"]
-        CFG.MACD_SLOW = p["macd_sl"]
-        CFG.MACD_SIGNAL = p["macd_si"]
-        CFG.RSI_PERIOD = p.get("rsi_p", 14)
-        CFG.RSI_OVERBOUGHT = p.get("rsi_ob", 60.0)
-        CFG.RSI_OVERSOLD = p.get("rsi_os", 40.0)
-        
-        # 세션 상태 위젯 키들도 명시적 업데이트
-        st.session_state.sb_ssl_period = p["ssl_p"]
-        st.session_state.main_ssl_period = p["ssl_p"]
-        st.session_state.sb_bb_period = p["bb_p"]
-        st.session_state.main_bb_period = p["bb_p"]
-        st.session_state.sb_bb_std = p["bb_s"]
-        st.session_state.main_bb_std = p["bb_s"]
-        st.session_state.sb_macd_fast = p["macd_f"]
-        st.session_state.main_macd_fast = p["macd_f"]
-        st.session_state.sb_macd_slow = p["macd_sl"]
-        st.session_state.main_macd_slow = p["macd_sl"]
-        st.session_state.sb_macd_signal = p["macd_si"]
-        st.session_state.main_macd_signal = p["macd_si"]
-        st.session_state.sb_rsi_period = p.get("rsi_p", 14)
-        st.session_state.main_rsi_period = p.get("rsi_p", 14)
-        st.session_state.settings_rsi_period = p.get("rsi_p", 14)
-        st.session_state.sb_rsi_overbought = p.get("rsi_ob", 60.0)
-        st.session_state.main_rsi_overbought = p.get("rsi_ob", 60.0)
-        st.session_state.settings_rsi_overbought = p.get("rsi_ob", 60.0)
-        st.session_state.sb_rsi_oversold = p.get("rsi_os", 40.0)
-        st.session_state.main_rsi_oversold = p.get("rsi_os", 40.0)
-        st.session_state.settings_rsi_oversold = p.get("rsi_os", 40.0)
-
-        st.toast(f"✅ {preset_name} 파라미터 적용됨")
-        time.sleep(0.5)
-        st.rerun()
-
-    p1, p2, p3 = st.columns(3)
-    with p1:
-        st.number_input("SSL 기간", 2, 100, CFG.SSL_PERIOD, step=1, key="main_ssl_period",
-                        on_change=sync_p, args=("main_ssl_period", "sb_ssl_period", "SSL_PERIOD"))
-        # [v1.3.02] 타임프레임 원격 제어 추가
-        tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
-        st.selectbox("타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="main_timeframe",
-                     on_change=sync_p, args=("main_timeframe", "sb_timeframe", "TIMEFRAME"))
-        st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="main_rsi_period",
-                        on_change=sync_p, args=("main_rsi_period", "sb_rsi_period,settings_rsi_period", "RSI_PERIOD"))
-    with p2:
-        st.number_input("BB 기간", 5, 100, CFG.BB_PERIOD, step=5, key="main_bb_period",
-                        on_change=sync_p, args=("main_bb_period", "sb_bb_period", "BB_PERIOD"))
-        st.number_input("BB 편차 (x)", 1.0, 5.0, float(CFG.BB_STD), step=0.1, key="main_bb_std",
-                        on_change=sync_p, args=("main_bb_std", "sb_bb_std", "BB_STD"))
-        st.number_input("RSI 롱 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="main_rsi_overbought",
-                        on_change=sync_p, args=("main_rsi_overbought", "sb_rsi_overbought,settings_rsi_overbought", "RSI_OVERBOUGHT"))
-    with p3:
-        st.number_input("MACD 단기", 1, 50, CFG.MACD_FAST, step=1, key="main_macd_fast",
-                        on_change=sync_p, args=("main_macd_fast", "sb_macd_fast", "MACD_FAST"))
-        st.number_input("MACD 장기", 1, 100, CFG.MACD_SLOW, step=1, key="main_macd_slow",
-                        on_change=sync_p, args=("main_macd_slow", "sb_macd_slow", "MACD_SLOW"))
-        st.number_input("MACD 시그널", 1, 50, CFG.MACD_SIGNAL, step=1, key="main_macd_signal",
-                        on_change=sync_p, args=("main_macd_signal", "sb_macd_signal", "MACD_SIGNAL"))
-        st.number_input("RSI 숏 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="main_rsi_oversold",
-                        on_change=sync_p, args=("main_rsi_oversold", "sb_rsi_oversold,settings_rsi_oversold", "RSI_OVERSOLD"))
 
 # TAB 5: 설정
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1784,18 +1670,40 @@ with tabs[4]:
                         on_change=sync_p, args=("main_max_pos", "sb_max_pos", "MAX_POSITIONS"))
         st.number_input("⏱️ 스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10, key="main_scan_interval",
                         on_change=sync_p, args=("main_scan_interval", "sb_scan_interval", "SCAN_INTERVAL_SEC"))
+        st.number_input("💵 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
+                        on_change=sync_p, args=("main_min_vol", "sb_min_vol", "MIN_VOLUME_USDT"))
 
     with s2:
         st.number_input("🎯 익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",
                         on_change=sync_p, args=("main_tp", "sb_tp", "TAKE_PROFIT_PCT", True))
         st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
                         on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True))
-        st.number_input("💵 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
-                        on_change=sync_p, args=("main_min_vol", "sb_min_vol", "MIN_VOLUME_USDT"))
+        st.number_input("💵 일일 익절 잠금 (USDT)", 0.1, 100.0, float(CFG.DAILY_PROFIT_LIMIT_USDT), step=0.1, key="main_daily_profit_limit",
+                        on_change=sync_p, args=("main_daily_profit_limit", "sb_daily_profit_limit", "DAILY_PROFIT_LIMIT_USDT"))
+        st.number_input("🛡️ 일일 손실 한도 (USDT)", 1.0, 100.0, float(CFG.DAILY_LOSS_LIMIT_USDT), step=1.0, key="main_daily_loss_limit",
+                        on_change=sync_p, args=("main_daily_loss_limit", "main_daily_loss_limit", "DAILY_LOSS_LIMIT_USDT"))
+
+    st.markdown("---")
+    st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#ff9900;letter-spacing:0.1em;margin-top:10px;">TTM SQUEEZE INDICATORS</p>', unsafe_allow_html=True)
+    t1, t2, t3 = st.columns(3)
+    with t1:
+        st.number_input("📈 BB 기간", 5, 100, CFG.BB_PERIOD, step=1, key="main_bb_period",
+                        on_change=sync_p, args=("main_bb_period", "sb_bb_period", "BB_PERIOD"))
+        tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
+        st.selectbox("⏱️ 타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="main_timeframe",
+                     on_change=sync_p, args=("main_timeframe", "sb_timeframe", "TIMEFRAME"))
+    with t2:
+        st.number_input("📏 BB 편차 배수", 1.0, 5.0, float(CFG.BB_STD), step=0.1, key="main_bb_std",
+                        on_change=sync_p, args=("main_bb_std", "sb_bb_std", "BB_STD"))
+        st.number_input("📏 KC ATR 배수", 0.5, 5.0, float(CFG.TTM_KC_MULT), step=0.1, key="main_kc_mult",
+                        on_change=sync_p, args=("main_kc_mult", "sb_kc_mult", "TTM_KC_MULT"))
+    with t3:
+        st.number_input("⏱️ TTM 모멘텀 기간", 5, 100, CFG.TTM_MOM_PERIOD, step=1, key="main_ttm_mom_period",
+                        on_change=sync_p, args=("main_ttm_mom_period", "sb_ttm_mom_period", "TTM_MOM_PERIOD"))
 
     st.markdown("---")
     st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#ff9900;letter-spacing:0.1em;margin-top:10px;">RSI FILTER PARAMETERS (AKMCD-SSL-RSI)</p>',
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#ff9900;letter-spacing:0.1em;margin-top:10px;">RSI FILTER PARAMETERS</p>',
         unsafe_allow_html=True,
     )
     r1, r2, r3 = st.columns(3)
@@ -1814,7 +1722,8 @@ with tabs[4]:
         f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.92rem;color:#cccccc;line-height:2;">
         손익비: 1 : {CFG.TAKE_PROFIT_PCT / CFG.STOP_LOSS_PCT:.1f} &nbsp;|&nbsp;
         증거금/종목: ${CFG.MARGIN_USDT:.2f} USDT &nbsp;|&nbsp;
-        최대 노출: ${CFG.MARGIN_USDT * CFG.LEVERAGE * CFG.MAX_POSITIONS:.2f} USDT <br>
+        일일 익절 한도: ${CFG.DAILY_PROFIT_LIMIT_USDT:.2f} USDT &nbsp;|&nbsp;
+        일일 손실 한도: ${CFG.DAILY_LOSS_LIMIT_USDT:.2f} USDT <br>
         RSI 설정: 기간 {CFG.RSI_PERIOD} &nbsp;|&nbsp;
         롱 진입 상한: {CFG.RSI_OVERBOUGHT:.1f} &nbsp;|&nbsp;
         숏 진입 하한: {CFG.RSI_OVERSOLD:.1f}
@@ -1843,227 +1752,7 @@ with tabs[4]:
         st.rerun()
 
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# TAB 6: 🧬 딥러닝 최적화
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-with tabs[5]:
-    st.markdown(
-        '<p title="자동매매 Off 일 때도 작동 가능합니다 (로컬 과거 캔들 캐시 데이터 기반 학습)" '
-        'style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;cursor:help;">'
-        'DEEP LEARNING OPTIMIZATION ENGINE <span style="color:#00e0ff;font-size:0.8rem;">[ℹ️ 마우스 오버 툴팁]</span></p>',
-        unsafe_allow_html=True,
-    )
-
-    # 비동기 백그라운드 관리 함수 정의
-    def is_dl_optimization_running():
-        pid_path = "data/dl_optim.pid"
-        if not os.path.exists(pid_path):
-            return False
-        try:
-            with open(pid_path, "r") as f:
-                pid = int(f.read().strip())
-            import subprocess
-            output = subprocess.check_output(f'tasklist /FI "PID eq {pid}"', shell=True).decode('utf-8', errors='ignore')
-            return str(pid) in output
-        except Exception:
-            return False
-
-    def start_dl_optimization():
-        if is_dl_optimization_running():
-            return False
-        os.makedirs("data", exist_ok=True)
-        log_path = "data/dl_optim_run.log"
-        pid_path = "data/dl_optim.pid"
-        with open(log_path, "w", encoding="utf-8") as f:
-            f.write("=== 🧬 딥러닝 다중 기간 최적화 엔진 기동 ===\n")
-        import sys
-        import subprocess
-        log_f = open(log_path, "a", encoding="utf-8")
-        proc = subprocess.Popen(
-            [sys.executable, "scratch/multi_period_optimizer.py"],
-            stdout=log_f,
-            stderr=subprocess.STDOUT,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-        )
-        with open(pid_path, "w") as f:
-            f.write(str(proc.pid))
-        return True
-
-    def stop_dl_optimization():
-        pid_path = "data/dl_optim.pid"
-        if not os.path.exists(pid_path):
-            return False
-        try:
-            with open(pid_path, "r") as f:
-                pid = int(f.read().strip())
-            import subprocess
-            # Windows 강제 프로세스 종료
-            subprocess.run(f'taskkill /F /PID {pid}', shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if os.path.exists(pid_path):
-                os.remove(pid_path)
-            log_path = "data/dl_optim_run.log"
-            if os.path.exists(log_path):
-                with open(log_path, "a", encoding="utf-8") as f:
-                    f.write("\n=== 🛑 사용자에 의해 연산이 강제 중지되었습니다 ===\n")
-            return True
-        except Exception:
-            return False
-
-    def get_optimization_progress():
-        log_path = "data/dl_optim_run.log"
-        if not os.path.exists(log_path):
-            return 0.0, "준비 중..."
-        try:
-            with open(log_path, "r", encoding="utf-8") as f:
-                content = f.read()
-            
-            periods = ["30일 (30d)", "15일 (15d)", "7일 (7d)", "48시간 (48h)", "24시간 (24h)", "12시간 (12h)"]
-            done_count = 0
-            current_period = ""
-            
-            for p in periods:
-                if f"[{p}] Optimization Done!" in content:
-                    done_count += 1
-                elif f"Optimizing for period: {p}" in content:
-                    current_period = p
-            
-            if done_count == 6:
-                return 1.0, "최적화 완료"
-            
-            phase_offset = 0.0
-            if current_period:
-                period_idx = content.rfind(f"Optimizing for period: {current_period}")
-                if period_idx != -1:
-                    sub_content = content[period_idx:]
-                    if "Phase 4" in sub_content:
-                         phase_offset = 0.8
-                    elif "Phase 3" in sub_content:
-                         phase_offset = 0.6
-                    elif "Phase 2" in sub_content:
-                         phase_offset = 0.4
-                    elif "Phase 1" in sub_content:
-                         phase_offset = 0.2
-            
-            total_progress = (done_count + phase_offset) / 6.0
-            total_progress = max(0.0, min(1.0, total_progress))
-            
-            if current_period:
-                desc = f"🧬 {current_period} 최적화 및 학습 진행 중... ({int(total_progress * 100)}%)"
-            else:
-                desc = f"⚙️ 최적화 준비 및 데이터 분석 중... ({int(total_progress * 100)}%)"
-                
-            return total_progress, desc
-        except Exception:
-            return 0.0, "로그 파일 파싱 중..."
-
-    is_running = is_dl_optimization_running()
-
-    # 상단 정보 카드 & 컨트롤러 레이아웃 (3단으로 분할)
-    c1, c2, c3 = st.columns([2, 1, 1])
-    with c1:
-        if is_running:
-            st.info("🧬 **딥러닝 파라미터 최적화 연산이 진행 중입니다.**\n\n대시보드가 얼어붙지 않고 비동기로 학습하고 있으며, 5초마다 실시간 로그와 진행바를 갱신합니다. (자동매매 Off 일 때도 연산 가능)")
-        else:
-            st.success("✅ **최적화 엔진 대기 중 (자동매매 Off 상태에서도 연산 작동 가능)**\n\n언제든지 아래 버튼을 눌러 6개 기간의 딥러닝 최적화 연산을 시작할 수 있습니다.")
-    
-    with c2:
-        if is_running:
-            st.button("🧬 연산 실행 중...", disabled=True, use_container_width=True)
-        else:
-            if st.button("🧬 최적화 시작", key="start_dl_opt_btn", use_container_width=True):
-                if start_dl_optimization():
-                    st.toast("🧬 딥러닝 최적화가 백그라운드에서 시작되었습니다.")
-                    time.sleep(0.5)
-                    st.rerun()
-
-    with c3:
-        if is_running:
-            # 연산 중일때만 빨간색 느낌의 중지 버튼 노출 (Streamlit 버튼 스타일 커스텀 스타일 가이드라인을 고려하여 key 설정)
-            if st.button("🛑 최적화 중지", key="stop_dl_opt_btn", use_container_width=True):
-                if stop_dl_optimization():
-                    st.toast("🛑 딥러닝 최적화 연산이 중지되었습니다.")
-                    time.sleep(0.5)
-                    st.rerun()
-        else:
-            st.button("🛑 중지 대기", disabled=True, use_container_width=True)
-
-    # 실시간 진행바 (Progress Bar) 렌더링
-    if is_running:
-        st.markdown(" ")
-        progress_val, progress_desc = get_optimization_progress()
-        st.progress(progress_val, text=progress_desc)
-    elif os.path.exists("scratch/multi_period_results.pkl") and os.path.exists("data/dl_optim_run.log"):
-        # 완료되었거나 이전에 완료된 결과가 있는 경우
-        with open("data/dl_optim_run.log", "r", encoding="utf-8") as f:
-            log_c = f.read()
-        if "=== 🛑 사용자에 의해 연산이 강제 중지되었습니다 ===" in log_c:
-            st.warning("🛑 최근 최적화 연산이 사용자에 의해 중지되었습니다.")
-        else:
-            st.progress(1.0, text="🎉 최근 딥러닝 다중 기간 최적화 연산이 성공적으로 완료되었습니다!")
-
-    st.markdown("---")
-
-    # 실시간 로그 모니터링
-    st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#ff9900;letter-spacing:0.1em;">REAL-TIME ENGINE LOGS</p>',
-        unsafe_allow_html=True,
-    )
-    log_path = "data/dl_optim_run.log"
-    if os.path.exists(log_path):
-        try:
-            with open(log_path, "r", encoding="utf-8") as f:
-                log_lines = f.readlines()
-            log_text = "".join(log_lines[-40:])
-            st.code(log_text, language="text")
-        except Exception as e:
-            st.code(f"로그를 읽을 수 없습니다: {e}", language="text")
-    else:
-        st.info("아직 생성된 최적화 로그 파일이 없습니다. [최적화 시작] 버튼을 누르면 연산 로그가 여기에 표시됩니다.")
-
-    # 학습 완료 결과 리포트 및 연동
-    results_path = "scratch/multi_period_results.pkl"
-    if os.path.exists(results_path):
-        st.markdown("---")
-        st.markdown(
-            '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#00e0ff;letter-spacing:0.1em;">OPTIMIZATION RESULTS REPORT</p>',
-            unsafe_allow_html=True,
-        )
-        try:
-            import pickle
-            with open(results_path, "rb") as f:
-                res_data = pickle.load(f)
-
-            periods_list = ["30일 (30d)", "15일 (15d)", "7일 (7d)", "48시간 (48h)", "24시간 (24h)", "12시간 (12h)"]
-            summary_table = []
-            for p in periods_list:
-                if p in res_data:
-                    d = res_data[p]
-                    summary_table.append({
-                        "기간": p,
-                        "일평균 수익률": f"{d.get('daily_ret', 0.0):.2f}%",
-                        "최대 낙폭 (MDD)": f"{d.get('mdd', 0.0):.2f}%",
-                        "승률 (Win Rate)": f"{d.get('winrate', 0.0):.1f}%",
-                        "Long 진입": f"{d.get('long_entries', 0)}회",
-                        "Short 진입": f"{d.get('short_entries', 0)}회",
-                        "총 거래 횟수": f"{d.get('total_entries', 0)}회"
-                    })
-            
-            if summary_table:
-                st.dataframe(pd.DataFrame(summary_table).set_index("기간"), use_container_width=True)
-
-            if not is_running:
-                st.markdown(" ")
-                if st.button("🪄 신규 최적 파라미터 적용 및 업데이트", use_container_width=True, key="apply_dl_preset_btn"):
-                    st.toast("✅ 신규 딥러닝 최적 파라미터가 전체 시스템에 연동되었습니다!")
-                    time.sleep(0.5)
-                    st.rerun()
-        except Exception as e:
-            st.error(f"결과 데이터를 파싱하는 중 오류가 발생했습니다: {e}")
-
-    # 실행 중일 경우 실시간으로 Streamlit Rerun 유도
-    if is_running:
-        time.sleep(5)
-        st.rerun()
+# TAB 6 was removed
 
 
 # ── 자동 새로고침 ─────────────────────────────────

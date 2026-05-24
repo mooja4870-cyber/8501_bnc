@@ -51,6 +51,9 @@ def load_local_trade_history() -> List[Dict]:
             lev_val = row.get("레버리지")
             leverage = CFG.LEVERAGE if pd.isna(lev_val) else int(float(lev_val))
             
+            trade_id_val = row.get("체결ID")
+            trade_id = "" if pd.isna(trade_id_val) else str(trade_id_val).strip()
+            
             trades.append({
                 "timestamp": pd.to_datetime(row["시간"]),
                 "symbol": row["심볼"],
@@ -62,6 +65,7 @@ def load_local_trade_history() -> List[Dict]:
                 "pnl_pct": pnl_pct,
                 "leverage": leverage,
                 "order_id": order_id,
+                "trade_id": trade_id,
             })
         return trades
     except Exception as e:
@@ -102,7 +106,7 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
     orders = grouped.to_dict("records")
     orders.sort(key=lambda x: x["timestamp"])
 
-    # ── 2. 진입/청산 페어링 (LONG / SHORT 분리 관리) ──
+    # ── 2. 진입/청산 페어링 (LONG / SHORT 분리 관리, M:N 매칭 지원) ──
     paired_cycles = []
     symbol_groups = {}
     
@@ -123,14 +127,25 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
             direction = get_position_direction(o["category"], o["side"])
             
             if cat in ("진입", "*진입"):
+                # entry 딕셔너리에 amount_remaining 필드를 초깃값 amount로 설정하여 복사본 저장
+                entry_copy = dict(o)
+                entry_copy["amount_remaining"] = o["amount"]
                 if direction == "LONG":
-                    active_longs.append(o)
+                    active_longs.append(entry_copy)
                 else:
-                    active_shorts.append(o)
+                    active_shorts.append(entry_copy)
             elif cat in ("청산", "청산(로테이션)"):
+                remaining_exit_amount = o["amount"]
+                total_exit_pnl = o["pnl"]
+                
                 if direction == "LONG":
-                    if active_longs:
-                        entry = active_longs.pop(0)  # FIFO 페어링
+                    while remaining_exit_amount > 1e-8 and active_longs:
+                        entry = active_longs[0]
+                        match_amount = min(entry["amount_remaining"], remaining_exit_amount)
+                        
+                        # 분할 청산에 비례하여 PnL 분할
+                        match_pnl = total_exit_pnl * (match_amount / o["amount"])
+                        
                         paired_cycles.append({
                             "entry_time": entry["timestamp"],
                             "exit_time": o["timestamp"],
@@ -138,12 +153,20 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
                             "direction": "🟢 LONG",
                             "entry_price": entry["price"],
                             "exit_price": o["price"],
-                            "amount": o["amount"],
-                            "pnl_usdt": o["pnl"],
+                            "amount": match_amount,
+                            "pnl_usdt": match_pnl,
                             "pnl_pct": o["pnl_pct"],
                             "status": "청산 완료"
                         })
-                    else:
+                        
+                        entry["amount_remaining"] -= match_amount
+                        remaining_exit_amount -= match_amount
+                        
+                        if entry["amount_remaining"] <= 1e-8:
+                            active_longs.pop(0)
+                            
+                    if remaining_exit_amount > 1e-8:
+                        match_pnl = total_exit_pnl * (remaining_exit_amount / o["amount"])
                         paired_cycles.append({
                             "entry_time": None,
                             "exit_time": o["timestamp"],
@@ -151,14 +174,18 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
                             "direction": "🟢 LONG",
                             "entry_price": None,
                             "exit_price": o["price"],
-                            "amount": o["amount"],
-                            "pnl_usdt": o["pnl"],
+                            "amount": remaining_exit_amount,
+                            "pnl_usdt": match_pnl,
                             "pnl_pct": o["pnl_pct"],
                             "status": "청산 완료 (진입유실)"
                         })
                 else:  # SHORT
-                    if active_shorts:
-                        entry = active_shorts.pop(0)  # FIFO 페어링
+                    while remaining_exit_amount > 1e-8 and active_shorts:
+                        entry = active_shorts[0]
+                        match_amount = min(entry["amount_remaining"], remaining_exit_amount)
+                        
+                        match_pnl = total_exit_pnl * (match_amount / o["amount"])
+                        
                         paired_cycles.append({
                             "entry_time": entry["timestamp"],
                             "exit_time": o["timestamp"],
@@ -166,12 +193,20 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
                             "direction": "🔴 SHORT",
                             "entry_price": entry["price"],
                             "exit_price": o["price"],
-                            "amount": o["amount"],
-                            "pnl_usdt": o["pnl"],
+                            "amount": match_amount,
+                            "pnl_usdt": match_pnl,
                             "pnl_pct": o["pnl_pct"],
                             "status": "청산 완료"
                         })
-                    else:
+                        
+                        entry["amount_remaining"] -= match_amount
+                        remaining_exit_amount -= match_amount
+                        
+                        if entry["amount_remaining"] <= 1e-8:
+                            active_shorts.pop(0)
+                            
+                    if remaining_exit_amount > 1e-8:
+                        match_pnl = total_exit_pnl * (remaining_exit_amount / o["amount"])
                         paired_cycles.append({
                             "entry_time": None,
                             "exit_time": o["timestamp"],
@@ -179,19 +214,20 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
                             "direction": "🔴 SHORT",
                             "entry_price": None,
                             "exit_price": o["price"],
-                            "amount": o["amount"],
-                            "pnl_usdt": o["pnl"],
+                            "amount": remaining_exit_amount,
+                            "pnl_usdt": match_pnl,
                             "pnl_pct": o["pnl_pct"],
                             "status": "청산 완료 (진입유실)"
                         })
         
         # 스캔 후 남은 진입중인 포지션 표시
         for entry in active_longs:
+            if entry["amount_remaining"] <= 1e-8:
+                continue
             is_actually_holding = False
             if active_positions_set is not None:
                 is_actually_holding = ((sym, "LONG") in active_positions_set)
             else:
-                # API 연동 안 된 오프라인 모드에서는 임시로 최근 24시간 이내 데이터만 보유 중으로 처리
                 time_diff = pd.Timestamp.now() - entry["timestamp"]
                 if time_diff.total_seconds() < 24 * 3600:
                     is_actually_holding = True
@@ -205,13 +241,15 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
                 "direction": "🟢 LONG",
                 "entry_price": entry["price"],
                 "exit_price": entry["price"] if not is_actually_holding else None,
-                "amount": entry["amount"],
+                "amount": entry["amount_remaining"],
                 "pnl_usdt": 0.0 if not is_actually_holding else None,
                 "pnl_pct": 0.0 if not is_actually_holding else None,
                 "status": status_str
             })
 
         for entry in active_shorts:
+            if entry["amount_remaining"] <= 1e-8:
+                continue
             is_actually_holding = False
             if active_positions_set is not None:
                 is_actually_holding = ((sym, "SHORT") in active_positions_set)
@@ -229,7 +267,7 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
                 "direction": "🔴 SHORT",
                 "entry_price": entry["price"],
                 "exit_price": entry["price"] if not is_actually_holding else None,
-                "amount": entry["amount"],
+                "amount": entry["amount_remaining"],
                 "pnl_usdt": 0.0 if not is_actually_holding else None,
                 "pnl_pct": 0.0 if not is_actually_holding else None,
                 "status": status_str

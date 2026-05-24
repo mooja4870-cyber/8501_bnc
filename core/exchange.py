@@ -189,6 +189,7 @@ class BinanceClient:
                         pnl_pct = (pnl / margin_est) * 100
 
                 result.append({
+                    "id": t.get("id"),
                     "timestamp": pd.to_datetime(t["timestamp"], unit="ms") + pd.Timedelta(hours=9),
                     "symbol": t["symbol"],
                     "category": category,

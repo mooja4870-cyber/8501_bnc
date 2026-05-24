@@ -295,6 +295,7 @@ class QuantumEngine:
                                 "pnl_pct": exit_trade.get("pnl_pct", 0),
                                 "leverage": self.cfg.LEVERAGE,
                                 "order_id": exit_trade.get("order_id", ""),
+                                "trade_id": exit_trade.get("id", ""),
                             })
                     except Exception as e:
                         logger.error(f"청산 CSV 기록 실패: {e}")
@@ -420,6 +421,7 @@ class QuantumEngine:
                                 "pnl_pct": pnl_pct,
                                 "leverage": p.get("leverage", self.cfg.LEVERAGE),
                                 "order_id": f"ROT-{int(now_ms)}",
+                                "trade_id": f"ROT-{int(now_ms)}",
                             })
                         except Exception as e:
                             logger.error(f"로테이션 청산 CSV 기록 실패: {e}")
@@ -536,13 +538,17 @@ class QuantumEngine:
             if not trades:
                 return
             
-            # 3) 기존 로컬 이력에 기록된 order_id 목록 추출 (중복 저장 가드)
-            existing_ids = set()
+            # 3) 기존 로컬 이력에 기록된 order_id 및 trade_id 목록 추출 (중복 저장 가드)
+            existing_trade_ids = set()
+            existing_order_ids = set()
             try:
                 for lt in local_trades:
+                    tid = lt.get("trade_id")
                     oid = lt.get("order_id")
+                    if tid:
+                        existing_trade_ids.add(str(tid).strip())
                     if oid:
-                        existing_ids.add(str(oid).strip())
+                        existing_order_ids.add(str(oid).strip())
             except Exception:
                 pass
 
@@ -552,22 +558,64 @@ class QuantumEngine:
             new_count = 0
             for t in trades:
                 t_order_id = str(t.get("order_id", "")).strip()
-                if t_order_id and t_order_id in existing_ids:
-                    continue  # 이미 기록된 거래 건너뜀
+                t_trade_id = str(t.get("id", "")).strip()
                 
-                csv_log({
+                # 중복 검사 (체결 ID 우선, 없을 경우 주문 ID로 대체)
+                if t_trade_id:
+                    if t_trade_id in existing_trade_ids:
+                        continue
+                elif t_order_id and t_order_id in existing_order_ids:
+                    continue
+                
+                category = "진입" if t["category"] == "*진입" or t["category"] == "진입" else "청산"
+                
+                # 과거 진입 거래의 레버리지 찾기 (동일 종목의 가장 최근 진입 거래)
+                leverage = self.cfg.LEVERAGE
+                if category == "청산":
+                    entry_leverage = None
+                    for lt in reversed(local_trades):
+                        if lt["symbol"] == t["symbol"] and lt["category"] in ("진입", "*진입"):
+                            entry_leverage = lt.get("leverage")
+                            break
+                    if entry_leverage:
+                        leverage = entry_leverage
+                
+                # 레버리지에 기반한 수익률(%) 재계산
+                pnl_pct = t.get("pnl_pct", 0.0)
+                if category == "청산" and t["pnl"] != 0 and t["cost"] > 0:
+                    margin_est = t["cost"] / leverage
+                    if margin_est > 0:
+                        pnl_pct = round((t["pnl"] / margin_est) * 100, 2)
+                
+                trade_data = {
                     "timestamp": t["timestamp"],
                     "symbol": t["symbol"],
-                    "type": "진입" if t["category"] == "*진입" or t["category"] == "진입" else "청산",
+                    "type": category,
                     "side": t["side"],
                     "price": t["price"],
                     "amount": t["amount"],
                     "pnl_usdt": t["pnl"],
-                    "pnl_pct": t["pnl_pct"],
-                    "leverage": self.cfg.LEVERAGE,
+                    "pnl_pct": pnl_pct,
+                    "leverage": leverage,
                     "order_id": t_order_id,
+                    "trade_id": t_trade_id,
+                }
+                
+                csv_log(trade_data)
+                
+                # 동적으로 다음 루프에서 조회될 수 있도록 local_trades에 기록 형태에 맞추어 추가
+                local_trades.append({
+                    "symbol": t["symbol"],
+                    "category": category,
+                    "leverage": leverage,
+                    "order_id": t_order_id,
+                    "trade_id": t_trade_id
                 })
-                existing_ids.add(t_order_id)
+                
+                if t_trade_id:
+                    existing_trade_ids.add(t_trade_id)
+                if t_order_id:
+                    existing_order_ids.add(t_order_id)
                 new_count += 1
                 
             if new_count > 0:

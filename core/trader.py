@@ -186,6 +186,10 @@ class AutoTrader:
         if self.daily_pnl_usdt <= -self.cfg.DAILY_LOSS_LIMIT_USDT:
             return False, f"일일 손실 한도 초과: {self.daily_pnl_usdt:.2f} USDT"
 
+        # 1.5 일일 익절 잠금 한도 (Daily Profit Lock)
+        if self.daily_pnl_usdt >= self.cfg.DAILY_PROFIT_LIMIT_USDT:
+            return False, f"일일 목표 익절 한도 달성 완료: {self.daily_pnl_usdt:.2f} >= {self.cfg.DAILY_PROFIT_LIMIT_USDT:.2f} USDT. 당일 추가 진입을 잠금 처리합니다."
+
         # 2. 계좌 잔고 체크
         balance = self.client.get_balance()
         total = balance.get("total", 0)

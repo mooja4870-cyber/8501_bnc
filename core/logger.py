@@ -10,19 +10,38 @@ KST = timezone(timedelta(hours=9))
 LOG_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "trade_history.csv")
 
 def _ensure_file():
-    """CSV 파일 및 헤더 생성"""
+    """CSV 파일 및 헤더 생성 및 업데이트"""
     os.makedirs(os.path.dirname(os.path.abspath(LOG_FILE)), exist_ok=True)
     if not os.path.exists(LOG_FILE):
         with open(LOG_FILE, "w", encoding="utf-8-sig", newline="") as f:
             writer = csv.writer(f)
             writer.writerow([
-                "시간", "심볼", "유형", "방향", "가격", "수량", "수익(USDT)", "수익률(%)", "레버리지", "주문ID"
+                "시간", "심볼", "유형", "방향", "가격", "수량", "수익(USDT)", "수익률(%)", "레버리지", "주문ID", "체결ID"
             ])
+    else:
+        # 기존 파일이 있다면 헤더 검사하여 체결ID 추가
+        try:
+            with open(LOG_FILE, "r", encoding="utf-8-sig") as f:
+                reader = csv.reader(f)
+                header = next(reader)
+            if "체결ID" not in header:
+                with open(LOG_FILE, "r", encoding="utf-8-sig") as f:
+                    lines = list(csv.reader(f))
+                if lines:
+                    lines[0].append("체결ID")
+                    for i in range(1, len(lines)):
+                        while len(lines[i]) < len(lines[0]):
+                            lines[i].append("")
+                    with open(LOG_FILE, "w", encoding="utf-8-sig", newline="") as f:
+                        writer = csv.writer(f)
+                        writer.writerows(lines)
+        except Exception as e:
+            print(f"[LOGGER HEADER UPDATE ERROR] {e}")
 
 def log_trade(data: dict):
     """
     매매 내역 한 줄 추가
-    data keys: timestamp, symbol, type, side, price, amount, pnl_usdt, pnl_pct, leverage, order_id
+    data keys: timestamp, symbol, type, side, price, amount, pnl_usdt, pnl_pct, leverage, order_id, trade_id
     """
     try:
         _ensure_file()
@@ -46,7 +65,8 @@ def log_trade(data: dict):
                 data.get("pnl_usdt", 0),
                 data.get("pnl_pct", 0),
                 data.get("leverage", ""),
-                f"ID_{data.get('order_id', '')}"
+                f"ID_{data.get('order_id', '')}",
+                data.get("trade_id", "")
             ])
     except Exception as e:
         # 매매에 영향을 주지 않기 위해 에러는 출력만 하고 무시

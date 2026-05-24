@@ -223,3 +223,69 @@ def test_aggregate_and_pair_trades_cross_check():
     assert len(paired_held) == 1
     assert paired_held[0]["status"] == "보유 중"
     assert paired_held[0]["exit_time"] is None
+
+def test_aggregate_and_pair_trades_mn_matching():
+    t1 = datetime(2026, 5, 20, 10, 0, 0)
+    t2 = datetime(2026, 5, 20, 10, 5, 0)
+    t3 = datetime(2026, 5, 20, 10, 10, 0)
+    
+    trades = [
+        # Entry: 10.0 amount, price 100
+        {
+            "timestamp": t1,
+            "symbol": "DOGE/USDT:USDT",
+            "category": "진입",
+            "side": "buy",
+            "price": 100.0,
+            "amount": 10.0,
+            "pnl": 0.0,
+            "pnl_pct": 0.0,
+            "leverage": 10,
+            "order_id": "100"
+        },
+        # Exit 1: 3.0 amount, PnL +30.0, yield +30%
+        {
+            "timestamp": t2,
+            "symbol": "DOGE/USDT:USDT",
+            "category": "청산",
+            "side": "sell",
+            "price": 110.0,
+            "amount": 3.0,
+            "pnl": 30.0,
+            "pnl_pct": 30.0,
+            "leverage": 10,
+            "order_id": "101"
+        },
+        # Exit 2: 7.0 amount, PnL +70.0, yield +30%
+        {
+            "timestamp": t3,
+            "symbol": "DOGE/USDT:USDT",
+            "category": "청산",
+            "side": "sell",
+            "price": 110.0,
+            "amount": 7.0,
+            "pnl": 70.0,
+            "pnl_pct": 30.0,
+            "leverage": 10,
+            "order_id": "102"
+        }
+    ]
+    
+    paired = aggregate_and_pair_trades(trades)
+    
+    # It should split into 2 cycles in order of exit timestamp (descending in returned output)
+    assert len(paired) == 2
+    
+    cycle_latest = paired[0] # Exit 2 at t3
+    assert cycle_latest["exit_time"] == t3
+    assert cycle_latest["amount"] == 7.0
+    assert cycle_latest["pnl_usdt"] == 70.0
+    assert cycle_latest["pnl_pct"] == 30.0
+    assert cycle_latest["status"] == "청산 완료"
+    
+    cycle_earliest = paired[1] # Exit 1 at t2
+    assert cycle_earliest["exit_time"] == t2
+    assert cycle_earliest["amount"] == 3.0
+    assert cycle_earliest["pnl_usdt"] == 30.0
+    assert cycle_earliest["pnl_pct"] == 30.0
+    assert cycle_earliest["status"] == "청산 완료"
