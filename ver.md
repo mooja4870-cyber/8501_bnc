@@ -1,3 +1,4 @@
+| v3.4.1 | 2026-05-24 | [Core/Bugfix] 거래소 포지션 정보에서 레버리지 값이 None으로 들어오는 경우 Dashboard에서 'Nonex'로 잘못 렌더링되던 현상을 수정 (None일 시 CFG.LEVERAGE로 Fallback 처리) | Core/Bugfix |
 | v3.4.0 | 2026-05-24 | [Core/Safety] 쿨다운 시스템 도입 — 일괄청산 후 1분 글로벌 쿨다운 + 개별 청산(수동 즉시청산, 거래소 TP/SL 청산, 타임아웃 강제청산, 로테이션 청산 등 모든 청산 케이스) 후 1분 종목별 쿨다운 도입 및 단위 테스트 구현 | Core/Safety |
 | v3.3.5 | 2026-05-24 | [UI/UX] 앱 최초 로드 및 화면 너비/브라우저 캐시 여부에 상관없이 앱 기동 시 사이드바 강제 열림(확장) 보장을 위해 data-testid="collapsedControl" 자동 클릭 JS 스크립트 추가 | UI/UX |
 | v3.3.4 | 2026-05-23 | [Core/Bugfix] 매매 이력 페어링 로직 고도화 및 캐싱 방지. 동일 분(minute)에 속한 분할 체결(Split-Fill) 건의 단일 행 병합, 1개 청산 주문에 대한 N개 진입 주문 가중평균 FIFO 매칭(1:N) 적용으로 수익률/손익의 거래소 일치성 확보. Streamlit의 모듈 캐싱에 따른 구버전 렌더링 방지를 위해 `importlib.reload` 구문 적용 | Core/Bugfix |

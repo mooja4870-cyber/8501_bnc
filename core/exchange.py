@@ -135,7 +135,7 @@ class BinanceClient:
                         "mark_price": float(current),
                         "pnl_pct": round(pct * 100, 2),
                         "pnl_usdt": round(p.get("unrealizedPnl", 0) or 0, 4),
-                        "leverage": p.get("leverage", CFG.LEVERAGE),
+                        "leverage": p.get("leverage") or CFG.LEVERAGE,
                         "margin": round(p.get("initialMargin", 0) or 0, 4),
                         "timestamp": p.get("timestamp"),
                         "amount_usdt": round(entry_val, 2),
