@@ -58,6 +58,36 @@ class TestRiskGate:
         with pytest.raises(Exception, match="잔고 조회 실패"):
             self.trader._risk_check(_sig())
 
+    def test_global_cooldown_blocks_entry(self):
+        self.mock.set_scenario("default")
+        self.trader.trigger_global_cooldown(60)
+        ok, r = self.trader._risk_check(_sig())
+        assert not ok and "글로벌 쿨다운" in r
+
+        # 쿨다운 만료 후 통과하는지 확인
+        import datetime as dt_mod
+        self.trader.global_cooldown_until = dt_mod.datetime.now() - dt_mod.timedelta(seconds=1)
+        ok, r = self.trader._risk_check(_sig())
+        assert ok and r == "OK"
+
+    def test_symbol_cooldown_blocks_entry(self):
+        self.mock.set_scenario("default")
+        self.trader.trigger_symbol_cooldown("BTC/USDT:USDT", 60)
+        
+        # 해당 종목은 쿨다운으로 진입 차단
+        ok, r = self.trader._risk_check(_sig(symbol="BTC/USDT:USDT"))
+        assert not ok and "종목별 쿨다운" in r
+
+        # 다른 종목은 쿨다운 미발생하여 통과
+        ok, r = self.trader._risk_check(_sig(symbol="ETH/USDT:USDT"))
+        assert ok and r == "OK"
+
+        # 쿨다운 만료 후 통과하는지 확인
+        import datetime as dt_mod
+        self.trader.symbol_cooldown_until["BTC/USDT:USDT"] = dt_mod.datetime.now() - dt_mod.timedelta(seconds=1)
+        ok, r = self.trader._risk_check(_sig(symbol="BTC/USDT:USDT"))
+        assert ok and r == "OK"
+
 
 class TestPositionGuards:
     def setup_method(self):

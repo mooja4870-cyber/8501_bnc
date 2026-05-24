@@ -1153,6 +1153,8 @@ with tabs[0]:
                     if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
                         count = engine.client.close_all_positions()
                         if count > 0:
+                            if engine.trader:
+                                engine.trader.trigger_global_cooldown(60)
                             st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
                             time.sleep(1)
                             st.rerun()
@@ -1218,6 +1220,8 @@ with tabs[0]:
                                 # [v1.2.52] 버튼 클릭 즉시 세션 캐시에 추가하여 화면에서 지움
                                 st.session_state.closing_symbols.add(p['symbol'])
                                 if engine.client.close_position(p["symbol"], p["side"]):
+                                    if engine.trader:
+                                        engine.trader.trigger_symbol_cooldown(p['symbol'], 60)
                                     st.toast(f"✅ {p['symbol']} 청산 완료")
                                     time.sleep(0.5)
                                     st.rerun()

@@ -41,6 +41,10 @@ class AutoTrader:
         # API 갱신 지연(Execution/Replication Lag) 방지를 위한 최근 주문 종목 대기열
         self.recently_entered: Dict[str, datetime] = {}
 
+        # 쿨다운 시스템 — 일괄청산 후 1분 글로벌 쿨다운 + 개별 청산 후 1분 종목별 쿨다운
+        self.global_cooldown_until: Optional[datetime] = None
+        self.symbol_cooldown_until: Dict[str, datetime] = {}
+
     # ── 제어 ───────────────────────────────────────────
 
     def enable(self):
@@ -50,6 +54,16 @@ class AutoTrader:
     def disable(self):
         self.enabled = False
         logger.info("[TRADER] 자동매매 비활성화")
+
+    def trigger_global_cooldown(self, seconds: int = 60):
+        """일괄청산 시 1분간 글로벌 쿨다운 트리거"""
+        self.global_cooldown_until = datetime.now() + timedelta(seconds=seconds)
+        logger.info(f"[COOLDOWN] 글로벌 쿨다운 설정 완료 ({seconds}초간 새로운 진입 전면 차단)")
+
+    def trigger_symbol_cooldown(self, symbol: str, seconds: int = 60):
+        """개별 청산 시 1분간 종목별 쿨다운 트리거"""
+        self.symbol_cooldown_until[symbol] = datetime.now() + timedelta(seconds=seconds)
+        logger.info(f"[COOLDOWN] {symbol} 종목별 쿨다운 설정 완료 ({seconds}초간 진입 차단)")
 
     # ── 신호 처리 ──────────────────────────────────────
 
@@ -154,6 +168,20 @@ class AutoTrader:
     def _risk_check(self, sig: Signal) -> tuple[bool, str]:
         """다층 리스크 게이트"""
 
+        # 0. 쿨다운 체크
+        now = datetime.now()
+        if self.global_cooldown_until and now < self.global_cooldown_until:
+            remaining = (self.global_cooldown_until - now).total_seconds()
+            return False, f"글로벌 쿨다운 진행 중 (남은 시간: {remaining:.1f}초)"
+
+        if sig.symbol in self.symbol_cooldown_until:
+            until = self.symbol_cooldown_until[sig.symbol]
+            if now < until:
+                remaining = (until - now).total_seconds()
+                return False, f"{sig.symbol} 종목별 쿨다운 진행 중 (남은 시간: {remaining:.1f}초)"
+            else:
+                self.symbol_cooldown_until.pop(sig.symbol, None)
+
         # 1. 일일 손실 한도
         if self.daily_pnl_usdt <= -self.cfg.DAILY_LOSS_LIMIT_USDT:
             return False, f"일일 손실 한도 초과: {self.daily_pnl_usdt:.2f} USDT"
@@ -161,8 +189,8 @@ class AutoTrader:
         # 2. 계좌 잔고 체크
         balance = self.client.get_balance()
         total = balance.get("total", 0)
-        if total < 10:  # 잔고 임계값
-            return False, "잔고 부족 (< 10 USDT)"
+        if total < self.cfg.MIN_REQUIRED_BALANCE_USDT:
+            return False, f"잔고 부족 (< {self.cfg.MIN_REQUIRED_BALANCE_USDT} USDT)"
 
         # 3. MAX_DRAWDOWN_PCT — 초기 자금 대비 낙폭 체크
         try:

@@ -1,6 +1,5 @@
 """
 매매 이력 파싱, 병합 및 진입/청산 페어링 헬퍼 모듈
-v3.3.4 — 분 단위 병합 및 1:N 가중평균 FIFO 매칭 적용
 """
 import os
 import pandas as pd
@@ -13,18 +12,22 @@ def get_position_direction(category: str, side: str) -> str:
     """유형(진입/청산)과 방향(buy/sell/long/short) 조합으로 포지션 방향 판별"""
     cat = category.strip()
     s = side.strip().lower()
+    
+    # 만약 방향 자체가 long/short으로 명시되어 있다면 직접 반환
     if s in ("long", "l"):
         return "LONG"
     if s in ("short", "s"):
         return "SHORT"
     
+    # buy/sell인 경우 유형(진입/청산) 기준으로 판별
     if cat in ("진입", "*진입"):
         return "LONG" if s == "buy" else "SHORT"
     else:  # 청산
+        # 롱 포지션 청산은 매도(sell), 숏 포지션 청산은 매수(buy)
         return "LONG" if s == "sell" else "SHORT"
 
 def load_local_trade_history() -> List[Dict]:
-    """local trade_history.csv 로드하여 원본 데이터 리스트 반환"""
+    """local trade_history.csv 로드하여 원본 데이터 리스트 반환 (모의 거래 필터링 포함)"""
     if not os.path.exists(LOG_FILE):
         return []
     try:
@@ -35,6 +38,10 @@ def load_local_trade_history() -> List[Dict]:
         for _, row in df.iterrows():
             order_id = str(row.get("주문ID", "")).replace("ID_", "").strip()
             
+            # 모의 거래(MOCK) 데이터 필터링하여 실거래 내역 오염 방지
+            if "MOCK" in order_id or order_id == "" or order_id == "nan":
+                continue
+                
             pnl_val = row.get("수익(USDT)", 0.0)
             pnl = 0.0 if pd.isna(pnl_val) else float(pnl_val)
             
@@ -63,28 +70,24 @@ def load_local_trade_history() -> List[Dict]:
 
 def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional[set] = None) -> List[Dict]:
     """
-    1. 동일 분(minute)에 발생한 동일 심볼, 유형, 방향, 레버리지 거래(Split-Fill/분할 체결)들을 하나로 합산.
-    2. 청산 주문(Exit) 기준으로 진입 주문(Entry)들과 수량 기반으로 FIFO 매칭 (1:N 및 N:1 가중평균 가격 대응).
-    3. 청산 주문의 실제 거래소 PnL 및 PnL%를 그대로 보존하여 매칭 결과를 정밀하게 도출.
-    4. 남은 진입 포지션에 대해 active_positions_set과 교차 검증하여 "보유 중" 또는 "청산 완료 (미기록)" 구분.
+    1. 동일 주문ID(order_id)의 개별 체결(fill)들을 하나의 주문 단위로 합산.
+    2. 동일 종목(symbol)에 대해 시간순으로 진입(Entry)과 청산(Exit)을 LONG/SHORT 방향별로 분리하여 짝지어(Pairing) 반환.
     """
     if not trades:
         return []
 
-    # 먼저 각 거래에 방향 정보를 추가
-    for t in trades:
-        t["direction"] = get_position_direction(t["category"], t["side"])
+    # ── 1. 주문 ID 단위로 체결 합산 ──
+    for idx, t in enumerate(trades):
+        if not t["order_id"] or t["order_id"] == "nan" or t["order_id"] == "":
+            t["order_id"] = f"TEMP_{t['timestamp'].strftime('%Y%m%d%H%M%S')}_{idx}"
 
     df_fills = pd.DataFrame(trades)
-    
-    # 동일 분(minute) 단위로 절사하여 동일 시각 분할 건을 하나로 묶음
-    df_fills["minute"] = df_fills["timestamp"].dt.floor("min")
     df_fills["cost"] = df_fills["price"] * df_fills["amount"]
     df_fills["weighted_pnl_pct"] = df_fills["pnl_pct"] * df_fills["amount"]
 
-    # 그룹화 항목: symbol, category, side, leverage, direction, minute
-    grouped = df_fills.groupby(["symbol", "category", "side", "leverage", "direction", "minute"], as_index=False).agg({
-        "timestamp": "min",
+    # 그룹화 항목: order_id, symbol, category, side, leverage
+    grouped = df_fills.groupby(["order_id", "symbol", "category", "side", "leverage"], as_index=False).agg({
+        "timestamp": "min",  # 가장 빠른 체결 시각
         "amount": "sum",
         "cost": "sum",
         "pnl": "sum",
@@ -92,109 +95,145 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
     })
     
     grouped["price"] = grouped["cost"] / grouped["amount"]
-    # pnl_pct는 수량 가중 평균
     grouped["pnl_pct"] = grouped["weighted_pnl_pct"] / grouped["amount"]
-    grouped = grouped.drop(columns=["cost", "weighted_pnl_pct"])
+    grouped = grouped.drop(columns=["weighted_pnl_pct"])
     
     # 다시 딕셔너리 리스트로 변환
     orders = grouped.to_dict("records")
-    
-    # 시간 순 정렬
     orders.sort(key=lambda x: x["timestamp"])
 
+    # ── 2. 진입/청산 페어링 (LONG / SHORT 분리 관리) ──
     paired_cycles = []
+    symbol_groups = {}
     
-    # (symbol, direction) 별로 그룹핑하여 순차 FIFO 페어링 진행
-    group_key = {}
     for o in orders:
-        key = (o["symbol"], o["direction"])
-        if key not in group_key:
-            group_key[key] = []
-        group_key[key].append(o)
+        sym = o["symbol"]
+        if sym not in symbol_groups:
+            symbol_groups[sym] = []
+        symbol_groups[sym].append(o)
 
-    for (sym, direction), sym_orders in group_key.items():
+    for sym, sym_orders in symbol_groups.items():
         sym_orders.sort(key=lambda x: x["timestamp"])
         
-        # 진입 큐 (각 항목은 {"order": order_dict, "remaining_qty": float})
-        entry_queue = []
+        active_longs = []
+        active_shorts = []
 
         for o in sym_orders:
             cat = o["category"].strip()
+            direction = get_position_direction(o["category"], o["side"])
             
             if cat in ("진입", "*진입"):
-                entry_queue.append({
-                    "order": o,
-                    "remaining_qty": o["amount"],
-                })
-            elif cat in ("청산", "청산(로테이션)"):
-                exit_qty = o["amount"]
-                matched_entries = []
-                total_matched_qty = 0.0
-                
-                # 진입 큐에서 FIFO 순으로 수량 매칭
-                while exit_qty > 1e-10 and entry_queue:
-                    entry = entry_queue[0]
-                    match_qty = min(entry["remaining_qty"], exit_qty)
-                    
-                    matched_entries.append({
-                        "entry_time": entry["order"]["timestamp"],
-                        "entry_price": entry["order"]["price"],
-                        "qty": match_qty,
-                    })
-                    
-                    entry["remaining_qty"] -= match_qty
-                    exit_qty -= match_qty
-                    total_matched_qty += match_qty
-                    
-                    if entry["remaining_qty"] <= 1e-10:
-                        entry_queue.pop(0)
-                
-                # 매칭된 진입가들의 가중평균 산출
-                if matched_entries:
-                    total_entry_cost = sum(m["entry_price"] * m["qty"] for m in matched_entries)
-                    avg_entry_price = total_entry_cost / total_matched_qty if total_matched_qty > 0 else 0.0
-                    entry_time = matched_entries[0]["entry_time"]
+                if direction == "LONG":
+                    active_longs.append(o)
                 else:
-                    avg_entry_price = None
-                    entry_time = None
-                
-                # 매칭 상태 구분
-                status = "청산 완료" if exit_qty <= 1e-10 else "청산 완료 (진입유실)"
-                
-                paired_cycles.append({
-                    "entry_time": entry_time,
-                    "exit_time": o["timestamp"],
-                    "symbol": sym,
-                    "direction": f"🟢 LONG" if direction == "LONG" else f"🔴 SHORT",
-                    "entry_price": round(avg_entry_price, 8) if avg_entry_price is not None else None,
-                    "exit_price": o["price"],
-                    "amount": round(o["amount"], 8),
-                    "pnl_usdt": round(o["pnl"], 4),
-                    "pnl_pct": round(o["pnl_pct"], 2),
-                    "status": status
-                })
+                    active_shorts.append(o)
+            elif cat in ("청산", "청산(로테이션)"):
+                if direction == "LONG":
+                    if active_longs:
+                        entry = active_longs.pop(0)  # FIFO 페어링
+                        paired_cycles.append({
+                            "entry_time": entry["timestamp"],
+                            "exit_time": o["timestamp"],
+                            "symbol": sym,
+                            "direction": "🟢 LONG",
+                            "entry_price": entry["price"],
+                            "exit_price": o["price"],
+                            "amount": o["amount"],
+                            "pnl_usdt": o["pnl"],
+                            "pnl_pct": o["pnl_pct"],
+                            "status": "청산 완료"
+                        })
+                    else:
+                        paired_cycles.append({
+                            "entry_time": None,
+                            "exit_time": o["timestamp"],
+                            "symbol": sym,
+                            "direction": "🟢 LONG",
+                            "entry_price": None,
+                            "exit_price": o["price"],
+                            "amount": o["amount"],
+                            "pnl_usdt": o["pnl"],
+                            "pnl_pct": o["pnl_pct"],
+                            "status": "청산 완료 (진입유실)"
+                        })
+                else:  # SHORT
+                    if active_shorts:
+                        entry = active_shorts.pop(0)  # FIFO 페어링
+                        paired_cycles.append({
+                            "entry_time": entry["timestamp"],
+                            "exit_time": o["timestamp"],
+                            "symbol": sym,
+                            "direction": "🔴 SHORT",
+                            "entry_price": entry["price"],
+                            "exit_price": o["price"],
+                            "amount": o["amount"],
+                            "pnl_usdt": o["pnl"],
+                            "pnl_pct": o["pnl_pct"],
+                            "status": "청산 완료"
+                        })
+                    else:
+                        paired_cycles.append({
+                            "entry_time": None,
+                            "exit_time": o["timestamp"],
+                            "symbol": sym,
+                            "direction": "🔴 SHORT",
+                            "entry_price": None,
+                            "exit_price": o["price"],
+                            "amount": o["amount"],
+                            "pnl_usdt": o["pnl"],
+                            "pnl_pct": o["pnl_pct"],
+                            "status": "청산 완료 (진입유실)"
+                        })
         
         # 스캔 후 남은 진입중인 포지션 표시
-        for entry in entry_queue:
-            if entry["remaining_qty"] > 1e-10:
-                is_actually_holding = True
-                if active_positions_set is not None:
-                    is_actually_holding = ((sym, direction) in active_positions_set)
+        for entry in active_longs:
+            is_actually_holding = False
+            if active_positions_set is not None:
+                is_actually_holding = ((sym, "LONG") in active_positions_set)
+            else:
+                # API 연동 안 된 오프라인 모드에서는 임시로 최근 24시간 이내 데이터만 보유 중으로 처리
+                time_diff = pd.Timestamp.now() - entry["timestamp"]
+                if time_diff.total_seconds() < 24 * 3600:
+                    is_actually_holding = True
                 
-                status_str = "보유 중" if is_actually_holding else "청산 완료 (미기록)"
+            status_str = "보유 중" if is_actually_holding else "청산 완료 (미기록)"
+            
+            paired_cycles.append({
+                "entry_time": entry["timestamp"],
+                "exit_time": None if is_actually_holding else entry["timestamp"],
+                "symbol": sym,
+                "direction": "🟢 LONG",
+                "entry_price": entry["price"],
+                "exit_price": entry["price"] if not is_actually_holding else None,
+                "amount": entry["amount"],
+                "pnl_usdt": 0.0 if not is_actually_holding else None,
+                "pnl_pct": 0.0 if not is_actually_holding else None,
+                "status": status_str
+            })
+
+        for entry in active_shorts:
+            is_actually_holding = False
+            if active_positions_set is not None:
+                is_actually_holding = ((sym, "SHORT") in active_positions_set)
+            else:
+                time_diff = pd.Timestamp.now() - entry["timestamp"]
+                if time_diff.total_seconds() < 24 * 3600:
+                    is_actually_holding = True
                 
-                paired_cycles.append({
-                    "entry_time": entry["order"]["timestamp"],
-                    "exit_time": None if is_actually_holding else entry["order"]["timestamp"],
-                    "symbol": sym,
-                    "direction": f"🟢 LONG" if direction == "LONG" else f"🔴 SHORT",
-                    "entry_price": entry["order"]["price"],
-                    "exit_price": None if is_actually_holding else entry["order"]["price"],
-                    "amount": round(entry["remaining_qty"], 8),
-                    "pnl_usdt": None if is_actually_holding else 0.0,
-                    "pnl_pct": None if is_actually_holding else 0.0,
-                    "status": status_str
-                })
+            status_str = "보유 중" if is_actually_holding else "청산 완료 (미기록)"
+            
+            paired_cycles.append({
+                "entry_time": entry["timestamp"],
+                "exit_time": None if is_actually_holding else entry["timestamp"],
+                "symbol": sym,
+                "direction": "🔴 SHORT",
+                "entry_price": entry["price"],
+                "exit_price": entry["price"] if not is_actually_holding else None,
+                "amount": entry["amount"],
+                "pnl_usdt": 0.0 if not is_actually_holding else None,
+                "pnl_pct": 0.0 if not is_actually_holding else None,
+                "status": status_str
+            })
 
     # 전체 사이클을 최신 종료 시각(exit_time이 없으면 entry_time) 기준으로 내림차순 정렬
     def sort_key(x):

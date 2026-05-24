@@ -184,16 +184,35 @@ class StrategyEngine:
         cond_long_1 = close > ssl_up                     # SSL 파란선 위
         cond_long_2 = curr['candle_color'] == 'blue'     # 캔들 파란색
         cond_long_3 = macd_hist > 0                      # AKMCD 영선 위
-        cond_long_4 = (prev['dot_color'] == 'red' and    # 이전: 빨강 -> 현재: 초록
-                       curr['dot_color'] == 'green')
+        
+        # 최근 N개 봉 이내에 점 색상이 빨강->초록으로 전환되었는지 체크
+        cond_long_4 = False
+        window_size = getattr(self.cfg, 'MOMENTUM_WINDOW', 3)
+        for i in range(1, window_size + 1):
+            if len(df) >= i + 1:
+                p_dot = df.iloc[-(i+1)]['dot_color']
+                c_dot = df.iloc[-i]['dot_color']
+                if p_dot == 'red' and c_dot == 'green':
+                    cond_long_4 = True
+                    break
+                    
         cond_long_rsi = (curr['rsi'] < self.cfg.RSI_OVERBOUGHT) if self.cfg.USE_RSI_FILTER else True
 
         # ── 숏 조건 체크 ──
         cond_short_1 = close < ssl_down                  # SSL 빨간선 아래
         cond_short_2 = curr['candle_color'] == 'red'     # 캔들 빨간색
         cond_short_3 = macd_hist < 0                     # AKMCD 영선 아래
-        cond_short_4 = (prev['dot_color'] == 'green' and  # 이전: 초록 -> 현재: 빨강
-                        curr['dot_color'] == 'red')
+        
+        # 최근 N개 봉 이내에 점 색상이 초록->빨강으로 전환되었는지 체크
+        cond_short_4 = False
+        for i in range(1, window_size + 1):
+            if len(df) >= i + 1:
+                p_dot = df.iloc[-(i+1)]['dot_color']
+                c_dot = df.iloc[-i]['dot_color']
+                if p_dot == 'green' and c_dot == 'red':
+                    cond_short_4 = True
+                    break
+                    
         cond_short_rsi = (curr['rsi'] > self.cfg.RSI_OVERSOLD) if self.cfg.USE_RSI_FILTER else True
 
         # 신호 강도 계산 (4가지 조건 각각 점수 배분)

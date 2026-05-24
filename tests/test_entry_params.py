@@ -301,7 +301,7 @@ class TestRiskGateParameters:
 
     def test_balance_minimum(self):
         """잔고 < 10 USDT → 차단"""
-        self.mock._balance = {"total": 5.0, "free": 5.0, "used": 0.0}
+        self.mock._balance = {"total": 0.5, "free": 0.5, "used": 0.0}
         ok, reason = self.trader._risk_check(_make_signal())
         assert ok is False
         assert "잔고 부족" in reason

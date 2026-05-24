@@ -132,7 +132,7 @@ def test_aggregate_and_pair_trades_fills_aggregation():
     assert cycle["status"] == "청산 완료"
 
 def test_aggregate_and_pair_trades_open_position():
-    t1 = datetime(2026, 5, 20, 10, 0, 0)
+    t1 = datetime.now() - timedelta(hours=2)
     trades = [
         {
             "timestamp": t1,

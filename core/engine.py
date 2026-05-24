@@ -302,6 +302,7 @@ class QuantumEngine:
                     stats_store.record_result(pnl)
                     if self.trader:
                         self.trader.daily_pnl_usdt = round(self.trader.daily_pnl_usdt + pnl, 4)
+                        self.trader.trigger_symbol_cooldown(sym, 60)
                     logger.info(
                         f"[CLOSED] {sym} PnL={pnl:+.4f} USDT"
                         f" -> {'WIN' if pnl >= 0 else 'LOSS'} 기록"
@@ -352,6 +353,8 @@ class QuantumEngine:
                         side = p["side"]
                         logger.warning(f"[TIMEOUT] {sym} {side} - {self.cfg.MAX_HOLDING_HOURS}시간 초과 강제청산 실행")
                         self.client.close_position(sym, side)
+                        if self.trader:
+                            self.trader.trigger_symbol_cooldown(sym, 60)
 
             self._prev_position_symbols = current
             
@@ -402,6 +405,8 @@ class QuantumEngine:
                     # 시장가 즉시 청산
                     close_res = self.client.close_position(sym, side)
                     if close_res:
+                        if self.trader:
+                            self.trader.trigger_symbol_cooldown(sym, 60)
                         # 로컬 CSV 영구 기록
                         try:
                             csv_log({

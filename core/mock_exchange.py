@@ -47,7 +47,7 @@ class MockBinanceClient:
             self._positions = []
 
         elif name == "low_balance":
-            self._balance = {"total": 5.0, "free": 3.0, "used": 2.0}
+            self._balance = {"total": 0.5, "free": 0.3, "used": 0.2}
             self._positions = []
 
         elif name == "no_margin":

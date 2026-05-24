@@ -13,10 +13,10 @@ class TradingConfig:
     BASE_URL: str = "https://fapi.binance.com"
 
     # ── 포지션 설정 ──────────────────────────────────────
-    LEVERAGE: int = 5                      # 레버리지 (기본값 5)
+    LEVERAGE: int = 10                     # 레버리지 (잔고 고려 10x 적용)
     MARGIN_MODE: str = "isolated"          # 격리 마진
-    MARGIN_USDT: float = 4.0               # 1회 진입 증거금 (USDT)
-    MAX_POSITIONS: int = 5                # 최대 동시 보유 종목 수
+    MARGIN_USDT: float = 2.0               # 1회 진입 증거금 (잔고 $9.45 고려 $2.0 적용)
+    MAX_POSITIONS: int = 3                # 최대 동시 보유 종목 수 (잔고 고려 3개 적용)
     MAX_HOLDING_HOURS: float = 4.0        # 강제 청산 타임아웃 (4시간 - 15m 봉 16개 분량)
     ALLOW_LONG: bool = True
     ALLOW_SHORT: bool = True
@@ -24,7 +24,7 @@ class TradingConfig:
     # ── 전략 필터 모드 ──────────────────────────────────
     USE_EMA200_FILTER: bool = True         # EMA 200 장기추세 필터 기본 활성화 (RSI+EMA200이 기본 전략)
     USE_RSI_FILTER: bool = True            # RSI 필터 활성화 여부 (기본 ON)
-    ADX_AUTO_SWITCH: bool = False          # ADX 자동 스위칭 ON 시: 추세장→EMA200, 횡보장→PriceBB
+    ADX_AUTO_SWITCH: bool = True           # ADX 자동 스위칭 ON 시: 추세장→EMA200, 횡보장→PriceBB
     ADX_PERIOD: int = 14                   # ADX 계산 기간 (기본값 14)
     ADX_THRESHOLD: float = 25.0            # ADX 추세 판별 임계값 (≥25: 추세장, <25: 횡보장)
 
@@ -39,6 +39,7 @@ class TradingConfig:
     # ── 리스크 한도 ────────────────────────────────────
     MAX_DRAWDOWN_PCT: float = 0.10        # 최대 낙폭 10% 초과 시 전략 중단
     DAILY_LOSS_LIMIT_USDT: float = 25.0  # 일일 손실 한도 (5회 진입분)
+    MIN_REQUIRED_BALANCE_USDT: float = 1.0 # 최소 필요 잔고 (기본값 1.0 USDT)
     
     # ── 포지션 로테이션 (Stale Position Rotation) 설정 ──
     ROTATION_ENABLED: bool = False         # 정체 포지션 로테이션 활성화
@@ -67,6 +68,7 @@ class TradingConfig:
     RSI_PERIOD: int = 14                   # RSI 기간 (기본값 14)
     RSI_OVERBOUGHT: float = 60.0           # 롱 진입 제한 RSI 상한선 (기본값 60.0)
     RSI_OVERSOLD: float = 40.0             # 숏 진입 제한 RSI 하한선 (기본값 40.0)
+    MOMENTUM_WINDOW: int = 3               # AKMCD 모멘텀 전환 진입 유효 봉수 (기본값 3, 1일 시 기존 극단적 조건)
 
     # ── 가격 볼린저 밴드 (횡보장 모드용) ───────────────────
     PRICE_BB_PERIOD: int = 20              # 가격 BB 기간 (기본값 20, ADX 횡보장 모드 시 활용)
