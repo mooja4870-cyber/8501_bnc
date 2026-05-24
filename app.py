@@ -39,7 +39,7 @@ def get_git_tag():
             return tag
     except Exception:
         pass
-    return "v3.3.4" # Fallback 하드코딩
+    return "v3.3.5" # Fallback 하드코딩
 
 APP_VERSION = get_git_tag()
 
@@ -550,6 +550,15 @@ st.markdown(
         align-items: center;
     }
     </style>
+    <img src="x" style="display:none;" onerror="
+        (function() {
+            const doc = window.parent.document || document;
+            const btn = doc.querySelector('[data-testid=\\'collapsedControl\\']');
+            if (btn) {
+                btn.click();
+            }
+        })();
+    ">
     """,
     unsafe_allow_html=True,
 )

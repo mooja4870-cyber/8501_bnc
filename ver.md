@@ -1,3 +1,4 @@
+| v3.3.5 | 2026-05-24 | [UI/UX] 앱 최초 로드 및 화면 너비/브라우저 캐시 여부에 상관없이 앱 기동 시 사이드바 강제 열림(확장) 보장을 위해 data-testid="collapsedControl" 자동 클릭 JS 스크립트 추가 | UI/UX |
 | v3.3.4 | 2026-05-23 | [Core/Bugfix] 매매 이력 페어링 로직 고도화 및 캐싱 방지. 동일 분(minute)에 속한 분할 체결(Split-Fill) 건의 단일 행 병합, 1개 청산 주문에 대한 N개 진입 주문 가중평균 FIFO 매칭(1:N) 적용으로 수익률/손익의 거래소 일치성 확보. Streamlit의 모듈 캐싱에 따른 구버전 렌더링 방지를 위해 `importlib.reload` 구문 적용 | Core/Bugfix |
 | v3.3.3 | 2026-05-23 | [UI/UX] 툴팁(st.help)의 물음표(stTooltipIcon) 아이콘의 색상과 투명도가 어두운 테마에서 가독성이 떨어지는 문제를 해결하기 위해 흰색(#ffffff) 및 opacity 1 강제 적용 CSS 추가 | UI/UX |
 | v3.3.2 | 2026-05-23 | [UI/UX] 사이드바 내 토글(st.toggle) 위젯 라벨의 글자 색상이 어두운 배경에 의해 묻히는 문제를 해결하기 위해 흰색(#ffffff) 강제 적용 CSS 룰 추가 | UI/UX |
