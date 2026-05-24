@@ -628,6 +628,9 @@ def sync_p(src_key: str, dst_key: str, cfg_attr: str, is_pct: bool = False):
     else:
         setattr(CFG, cfg_attr, val)
 
+    # [v3.5.1] 설정 값 변경 알림 팝업 추가
+    st.toast(f"⚙️ 설정 값이 변경되었습니다: {cfg_attr} ➔ {val}{'%' if is_pct else ''}")
+
 if not st.session_state.api_connected:
     ak = os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY", "")
     sk = os.getenv("BINANCE_SECRET_KEY") or os.getenv("OKX_SECRET_KEY", "")
@@ -660,7 +663,7 @@ with st.sidebar:
         '2. TTM Squeeze 돌파: 볼린저 밴드와 켈트너 채널의 변동성 돌파 감지 (Squeeze OFF 시 진입)&#10;'
         '3. 모멘텀 및 캔들 색상 필터: 선행 추세 확증 (Momentum 히스토그램 및 캔들 색상 일치)&#10;'
         '4. RSI 필터: 과열권 진입 제한 및 추격 매매 노이즈 필터링">'
-        f'<span class="rainbow-text">TTM-Squeeze-EMA</span><br><span style="font-size:calc(0.75rem * 1.33);">{APP_VERSION}</span></div>',
+        f'<span class="rainbow-text">TTM-Squeeze-EMA</span><br><span style="font-size:calc(0.75rem * 1.33 * 1.22);">{APP_VERSION}</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -707,6 +710,10 @@ with st.sidebar:
     
     if auto != st.session_state.auto_trading:
         st.session_state.auto_trading = auto
+        if auto:
+            st.toast("🤖 자동매매가 가동(ON) 되었습니다.")
+        else:
+            st.toast("⏹️ 자동매매가 중지(OFF) 되었습니다.")
         if engine.is_ready:
             if auto:
                 engine.enable_trading()
@@ -1425,10 +1432,13 @@ with tabs[1]:
             df_scan = pd.DataFrame(results)
 
             # 신호 필터
+            def notify_signal_filter():
+                st.toast(f"🔍 신호 필터가 변경되었습니다: {st.session_state.scanner_signal_filter}")
             signal_filter = st.selectbox(
                 "🔍 신호 필터 선택",
                 ["전체", "LONG 신호", "SHORT 신호", "신호 없음"],
-                key="scanner_signal_filter"
+                key="scanner_signal_filter",
+                on_change=notify_signal_filter
             )
             if signal_filter == "LONG 신호":
                 df_scan = df_scan[df_scan["signal"] == "long"]
@@ -1501,7 +1511,9 @@ with tabs[2]:
 
     h1, h2 = st.columns([2, 1])
     with h1:
-        hist_symbol = st.selectbox("📁 종목 필터 선택", ["전체"] + history_symbols, key="hist_sym")
+        def notify_hist_sym():
+            st.toast(f"📁 종목 필터가 변경되었습니다: {st.session_state.hist_sym}")
+        hist_symbol = st.selectbox("📁 종목 필터 선택", ["전체"] + history_symbols, key="hist_sym", on_change=notify_hist_sym)
     with h2:
         sync_disabled = not st.session_state.api_connected or not engine.is_ready
         help_msg = "실시간 거래소 이력을 반영하려면 사이드바에서 API를 연결하세요." if sync_disabled else "거래소에서 최근 100개 체결 이력을 받아와 로컬 CSV로 동기화합니다."
