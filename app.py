@@ -570,10 +570,8 @@ st.markdown(
 def init_session():
     engine = QuantumEngine.get_instance()
     
-    # 만약 엔진이 이미 실행 중이라면 그 상태에 맞추어 세션 상태 초기화
+    # 자동매매가동 기본 ON 설정
     is_trading = True
-    if engine.is_ready:
-        is_trading = (engine.state == EngineState.TRADING)
 
     defaults = {
         "engine": engine,
