@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.13"
+    return "v1.0.14"
 
 APP_VERSION = get_git_tag()
 
@@ -972,7 +972,7 @@ with col_status:
     _engine = st.session_state.get("engine")
     is_live = False
     if _engine and _engine.is_ready:
-        if getattr(_engine, "_state", None) and _engine._state.name == "TRADING":
+        if st.session_state.get("auto_trading", False):
             is_live = True
 
     if is_live:
