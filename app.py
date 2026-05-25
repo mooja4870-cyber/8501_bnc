@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.0.9"
+    return "v2.0.10"
 
 APP_VERSION = get_git_tag()
 
@@ -959,7 +959,7 @@ with st.sidebar:
                         on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True))
         st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
                         on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True))
-        use_auto_sb = st.toggle("🤖 자동 산출 (매일 00시 잔고기준)", value=CFG.USE_AUTO_PROFIT_LIMIT, key="sb_use_auto_profit_limit",
+        use_auto_sb = st.toggle("🤖 자동 산출 (대시보드 총 잔고 기준)", value=CFG.USE_AUTO_PROFIT_LIMIT, key="sb_use_auto_profit_limit",
                                 on_change=sync_p, args=("sb_use_auto_profit_limit", "main_use_auto_profit_limit", "USE_AUTO_PROFIT_LIMIT"))
         if use_auto_sb:
             st.info(f"✅ 자동 산출됨: {CFG.DAILY_PROFIT_LIMIT_USDT:.2f} USDT")
@@ -1786,7 +1786,7 @@ with tabs[4]:
                         on_change=sync_p, args=("main_tp", "sb_tp", "TAKE_PROFIT_PCT", True))
         st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
                         on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True))
-        use_auto_main = st.toggle("🤖 자동 산출 (매일 00시 잔고기준)", value=CFG.USE_AUTO_PROFIT_LIMIT, key="main_use_auto_profit_limit",
+        use_auto_main = st.toggle("🤖 자동 산출 (대시보드 총 잔고 기준)", value=CFG.USE_AUTO_PROFIT_LIMIT, key="main_use_auto_profit_limit",
                                   on_change=sync_p, args=("main_use_auto_profit_limit", "sb_use_auto_profit_limit", "USE_AUTO_PROFIT_LIMIT"))
         if use_auto_main:
             st.info(f"✅ 자동 산출됨: {CFG.DAILY_PROFIT_LIMIT_USDT:.2f} USDT")
