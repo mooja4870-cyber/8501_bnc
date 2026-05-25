@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.9"
+    return "v1.0.10"
 
 APP_VERSION = get_git_tag()
 
@@ -1412,14 +1412,14 @@ with tabs[0]:
                         <span class="terminal-tooltip">
                             ℹ
                             <span class="tooltip-text">
-                                [계산식] 초기화 이후 발생한 승(W) + 패(L) 합산 건수<br><br>
+                                [계산식] 초기화 시점부터 24시간 동안 발생한 승(W) + 패(L) 합산 건수<br><br>
                                 에러나 진입 유실이 아닌, 정상적으로 진입 후 청산까지 한 사이클이 완전히 종료된 실제 매매 건수만을 엄격하게 카운트하여 표기합니다.
                             </span>
                         </span>
                     </div>
                     <div class="terminal-metric-value">{orders_today}건</div>
                     <div class="terminal-metric-sub" style="color:#ffffff;">
-                        <span style="font-size:0.7rem;">↑</span> Today
+                        <span style="font-size:0.7rem;">↑</span> 24h
                     </div>
                 </div>
             </div>
