@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.10"
+    return "v1.0.11"
 
 APP_VERSION = get_git_tag()
 
@@ -1067,7 +1067,7 @@ with tabs[0]:
             delta_html = ""
             if delta is not None:
                 try:
-                    d_num = float(str(delta).replace('$','').replace(',','').replace('+',''))
+                    d_num = float(str(delta).split(' ')[0].replace('$','').replace(',','').replace('+','').replace('%','').strip())
                     d_color = "#ef4444" if d_num >= 0 else "#3b82f6"
                     delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px; font-family:\'JetBrains Mono\';">{delta}</div>'
                 except ValueError:
@@ -1102,7 +1102,7 @@ with tabs[0]:
         with m3:
             dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
             render_terminal_metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}", is_pnl=True,
-                                   tooltip="오늘 하루 동안 포지션을 청산(종료)하여 실제로 지갑에 확정된 수익(Realized PnL)의 총합입니다.")
+                                   tooltip="초기화 클릭 시점부터 24시간 동안 포지션을 청산(종료)하여 실제로 지갑에 확정된 수익(Realized PnL)의 총합입니다.")
         with m4:
             render_terminal_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}",
                                    tooltip="현재 진입한 포지션들을 유지하기 위해 묶여있는 담보금(Margin)입니다.<br><br>레버리지가 곱해진 포지션 전체 규모가 아닌 순수 담보금입니다.")
@@ -1111,10 +1111,20 @@ with tabs[0]:
                                    tooltip="추가로 새로운 포지션에 진입할 때 사용할 수 있는 여유 현금입니다.<br><br>가용 증거금이 부족하면 스캐너가 신호를 띄워도 신규 진입이 차단됩니다.")
         with m6:
             daily_target = CFG.DAILY_PROFIT_LIMIT_USDT
+            try:
+                _st = stats_store.load_stats()
+                seed_money = _st.get("seed_money", 30.0)
+            except:
+                seed_money = 30.0
+            
+            dpnl_pct = (dpnl / seed_money) * 100 if seed_money > 0 else 0.0
             is_locked = dpnl >= daily_target
-            lock_status_text = "🔴 LOCKED (진입 차단)" if is_locked else "🟢 RUNNING (감시 중)"
-            render_terminal_metric("목표 익절 잠금", f"+${dpnl:.2f} / ${daily_target:.2f}", delta=lock_status_text, is_pnl=True,
-                                   tooltip=f"금일 실현 손익이 하루 목표치({daily_target:.2f} USDT)에 도달하면 신규 진입을 강제 차단하여 번 돈을 지키는 기능입니다.")
+            
+            lock_text = " 🔴 LOCKED" if is_locked else ""
+            delta_str = f"{dpnl_pct:+.2f}%{lock_text}"
+            
+            render_terminal_metric("목표 익절 잠금", f"+${dpnl:.2f} / ${daily_target:.2f}", delta=delta_str, is_pnl=True,
+                                   tooltip="초기화 이후 24시간 동안의 손익금액 / 1일 1% 목표수익 금액입니다.<br><br>하단 퍼센티지는 초기화 시점 원금 대비 24시간 동안의 수익률을 뜻하며, 목표 달성 시 신규 진입이 차단됩니다.")
 
         st.markdown("---")
 
