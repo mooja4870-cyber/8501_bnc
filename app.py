@@ -67,8 +67,8 @@ st.markdown(
     html, body, [data-testid="stAppViewContainer"] {
         background-color: var(--terminal-bg) !important;
         background-image: 
-            /* 우상향 영롱한 글로우 (radial gradient at top right) */
-            radial-gradient(circle at 90% 10%, rgba(139, 92, 246, 0.15) 0%, rgba(0, 224, 255, 0.08) 30%, rgba(244, 63, 94, 0.03) 60%, transparent 100%),
+            /* 중앙 방사형 딥블루 글로우 (요청하신 스타일) */
+            radial-gradient(circle at 50% 45%, rgba(35, 45, 95, 0.35) 0%, rgba(15, 20, 35, 0.1) 50%, transparent 80%),
             /* 아주 흐릿한 격자무늬 (가로세로 약 1cm 크기: 38px) */
             linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
             linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
@@ -668,10 +668,6 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.markdown(
-        '<p style="font-family:IBM Plex Mono;font-size:0.9rem;color:#cccccc;letter-spacing:0.08em;">🔌 API 연결 설정</p>',
-        unsafe_allow_html=True,
-    )
 
     api_key = st.text_input(
         "🔑 API Key", value=os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY", ""), type="password", key="api_key_input"
@@ -906,7 +902,6 @@ with st.sidebar:
             _engine.trader.allow_short = preset["ALLOW_SHORT"]
 
     # [v1.2.90] 인터랙티브 프로 트레이딩 컨트롤러 (동기화 로직 적용)
-    st.markdown('<p style="font-family:\'JetBrains Mono\'; font-size:0.85rem; color:#ff9900; letter-spacing:0.05em; font-weight:700; margin-top:10px; margin-bottom:5px;">📊 STRATEGY ENGINE PARAMETERS</p>', unsafe_allow_html=True)
     
     with st.expander("📊 지표 및 스캐너 설정", expanded=False):
         st.number_input("📏 KC ATR 배수", 0.5, 5.0, float(CFG.TTM_KC_MULT), step=0.1, key="sb_kc_mult",
