@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.17"
+    return "v2.0.0"
 
 APP_VERSION = get_git_tag()
 
@@ -50,6 +50,10 @@ st.markdown(
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;700&display=swap');
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
+    html {
+        font-size: 105% !important;
+    }
 
     :root {
         --terminal-bg: #030408;
