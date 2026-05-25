@@ -173,4 +173,5 @@ v 2 . 0 . 0 - a s y n c   -   A s y n c   E n g i n e   A r c h i t e c t u r e 
  v 1 . 0 . 1   -   U p d a t e   U I   v e r s i o n   d i s p l a y   t o   1 . 0 . 1   a s   p e r   r e q u e s t  
  v 1 . 0 . 2   -   A d d   S I N C E   2 0 2 6 . 0 5 . 2 4   2 3 : 5 1   t e x t   b e l o w   v e r s i o n   s t r i n g  
  v 1 . 0 . 3   -   C h a n g e   S I N C E   d a t e   t e x t   f o n t - s i z e   t o   1 3 p x  
+ v 1 . 0 . 3   -   C h a n g e   S I N C E   d a t e   t e x t   f o n t   s i z e   t o   1 5 p x  
  
