@@ -98,8 +98,8 @@ def download_and_cache_data():
     return data_dict
 
 # ── 2. 지표 계산 및 백테스트 시뮬레이터 ─────────────────
-def calculate_indicators_vectorized(df, ema_period, bb_period, bb_std, macd_fast, macd_slow, macd_signal, ssl_period, rsi_period, price_bb_period, price_bb_std, adx_period):
-    if len(df) < max(220, ema_period, bb_period, macd_slow, ssl_period, rsi_period, price_bb_period, adx_period):
+def calculate_indicators_vectorized(df, ema_period, bb_period, bb_std, macd_fast, macd_slow, macd_signal, ssl_period, rsi_period, price_bb_period, price_bb_std):
+    if len(df) < max(220, ema_period, bb_period, macd_slow, ssl_period, rsi_period, price_bb_period):
         return pd.DataFrame()
         
     df = df.copy()
@@ -151,28 +151,7 @@ def calculate_indicators_vectorized(df, ema_period, bb_period, bb_std, macd_fast
     rs = gain / (loss.replace(0, 1e-6))
     df['rsi'] = 100 - (100 / (1 + rs))
     
-    # 5. ADX
-    tr_hl = high - low
-    tr_hc = (high - close.shift(1)).abs()
-    tr_lc = (low - close.shift(1)).abs()
-    tr = pd.concat([tr_hl, tr_hc, tr_lc], axis=1).max(axis=1)
-    
-    up_move = high.diff()
-    down_move = -low.diff()
-    plus_dm = np.where((up_move > down_move) & (up_move > 0), up_move, 0.0)
-    minus_dm = np.where((down_move > up_move) & (down_move > 0), down_move, 0.0)
-    
-    alpha = 1.0 / adx_period
-    tr_smooth = pd.Series(tr).ewm(alpha=alpha, min_periods=adx_period, adjust=False).mean()
-    plus_dm_s = pd.Series(plus_dm).ewm(alpha=alpha, min_periods=adx_period, adjust=False).mean()
-    minus_dm_s = pd.Series(minus_dm).ewm(alpha=alpha, min_periods=adx_period, adjust=False).mean()
-    
-    plus_di = 100 * (plus_dm_s / tr_smooth.replace(0, 1e-6))
-    minus_di = 100 * (minus_dm_s / tr_smooth.replace(0, 1e-6))
-    dx = 100 * ((plus_di - minus_di).abs() / (plus_di + minus_di).replace(0, 1e-6))
-    df['adx'] = dx.ewm(alpha=alpha, min_periods=adx_period, adjust=False).mean().fillna(0.0)
-    
-    # 6. Price BB
+    # 5. Price BB
     price_bb_mid = close.rolling(price_bb_period).mean()
     price_bb_std_val = close.rolling(price_bb_period).std()
     df['price_bb_upper'] = price_bb_mid + (price_bb_std * price_bb_std_val)
@@ -209,7 +188,6 @@ def run_portfolio_backtest(data_dict, p):
     macd_fast, macd_slow, macd_signal = 12, 26, 9
     ssl_period = 10
     price_bb_period, price_bb_std = 20, 2.0
-    adx_period = 14
     
     tf_data = data_dict.get(timeframe, {})
     if not tf_data:
@@ -220,7 +198,7 @@ def run_portfolio_backtest(data_dict, p):
     for symbol, df in tf_data.items():
         pdf = calculate_indicators_vectorized(
             df, ema_period, bb_period, bb_std, macd_fast, macd_slow, macd_signal, 
-            ssl_period, rsi_period, price_bb_period, price_bb_std, adx_period
+            ssl_period, rsi_period, price_bb_period, price_bb_std
         )
         if not pdf.empty:
             # We slice the indicators to only simulate the last 30 days.

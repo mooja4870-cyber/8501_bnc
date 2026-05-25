@@ -39,7 +39,6 @@ rsi_overbought = float(p['RSI_OVERBOUGHT'])
 macd_fast, macd_slow, macd_signal = 12, 26, 9
 ssl_period = 10
 price_bb_period, price_bb_std = 20, 2.0
-adx_period = 14
 
 tf_data = data_dict.get(timeframe, {})
 
@@ -48,7 +47,7 @@ processed_dfs = {}
 for symbol, df in tf_data.items():
     pdf = calculate_indicators_vectorized(
         df, ema_period, bb_period, bb_std, macd_fast, macd_slow, macd_signal, 
-        ssl_period, rsi_period, price_bb_period, price_bb_std, adx_period
+        ssl_period, rsi_period, price_bb_period, price_bb_std
     )
     if not pdf.empty:
         latest_ts = pdf.index[-1]

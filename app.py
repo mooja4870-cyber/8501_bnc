@@ -585,7 +585,6 @@ def init_session():
         "engine": engine,
         "api_connected": engine.is_ready,
         "auto_trading": is_trading,
-        "adx_auto_switch": CFG.ADX_AUTO_SWITCH,
         "rsi_auto_switch": CFG.USE_RSI_FILTER,
         "active_preset": "기본 (Stable)",
         "closing_symbols": set(), # [v1.2.52] 잔상 방지용 청산 대기 목록
@@ -743,8 +742,7 @@ with st.sidebar:
             if engine.scanner and engine.scanner.is_running:
                 engine.stop_scanner()
 
-    # 사이드바 전략 상태를 ADX/RSI 설정에 포인터 동기화
-    st.session_state.adx_auto_switch = CFG.ADX_AUTO_SWITCH
+    # 사이드바 전략 상태를 RSI 설정에 포인터 동기화
     st.session_state.rsi_auto_switch = CFG.USE_RSI_FILTER
 
     # ── [다중기간 연동 변수값 자동설정] Deep Learning 최적 파라미터 프리셋 ──

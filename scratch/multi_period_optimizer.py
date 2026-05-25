@@ -40,7 +40,6 @@ def run_portfolio_backtest_dynamic(data_dict, p, duration_td):
     macd_fast, macd_slow, macd_signal = 12, 26, 9
     ssl_period = 10
     price_bb_period, price_bb_std = 20, 2.0
-    adx_period = 14
     
     tf_data = data_dict.get(timeframe, {})
     if not tf_data:
@@ -50,7 +49,7 @@ def run_portfolio_backtest_dynamic(data_dict, p, duration_td):
     for symbol, df in tf_data.items():
         pdf = calculate_indicators_vectorized(
             df, ema_period, bb_period, bb_std, macd_fast, macd_slow, macd_signal, 
-            ssl_period, rsi_period, price_bb_period, price_bb_std, adx_period
+            ssl_period, rsi_period, price_bb_period, price_bb_std
         )
         if not pdf.empty:
             latest_ts = pdf.index[-1]

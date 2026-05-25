@@ -133,26 +133,6 @@ class StrategyEngine:
         df['rsi'] = 100 - (100 / (1 + rs))
         df['rsi'] = df['rsi'].fillna(50.0)
 
-        # 7. ADX (평균 방향성 지수)
-        adx_period = self.cfg.ADX_PERIOD
-        alpha = 1.0 / adx_period
-        tr_smooth = tr.ewm(alpha=alpha, min_periods=adx_period, adjust=False).mean()
-        plus_dm = (high.diff()).where((high.diff() > -low.diff()) & (high.diff() > 0), 0.0)
-        minus_dm = (-low.diff()).where((-low.diff() > high.diff()) & (-low.diff() > 0), 0.0)
-        plus_dm_s = plus_dm.ewm(alpha=alpha, min_periods=adx_period, adjust=False).mean()
-        minus_dm_s = minus_dm.ewm(alpha=alpha, min_periods=adx_period, adjust=False).mean()
-        plus_di = 100 * (plus_dm_s / tr_smooth.replace(0, float('nan')))
-        minus_di = 100 * (minus_dm_s / tr_smooth.replace(0, float('nan')))
-        di_sum = (plus_di + minus_di).replace(0, float('nan'))
-        dx = 100 * ((plus_di - minus_di).abs() / di_sum)
-        df['adx'] = dx.ewm(alpha=alpha, min_periods=adx_period, adjust=False).mean().fillna(0.0)
-
-        # 8. Price Bollinger Bands
-        price_bb_mid = close.rolling(self.cfg.PRICE_BB_PERIOD).mean()
-        price_bb_std = close.rolling(self.cfg.PRICE_BB_PERIOD).std()
-        df['price_bb_upper'] = price_bb_mid + (self.cfg.PRICE_BB_STD * price_bb_std)
-        df['price_bb_lower'] = price_bb_mid - (self.cfg.PRICE_BB_STD * price_bb_std)
-
         return df.dropna()
 
     def generate_signal(self, df: pd.DataFrame, symbol: str) -> Signal:

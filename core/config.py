@@ -24,9 +24,6 @@ class TradingConfig:
     # ── 전략 필터 모드 ──────────────────────────────────
     USE_EMA200_FILTER: bool = True         # EMA 200 장기추세 필터 기본 활성화 (RSI+EMA200이 기본 전략)
     USE_RSI_FILTER: bool = True            # RSI 필터 활성화 여부 (기본 ON)
-    ADX_AUTO_SWITCH: bool = True           # ADX 자동 스위칭 ON 시: 추세장→EMA200, 횡보장→PriceBB
-    ADX_PERIOD: int = 14                   # ADX 계산 기간 (기본값 14)
-    ADX_THRESHOLD: float = 25.0            # ADX 추세 판별 임계값 (≥25: 추세장, <25: 횡보장)
 
 
     # ── 손익 설정 ──────────────────────────────────────
@@ -72,10 +69,6 @@ class TradingConfig:
     RSI_OVERSOLD: float = 40.0             # 숏 진입 제한 RSI 하한선 (기본값 40.0)
     MOMENTUM_WINDOW: int = 3               # AKMCD 모멘텀 전환 진입 유효 봉수 (기본값 3, 1일 시 기존 극단적 조건)
     TTM_MOM_PERIOD: int = 20               # TTM Squeeze 모멘텀 선형회귀 기간 (기본값 20)
-
-    # ── 가격 볼린저 밴드 (횡보장 모드용) ───────────────────
-    PRICE_BB_PERIOD: int = 20              # 가격 BB 기간 (기본값 20, ADX 횡보장 모드 시 활용)
-    PRICE_BB_STD: float = 2.0             # 가격 BB 배수 (기본값 2.0)
 
     # ── 백테스트 설정 ──────────────────────────────────
     BT_COMMISSION: float = 0.0005         # 수수료 0.05%

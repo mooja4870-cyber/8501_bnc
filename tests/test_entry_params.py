@@ -4,7 +4,7 @@ AI QUANTUM — 포지션 진입 파라미터 개별 검증 테스트
 
 [검증 대상]
  1단계 스캐너: MIN_VOLUME_USDT, MAX_SPREAD_PCT
- 2단계 전략: SSL 추세, 캔들 색상, AKMCD 영선, AKMCD 점전환, EMA200, RSI, ADX 스위칭
+ 2단계 전략: SSL 추세, 캔들 색상, AKMCD 영선, AKMCD 점전환, EMA200, RSI
  3단계 리스크: 잔고, 강도, 증거금, 일일손실한도, 중복포지션, MAX_POSITIONS, 방향허용
 """
 import pytest
@@ -48,9 +48,6 @@ def _make_long_indicators(df_input, rsi=50.0, ema200=90.0):
     res['bb_lower'] = -2.0
     res['rsi'] = rsi
     res['ema200'] = ema200
-    res['adx'] = 30.0
-    res['price_bb_upper'] = 200.0
-    res['price_bb_lower'] = 0.0
     return res
 
 
@@ -66,9 +63,6 @@ def _make_short_indicators(df_input, rsi=50.0, ema200=110.0):
     res['bb_lower'] = -2.0
     res['rsi'] = rsi
     res['ema200'] = ema200
-    res['adx'] = 30.0
-    res['price_bb_upper'] = 200.0
-    res['price_bb_lower'] = 0.0
     return res
 
 
