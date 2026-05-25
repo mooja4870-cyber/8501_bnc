@@ -1126,8 +1126,8 @@ with tabs[0]:
             delta_str = f"{dpnl_pct:+.2f}%{lock_text}"
             
             sign = "+" if dpnl >= 0 else "-"
-            render_terminal_metric("목표 익절 잠금", f"{sign}${abs(dpnl):.2f} / ${daily_target:.2f}", delta=delta_str, is_pnl=True,
-                                   tooltip="초기화 이후 24시간 동안의 손익금액 / 1일 1% 목표수익 금액입니다.<br><br>하단 퍼센티지는 초기화 시점 원금 대비 24시간 동안의 수익률을 뜻하며, 목표 달성 시 신규 진입이 차단됩니다.")
+            render_terminal_metric("목표 익절 잠금", f"{sign}${abs(dpnl):.2f}/{daily_target:.2f}", delta=delta_str, is_pnl=True,
+                                   tooltip="초기화 이후 24시간 동안의 누적 확정 수익 합계 / 1일 목표수익 금액입니다.<br>하단 퍼센티지는 초기화 시점 원금 대비 현재의 확정 수익률을 뜻하며, 목표 달성 시 신규 진입이 차단됩니다.")
 
         st.markdown("---")
 
@@ -1323,7 +1323,7 @@ with tabs[0]:
         avg_arrow = "↑" if daily_avg_roi >= 0 else "↓"
         win_arrow = "↑" if win_rate > 50.0 else "↓"
 
-        # 일일 익절 잠금 계산
+        # 일일 익절 잠금 계산 (확정 수익 기준)
         daily_profit_limit = CFG.DAILY_PROFIT_LIMIT_USDT
         is_locked = daily_pnl >= daily_profit_limit
         lock_status = "🔴 LOCKED" if is_locked else "🟢 RUNNING"
@@ -1396,7 +1396,7 @@ with tabs[0]:
                             </span>
                         </span>
                     </div>
-                    <div class="terminal-metric-value" style="color:{lock_value_color};">{daily_pnl:+.2f} / {daily_profit_limit:.2f}</div>
+                    <div class="terminal-metric-value" style="color:{lock_value_color};">{daily_pnl:+.2f}/{daily_profit_limit:.2f}</div>
                     <div class="terminal-metric-sub" style="color:{lock_status_color}; font-weight:bold;">
                         <span style="font-size:0.7rem;">●</span> {lock_status}
                     </div>
@@ -1579,14 +1579,20 @@ with tabs[2]:
     raw_trades = load_local_trade_history()
     paired_history = aggregate_and_pair_trades(raw_trades, active_positions_set=active_positions_set)
 
-    # 동적 종목 필터 리스트 구성
+    # 동적 종목 및 상태 필터 리스트 구성
     history_symbols = sorted(list(set([x["symbol"] for x in paired_history])))
+    history_statuses = sorted(list(set([x.get("status", "") for x in paired_history])))
+    default_statuses = [s for s in history_statuses if s != "청산 완료 (미기록)"]
 
-    h1, h2 = st.columns([2, 1])
+    h1, h1_2, h2 = st.columns([1.5, 1.5, 1])
     with h1:
         def notify_hist_sym():
             st.toast(f"📁 종목 필터가 변경되었습니다: {st.session_state.hist_sym}")
         hist_symbol = st.selectbox("📁 종목 필터 선택", ["전체"] + history_symbols, key="hist_sym", on_change=notify_hist_sym)
+    with h1_2:
+        def notify_hist_status():
+            st.toast(f"🏷️ 상태 필터가 변경되었습니다")
+        hist_statuses = st.multiselect("🏷️ 상태 필터 선택", options=history_statuses, default=default_statuses, key="hist_status", on_change=notify_hist_status)
     with h2:
         sync_disabled = not st.session_state.api_connected or not engine.is_ready
         help_msg = "실시간 거래소 이력을 반영하려면 사이드바에서 API를 연결하세요." if sync_disabled else "거래소에서 최근 100개 체결 이력을 받아와 로컬 CSV로 동기화합니다."
@@ -1601,6 +1607,8 @@ with tabs[2]:
     # 필터링 적용
     if hist_symbol != "전체":
         paired_history = [x for x in paired_history if x["symbol"] == hist_symbol]
+    
+    paired_history = [x for x in paired_history if x.get("status", "") in hist_statuses]
 
     if paired_history:
         df_hist = pd.DataFrame(paired_history)

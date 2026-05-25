@@ -1,4 +1,4 @@
-"""
+﻿"""
 매매 이력 파싱, 병합 및 진입/청산 페어링 헬퍼 모듈
 """
 import os
@@ -190,8 +190,12 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
     df_fills["cost"] = df_fills["price"] * df_fills["amount"]
     df_fills["weighted_pnl_pct"] = df_fills["pnl_pct"] * df_fills["amount"]
 
-    # 그룹화 항목: order_id, symbol, category, side, leverage
-    grouped = df_fills.groupby(["order_id", "symbol", "category", "side", "leverage"], as_index=False).agg({
+    # [FIX] 방향(direction)을 명시적으로 추출하여 side 차이(long vs buy)로 인한 분리 방지
+    df_fills["direction"] = df_fills.apply(lambda row: get_position_direction(row["category"], row["side"]), axis=1)
+
+    # 그룹화 항목: order_id, symbol, category, direction, leverage
+    grouped = df_fills.groupby(["order_id", "symbol", "category", "direction", "leverage"], as_index=False).agg({
+        "side": "first", # downstream compatibility
         "timestamp": "min",  # 가장 빠른 체결 시각
         "amount": "sum",
         "cost": "sum",

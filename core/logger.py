@@ -38,6 +38,22 @@ def _ensure_file():
         except Exception as e:
             print(f"[LOGGER HEADER UPDATE ERROR] {e}")
 
+_logged_cache = set()
+
+def _load_cache():
+    if not _logged_cache and os.path.exists(LOG_FILE):
+        try:
+            with open(LOG_FILE, "r", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    oid = row.get("주문ID", "")
+                    tid = row.get("체결ID", "")
+                    status = row.get("유형", "")
+                    if not oid and not tid: continue
+                    _logged_cache.add(f"{oid}_{tid}_{status}")
+        except Exception:
+            pass
+
 def log_trade(data: dict):
     """
     매매 내역 한 줄 추가
@@ -45,6 +61,17 @@ def log_trade(data: dict):
     """
     try:
         _ensure_file()
+        _load_cache()
+        
+        oid = f"ID_{data.get('order_id', '')}"
+        tid = str(data.get("trade_id", ""))
+        status = data.get("type", "")
+        
+        cache_key = f"{oid}_{tid}_{status}"
+        if (oid != "ID_" or tid != "") and cache_key in _logged_cache:
+            return  # 중복 기록 차단
+            
+        _logged_cache.add(cache_key)
         
         # 한국 시간 변환 (Timestamp 객체인 경우 처리)
         ts = data.get("timestamp")
