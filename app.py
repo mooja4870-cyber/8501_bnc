@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.16"
+    return "v1.0.17"
 
 APP_VERSION = get_git_tag()
 
@@ -1127,7 +1127,8 @@ with tabs[0]:
             lock_text = " 🔴 LOCKED" if is_locked else ""
             delta_str = f"{dpnl_pct:+.2f}%{lock_text}"
             
-            render_terminal_metric("목표 익절 잠금", f"+${dpnl:.2f} / ${daily_target:.2f}", delta=delta_str, is_pnl=True,
+            sign = "+" if dpnl >= 0 else "-"
+            render_terminal_metric("목표 익절 잠금", f"{sign}${abs(dpnl):.2f} / ${daily_target:.2f}", delta=delta_str, is_pnl=True,
                                    tooltip="초기화 이후 24시간 동안의 손익금액 / 1일 1% 목표수익 금액입니다.<br><br>하단 퍼센티지는 초기화 시점 원금 대비 24시간 동안의 수익률을 뜻하며, 목표 달성 시 신규 진입이 차단됩니다.")
 
         st.markdown("---")
@@ -1254,7 +1255,7 @@ with tabs[0]:
         
         # 데이터 계산
         total_pnl = _st.get("total_pnl_usdt", 0.0)
-        daily_pnl = _st.get("daily_pnl_usdt", 0.0)
+        daily_pnl = engine.trader.daily_pnl_usdt if (engine and getattr(engine, 'trader', None)) else _st.get("daily_pnl_usdt", 0.0)
         
         # [v1.2.37] 수익률 계산 기준 업데이트 (stats.json 로드)
         seed_money = _st.get("seed_money", 30.0) # 기준 자산 (동적 로드)
