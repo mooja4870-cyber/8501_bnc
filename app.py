@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.7"
+    return "v1.0.8"
 
 APP_VERSION = get_git_tag()
 
@@ -382,13 +382,14 @@ st.markdown(
     }
     .terminal-tooltip .tooltip-text {
         visibility: hidden;
-        width: 250px;
+        width: 330px;
         background-color: #0b0f19 !important;
         color: #ffffff !important;
-        text-align: center;
+        text-align: left !important;
+        line-height: 1.5 !important;
         border: 1px solid rgba(0, 224, 255, 0.4) !important;
         border-radius: 6px !important;
-        padding: 8px 12px !important;
+        padding: 12px 16px !important;
         position: absolute;
         z-index: 9999 !important;
         bottom: 125%;
@@ -1313,7 +1314,10 @@ with tabs[0]:
                         누적 수익률
                         <span class="terminal-tooltip">
                             ℹ
-                            <span class="tooltip-text">초기화 시점의 총 잔고: {seed_money:,.2f} USDT</span>
+                            <span class="tooltip-text">
+                                [계산식] ((현재 총 잔고 / 초기화 잔고) - 1) * 100<br><br>
+                                버튼 클릭 시점의 거래소 총 잔고({seed_money:,.2f} USDT)를 새로운 원금으로 삼아 현재 실시간 수익률을 표기합니다.
+                            </span>
                         </span>
                     </div>
                     <div class="terminal-metric-value" style="color:{total_color};">{total_pnl_pct:+.2f}%</div>
@@ -1323,7 +1327,16 @@ with tabs[0]:
                 </div>
                 <!-- 일 평균 수익률 -->
                 <div class="terminal-metric-item">
-                    <div class="terminal-metric-label">일 평균 수익률</div>
+                    <div class="terminal-metric-label">
+                        일 평균 수익률
+                        <span class="terminal-tooltip">
+                            ℹ
+                            <span class="tooltip-text">
+                                [계산식] 누적 수익률 / 경과 일수<br><br>
+                                초기화 시점부터 현재까지 경과한 시간(일)으로 누적 수익률을 나눕니다. 첫날 수익률의 뻥튀기를 막기 위해 최소 1.0일로 보정되어 계산됩니다.
+                            </span>
+                        </span>
+                    </div>
                     <div class="terminal-metric-value" style="color:{avg_color};">{daily_avg_roi:+.2f}%</div>
                     <div class="terminal-metric-sub" style="color:#cccccc;">
                         {avg_arrow} {perf_start_dt.strftime("%Y.%m.%d %H:%M")} ~
@@ -1331,7 +1344,16 @@ with tabs[0]:
                 </div>
                 <!-- 누적 승률 -->
                 <div class="terminal-metric-item">
-                    <div class="terminal-metric-label">누적 승률</div>
+                    <div class="terminal-metric-label">
+                        누적 승률
+                        <span class="terminal-tooltip">
+                            ℹ
+                            <span class="tooltip-text">
+                                [계산식] (수익 종료 건수 / 전체 종료 건수) * 100<br><br>
+                                초기화 시점 이후에 청산(종료)된 포지션들만 집계합니다. 분할 체결 건들은 동일 주문번호(ID)로 하나로 묶어 최종 PnL이 양수면 W, 음수면 L로 카운트합니다.
+                            </span>
+                        </span>
+                    </div>
                     <div class="terminal-metric-value" style="color:{win_color};">{win_rate:.1f}%</div>
                     <div class="terminal-metric-sub" style="color:#cccccc;">
                         <span style="font-size:0.7rem;">{win_arrow}</span> {wins}W / {losses}L
@@ -1343,7 +1365,10 @@ with tabs[0]:
                         일일 익절 잠금
                         <span class="terminal-tooltip">
                             ℹ
-                            <span class="tooltip-text">목표 도달 시 당일 추가 진입 잠금 ({CFG.DAILY_PROFIT_LIMIT_USDT:.2f} USDT)</span>
+                            <span class="tooltip-text">
+                                [계산식] 당일 실현 손익 / 하루 목표 익절액<br><br>
+                                초기화 버튼 클릭 시 즉시 0으로 리셋되며, 이후 설정된 하루 목표치({CFG.DAILY_PROFIT_LIMIT_USDT:.2f} USDT)에 도달하면 신규 포지션 진입을 강제로 차단(LOCKED)합니다.
+                            </span>
                         </span>
                     </div>
                     <div class="terminal-metric-value" style="color:{lock_value_color};">{daily_pnl:+.2f} / {daily_profit_limit:.2f}</div>
@@ -1353,7 +1378,16 @@ with tabs[0]:
                 </div>
                 <!-- MDD 한도 -->
                 <div class="terminal-metric-item">
-                    <div class="terminal-metric-label">MDD 한도</div>
+                    <div class="terminal-metric-label">
+                        MDD 한도
+                        <span class="terminal-tooltip">
+                            ℹ
+                            <span class="tooltip-text">
+                                포지션 최대 손실 허용폭(Max Drawdown)입니다.<br><br>
+                                이 수치를 초과하는 순간 서킷 브레이커가 발동하여 봇이 모든 열려있는 포지션을 즉시 강제 청산(시장가 손절)합니다.
+                            </span>
+                        </span>
+                    </div>
                     <div class="terminal-metric-value" style="color:#cccccc;">-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%</div>
                     <div class="terminal-metric-sub" style="color:#cccccc;">
                         <span style="font-size:0.7rem;">↓</span> Max Risk
@@ -1361,7 +1395,16 @@ with tabs[0]:
                 </div>
                 <!-- 금일 주문 -->
                 <div class="terminal-metric-item">
-                    <div class="terminal-metric-label">금일 주문</div>
+                    <div class="terminal-metric-label">
+                        금일 주문
+                        <span class="terminal-tooltip">
+                            ℹ
+                            <span class="tooltip-text">
+                                [계산식] 초기화 이후 발생한 승(W) + 패(L) 합산 건수<br><br>
+                                에러나 진입 유실이 아닌, 정상적으로 진입 후 청산까지 한 사이클이 완전히 종료된 실제 매매 건수만을 엄격하게 카운트하여 표기합니다.
+                            </span>
+                        </span>
+                    </div>
                     <div class="terminal-metric-value">{orders_today}건</div>
                     <div class="terminal-metric-sub" style="color:#ffffff;">
                         <span style="font-size:0.7rem;">↑</span> Today
