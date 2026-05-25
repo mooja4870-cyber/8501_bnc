@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.5"
+    return "v1.0.6"
 
 APP_VERSION = get_git_tag()
 
@@ -1498,10 +1498,11 @@ with tabs[2]:
     active_positions_set = None
     if st.session_state.api_connected and engine.is_ready:
         try:
-            live_pos = engine.client.get_positions()
+            dash = engine.get_dashboard_data()
+            live_pos = dash.get("positions", [])
             active_positions_set = {
                 (p["symbol"], p["side"].upper())
-                for p in live_pos if abs(p["size"]) > 0
+                for p in live_pos if abs(p.get("size", 0)) > 0
             }
         except Exception:
             pass
