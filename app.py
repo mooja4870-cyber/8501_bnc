@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.11"
+    return "v1.0.12"
 
 APP_VERSION = get_git_tag()
 
@@ -1142,7 +1142,7 @@ with tabs[0]:
                 if positions:
                     st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
                     if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
-                        count = engine.client.close_all_positions()
+                        count = engine.close_all_positions()
                         if count > 0:
                             if engine.trader:
                                 engine.trader.trigger_global_cooldown(60)
