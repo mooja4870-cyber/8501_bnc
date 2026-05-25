@@ -3,10 +3,91 @@
 """
 import os
 import pandas as pd
-import numpy as np
 from typing import List, Dict, Optional
-from core.logger import LOG_FILE
+import core.logger as logger_store
 from core.config import CFG
+
+CSV_COLUMNS = {
+    "timestamp": "시간",
+    "symbol": "심볼",
+    "category": "유형",
+    "side": "방향",
+    "price": "가격",
+    "amount": "수량",
+    "pnl": "수익(USDT)",
+    "pnl_pct": "수익률(%)",
+    "leverage": "레버리지",
+    "order_id": "주문ID",
+    "trade_id": "체결ID",
+}
+
+
+def _normalize_id(value) -> str:
+    """CSV/거래소에서 온 주문·체결 ID를 비교 가능한 문자열로 정규화."""
+    if value is None or pd.isna(value):
+        return ""
+    text = str(value).strip()
+    if text.lower() in ("", "nan", "none"):
+        return ""
+    if text.startswith("ID_"):
+        text = text[3:]
+    try:
+        num = float(text)
+        if num.is_integer():
+            return str(int(num))
+    except (TypeError, ValueError):
+        pass
+    return text
+
+
+def _trade_dedupe_key(trade: Dict):
+    trade_id = _normalize_id(trade.get("trade_id"))
+    if trade_id:
+        return ("trade_id", trade.get("symbol"), trade_id)
+
+    timestamp = trade.get("timestamp")
+    if hasattr(timestamp, "strftime"):
+        timestamp = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    return (
+        "fallback",
+        timestamp,
+        trade.get("symbol"),
+        str(trade.get("side", "")).lower(),
+        round(float(trade.get("price") or 0), 12),
+        round(float(trade.get("amount") or 0), 12),
+        round(float(trade.get("pnl") or 0), 12),
+        _normalize_id(trade.get("order_id")),
+    )
+
+
+def _row_to_trade(row) -> Optional[Dict]:
+    order_id = _normalize_id(row.get(CSV_COLUMNS["order_id"], ""))
+    if "MOCK" in order_id or order_id == "":
+        return None
+
+    pnl_val = row.get(CSV_COLUMNS["pnl"], 0.0)
+    pnl = 0.0 if pd.isna(pnl_val) else float(pnl_val)
+
+    pnl_pct_val = row.get(CSV_COLUMNS["pnl_pct"], 0.0)
+    pnl_pct = 0.0 if pd.isna(pnl_pct_val) else float(pnl_pct_val)
+
+    lev_val = row.get(CSV_COLUMNS["leverage"])
+    leverage = CFG.LEVERAGE if pd.isna(lev_val) else int(float(lev_val))
+
+    return {
+        "timestamp": pd.to_datetime(row[CSV_COLUMNS["timestamp"]]),
+        "symbol": row[CSV_COLUMNS["symbol"]],
+        "category": row[CSV_COLUMNS["category"]],
+        "side": row[CSV_COLUMNS["side"]],
+        "price": float(row[CSV_COLUMNS["price"]]),
+        "amount": float(row[CSV_COLUMNS["amount"]]),
+        "pnl": pnl,
+        "pnl_pct": pnl_pct,
+        "leverage": leverage,
+        "order_id": order_id,
+        "trade_id": _normalize_id(row.get(CSV_COLUMNS["trade_id"])),
+    }
+
 
 def get_position_direction(category: str, side: str) -> str:
     """유형(진입/청산)과 방향(buy/sell/long/short) 조합으로 포지션 방향 판별"""
@@ -28,49 +109,59 @@ def get_position_direction(category: str, side: str) -> str:
 
 def load_local_trade_history() -> List[Dict]:
     """local trade_history.csv 로드하여 원본 데이터 리스트 반환 (모의 거래 필터링 포함)"""
-    if not os.path.exists(LOG_FILE):
+    if not os.path.exists(logger_store.LOG_FILE):
         return []
     try:
-        df = pd.read_csv(LOG_FILE, encoding="utf-8-sig")
+        df = pd.read_csv(logger_store.LOG_FILE, encoding="utf-8-sig")
         df.columns = [c.strip() for c in df.columns]
         
         trades = []
+        seen = set()
         for _, row in df.iterrows():
-            order_id = str(row.get("주문ID", "")).replace("ID_", "").strip()
-            
-            # 모의 거래(MOCK) 데이터 필터링하여 실거래 내역 오염 방지
-            if "MOCK" in order_id or order_id == "" or order_id == "nan":
+            trade = _row_to_trade(row)
+            if trade is None:
                 continue
-                
-            pnl_val = row.get("수익(USDT)", 0.0)
-            pnl = 0.0 if pd.isna(pnl_val) else float(pnl_val)
-            
-            pnl_pct_val = row.get("수익률(%)", 0.0)
-            pnl_pct = 0.0 if pd.isna(pnl_pct_val) else float(pnl_pct_val)
-            
-            lev_val = row.get("레버리지")
-            leverage = CFG.LEVERAGE if pd.isna(lev_val) else int(float(lev_val))
-            
-            trade_id_val = row.get("체결ID")
-            trade_id = "" if pd.isna(trade_id_val) else str(trade_id_val).strip()
-            
-            trades.append({
-                "timestamp": pd.to_datetime(row["시간"]),
-                "symbol": row["심볼"],
-                "category": row["유형"],
-                "side": row["방향"],
-                "price": float(row["가격"]),
-                "amount": float(row["수량"]),
-                "pnl": pnl,
-                "pnl_pct": pnl_pct,
-                "leverage": leverage,
-                "order_id": order_id,
-                "trade_id": trade_id,
-            })
+            key = _trade_dedupe_key(trade)
+            if key in seen:
+                continue
+            seen.add(key)
+            trades.append(trade)
         return trades
     except Exception as e:
         print(f"[HISTORY_HELPER] 로컬 CSV 로드 실패: {e}")
         return []
+
+
+def compact_local_trade_history() -> int:
+    """trade_history.csv의 완전 중복 체결 행을 백업 후 제거하고 제거 건수를 반환."""
+    path = logger_store.LOG_FILE
+    if not os.path.exists(path):
+        return 0
+
+    df = pd.read_csv(path, encoding="utf-8-sig")
+    df.columns = [c.strip() for c in df.columns]
+    seen = set()
+    keep_indices = []
+
+    for idx, row in df.iterrows():
+        trade = _row_to_trade(row)
+        if trade is None:
+            keep_indices.append(idx)
+            continue
+        key = _trade_dedupe_key(trade)
+        if key in seen:
+            continue
+        seen.add(key)
+        keep_indices.append(idx)
+
+    removed = len(df) - len(keep_indices)
+    if removed <= 0:
+        return 0
+
+    backup_path = f"{path}.bak"
+    df.to_csv(backup_path, index=False, encoding="utf-8-sig")
+    df.loc[keep_indices].to_csv(path, index=False, encoding="utf-8-sig")
+    return removed
 
 def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional[set] = None) -> List[Dict]:
     """
@@ -79,6 +170,16 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
     """
     if not trades:
         return []
+
+    deduped = []
+    seen = set()
+    for trade in trades:
+        key = _trade_dedupe_key(trade)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(trade)
+    trades = deduped
 
     # ── 1. 주문 ID 단위로 체결 합산 ──
     for idx, t in enumerate(trades):
@@ -236,14 +337,14 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
             
             paired_cycles.append({
                 "entry_time": entry["timestamp"],
-                "exit_time": None if is_actually_holding else entry["timestamp"],
+                "exit_time": None,
                 "symbol": sym,
                 "direction": "🟢 LONG",
                 "entry_price": entry["price"],
-                "exit_price": entry["price"] if not is_actually_holding else None,
+                "exit_price": None,
                 "amount": entry["amount_remaining"],
-                "pnl_usdt": 0.0 if not is_actually_holding else None,
-                "pnl_pct": 0.0 if not is_actually_holding else None,
+                "pnl_usdt": None,
+                "pnl_pct": None,
                 "status": status_str
             })
 
@@ -262,14 +363,14 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
             
             paired_cycles.append({
                 "entry_time": entry["timestamp"],
-                "exit_time": None if is_actually_holding else entry["timestamp"],
+                "exit_time": None,
                 "symbol": sym,
                 "direction": "🔴 SHORT",
                 "entry_price": entry["price"],
-                "exit_price": entry["price"] if not is_actually_holding else None,
+                "exit_price": None,
                 "amount": entry["amount_remaining"],
-                "pnl_usdt": 0.0 if not is_actually_holding else None,
-                "pnl_pct": 0.0 if not is_actually_holding else None,
+                "pnl_usdt": None,
+                "pnl_pct": None,
                 "status": status_str
             })
 

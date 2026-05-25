@@ -1,7 +1,13 @@
 import pytest
 import pandas as pd
 from datetime import datetime, timedelta
-from core.history_helper import get_position_direction, aggregate_and_pair_trades
+import core.logger as logger_store
+from core.history_helper import (
+    aggregate_and_pair_trades,
+    compact_local_trade_history,
+    get_position_direction,
+    load_local_trade_history,
+)
 
 def test_get_position_direction():
     assert get_position_direction("진입", "buy") == "LONG"
@@ -214,15 +220,115 @@ def test_aggregate_and_pair_trades_cross_check():
     paired_not_held = aggregate_and_pair_trades(trades, active_positions_set=set())
     assert len(paired_not_held) == 1
     assert paired_not_held[0]["status"] == "청산 완료 (미기록)"
-    assert paired_not_held[0]["exit_price"] == 3000.0
-    assert paired_not_held[0]["pnl_usdt"] == 0.0
-    assert paired_not_held[0]["exit_time"] == t1
+    assert paired_not_held[0]["exit_price"] is None
+    assert paired_not_held[0]["pnl_usdt"] is None
+    assert paired_not_held[0]["exit_time"] is None
     
     # 2. 실제 보유 중일 때 (세트에 포함시켜 전달)
     paired_held = aggregate_and_pair_trades(trades, active_positions_set={("ETH/USDT:USDT", "SHORT")})
     assert len(paired_held) == 1
     assert paired_held[0]["status"] == "보유 중"
     assert paired_held[0]["exit_time"] is None
+
+def test_aggregate_and_pair_trades_deduplicates_trade_id():
+    t1 = datetime(2026, 5, 20, 10, 0, 0)
+    t2 = datetime(2026, 5, 20, 10, 5, 0)
+    trades = [
+        {
+            "timestamp": t1,
+            "symbol": "BTC/USDT:USDT",
+            "category": "진입",
+            "side": "buy",
+            "price": 60000.0,
+            "amount": 0.1,
+            "pnl": 0.0,
+            "pnl_pct": 0.0,
+            "leverage": 10,
+            "order_id": "100",
+            "trade_id": "entry-fill",
+        },
+        {
+            "timestamp": t2,
+            "symbol": "BTC/USDT:USDT",
+            "category": "청산",
+            "side": "sell",
+            "price": 61000.0,
+            "amount": 0.1,
+            "pnl": 100.0,
+            "pnl_pct": 16.67,
+            "leverage": 10,
+            "order_id": "101",
+            "trade_id": "exit-fill",
+        },
+        {
+            "timestamp": t2,
+            "symbol": "BTC/USDT:USDT",
+            "category": "청산",
+            "side": "sell",
+            "price": 61000.0,
+            "amount": 0.1,
+            "pnl": 100.0,
+            "pnl_pct": 16.67,
+            "leverage": 10,
+            "order_id": "101",
+            "trade_id": "exit-fill",
+        },
+    ]
+
+    paired = aggregate_and_pair_trades(trades)
+
+    assert len(paired) == 1
+    assert paired[0]["status"] == "청산 완료"
+    assert paired[0]["amount"] == 0.1
+    assert paired[0]["pnl_usdt"] == 100.0
+
+def test_load_and_compact_local_trade_history_deduplicates_csv_rows():
+    rows = [
+        {
+            "시간": "2026-05-20 10:00:00",
+            "심볼": "BTC/USDT:USDT",
+            "유형": "진입",
+            "방향": "buy",
+            "가격": 60000.0,
+            "수량": 0.1,
+            "수익(USDT)": 0.0,
+            "수익률(%)": 0.0,
+            "레버리지": 10,
+            "주문ID": "ID_100",
+            "체결ID": "entry-fill",
+        },
+        {
+            "시간": "2026-05-20 10:05:00",
+            "심볼": "BTC/USDT:USDT",
+            "유형": "청산",
+            "방향": "sell",
+            "가격": 61000.0,
+            "수량": 0.1,
+            "수익(USDT)": 100.0,
+            "수익률(%)": 16.67,
+            "레버리지": 10,
+            "주문ID": "ID_101",
+            "체결ID": "exit-fill",
+        },
+        {
+            "시간": "2026-05-20 10:05:00",
+            "심볼": "BTC/USDT:USDT",
+            "유형": "청산",
+            "방향": "sell",
+            "가격": 61000.0,
+            "수량": 0.1,
+            "수익(USDT)": 100.0,
+            "수익률(%)": 16.67,
+            "레버리지": 10,
+            "주문ID": "ID_101",
+            "체결ID": "exit-fill",
+        },
+    ]
+    pd.DataFrame(rows).to_csv(logger_store.LOG_FILE, index=False, encoding="utf-8-sig")
+
+    assert len(load_local_trade_history()) == 2
+    assert compact_local_trade_history() == 1
+    assert len(pd.read_csv(logger_store.LOG_FILE, encoding="utf-8-sig")) == 2
 
 def test_aggregate_and_pair_trades_mn_matching():
     t1 = datetime(2026, 5, 20, 10, 0, 0)

@@ -1,3 +1,4 @@
+| v1.0.18 | 2026-05-25 | [Core/Bugfix] 매매 이력 청산 중복 기록 및 진입/청산 동일시각 표시 문제 수정. CSV 체결ID 기준 중복 제거, sync_trades_to_csv 비동기 엔진 복구, 청산 감지 중복 기록 방지, 미기록 청산의 임시 동일가/동일시각 표시 제거, 0손익 reduceOnly 청산 분류 보강 및 회귀 테스트 추가 | Core/Bugfix |
 | v3.5.4 | 2026-05-25 | [UI/UX] 앱 배경 스타일을 우상향 글로우에서 중앙 방사형 딥블루 글로우로 변경, 사이드바 'API 연결 설정' 라벨 및 대시보드 'STRATEGY ENGINE PARAMETERS' 라벨 문구 삭제 | UI/UX |
 | v3.5.3 | 2026-05-24 | v3.5.3 | UI |
 | v3.5.2 | 2026-05-24 | [Config] Git Pre-commit 훅(.pre-commit-config.yaml) 설정 및 자동화 릴리즈 툴(release.py) 스크립트 추가 | Config |

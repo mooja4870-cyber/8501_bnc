@@ -175,8 +175,10 @@ class BinanceClient:
             for t in trades:
                 info = t.get("info", {})
                 side = t.get("side", "").lower()
-                pnl = float(info.get("realizedPnl", 0) or 0)
-                category = "청산" if pnl != 0 else "진입"
+                pnl = float(info.get("realizedPnl", info.get("realizedProfit", 0)) or 0)
+                reduce_only_raw = info.get("reduceOnly", False)
+                reduce_only = str(reduce_only_raw).lower() == "true" if isinstance(reduce_only_raw, str) else bool(reduce_only_raw)
+                category = "청산" if reduce_only or pnl != 0 else "진입"
                 cost = float(t.get("cost", 0) or 0)
                 pnl_pct = 0.0
                 if category == "청산" and pnl != 0 and cost > 0:
@@ -196,6 +198,9 @@ class BinanceClient:
                     "pnl_pct": round(pnl_pct, 2),
                     "fee": round((t.get("fee") or {}).get("cost", 0), 6),
                     "order_id": t.get("order"),
+                    "trade_id": t.get("id"),
+                    "reduce_only": reduce_only,
+                    "position_side": info.get("positionSide", ""),
                 })
             return result
         except Exception as e:
