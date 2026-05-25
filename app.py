@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.12"
+    return "v1.0.13"
 
 APP_VERSION = get_git_tag()
 
@@ -958,7 +958,7 @@ with st.sidebar:
 
 # [v3.0.4] 시간, 상태, 버튼을 우측에 동일한 크기의 버튼 스타일로 나란히 배치
 st.markdown('<div class="floating-header-wrapper"></div>', unsafe_allow_html=True)
-col_empty, col_time, col_status, col_refresh = st.columns([5.5, 1.8, 1.5, 1.2])
+col_empty, col_time, col_status = st.columns([6.7, 1.8, 1.5])
 
 with col_time:
     now_kst = datetime.utcnow() + timedelta(hours=9)
@@ -987,10 +987,6 @@ with col_status:
             '<span class="dot"></span>STOPPED</div>',
             unsafe_allow_html=True,
         )
-
-with col_refresh:
-    if st.button("⟳ REFRESH", key="global_refresh", use_container_width=True):
-        st.rerun()
 
 
 # ══════════════════════════════════════════════════════
