@@ -157,7 +157,8 @@ def sync_daily_stats_from_csv():
         
         kst = pytz.timezone('Asia/Seoul')
         if df['timestamp'].dt.tz is None:
-            df['timestamp'] = df['timestamp'].dt.tz_localize(kst)
+            df['timestamp'] = df['timestamp'].dt.tz_localize('UTC')
+        df['timestamp'] = df['timestamp'].dt.tz_convert(kst)
         
         data = load_stats() # 이것이 cycle_start_time을 갱신합니다.
         cycle_start_str = data.get("cycle_start_time")
