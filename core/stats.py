@@ -111,3 +111,48 @@ def _write(data: Dict):
     _ensure_dir()
     with open(STATS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+
+def sync_daily_stats_from_csv():
+    """로컬 CSV 매매 이력을 읽어와서 오늘(KST) 하루 동안의 실제 청산 손익을 계산하고 stats.json에 덮어씌움"""
+    try:
+        from core.history_helper import load_local_trade_history
+        import pandas as pd
+        import pytz
+        from datetime import datetime
+        
+        trades = load_local_trade_history()
+        if not trades:
+            return 0.0
+            
+        df = pd.DataFrame(trades)
+        if df.empty or 'timestamp' not in df.columns:
+            return 0.0
+            
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        
+        kst = pytz.timezone('Asia/Seoul')
+        if df['timestamp'].dt.tz is None:
+            df['timestamp'] = df['timestamp'].dt.tz_localize('UTC')
+        df['timestamp'] = df['timestamp'].dt.tz_convert(kst)
+        df['date'] = df['timestamp'].dt.date
+        
+        today = datetime.now(kst).date()
+        today_exits = df[(df['date'] == today) & (df['category'].str.contains('청산'))]
+        
+        daily_pnl = round(float(today_exits['pnl'].sum()), 4)
+        orders_today = len(today_exits)
+        
+        data = load_stats()
+        data['daily_pnl_usdt'] = daily_pnl
+        data['orders_today'] = orders_today
+        data['today_date'] = str(today)
+        _write(data)
+        
+        logger.info(f"[STATS] CSV 기반 오늘(KST) 수익금 재보정 완료: {daily_pnl} USDT (총 {orders_today}건)")
+        return daily_pnl
+    except Exception as e:
+        logger.error(f"CSV 통계 재계산 중 오류: {e}")
+        data = load_stats()
+        return data.get('daily_pnl_usdt', 0.0)

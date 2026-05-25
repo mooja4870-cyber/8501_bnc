@@ -594,6 +594,16 @@ class QuantumEngine:
 
         if new_count:
             logger.info(f"로컬 CSV에 {new_count}개의 새로운 거래 내역을 추가 동기화했습니다.")
+            
+        try:
+            import core.stats as stats_store
+            if hasattr(stats_store, "sync_daily_stats_from_csv"):
+                dpnl = stats_store.sync_daily_stats_from_csv()
+                if getattr(self, "trader", None):
+                    self.trader.daily_pnl_usdt = dpnl
+        except Exception as e:
+            logger.error(f"동기화 후 일일 통계 재계산 실패: {e}")
+
         return removed + new_count
 
     async def _is_flow_bad_async(self, p: Dict) -> bool:
