@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.15"
+    return "v1.0.16"
 
 APP_VERSION = get_git_tag()
 
@@ -348,6 +348,11 @@ st.markdown(
         border-right: 1px solid var(--glass-border);
         padding: 0 20px;
         transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
     }
     .terminal-metric-item:last-child { border-right: none; }
     .terminal-metric-item:hover {
@@ -361,6 +366,7 @@ st.markdown(
         margin-bottom: 4px;
         display: flex;
         align-items: center;
+        justify-content: center;
     }
 
     /* 커스텀 금융 터미널 툴팁 */
@@ -413,6 +419,7 @@ st.markdown(
         font-weight: 700;
         color: #ffffff;
         line-height: 1.1;
+        text-align: center;
     }
     .terminal-metric-sub {
         font-family: 'JetBrains Mono', monospace;
@@ -420,6 +427,7 @@ st.markdown(
         margin-top: 4px;
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 4px;
     }
 
@@ -1077,8 +1085,8 @@ with tabs[0]:
             st.markdown(
                 f"""
                 <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:8px; height:105px;
-                            box-shadow: 0 4px 20px {border_glow}; transition: all 0.3s ease;">
-                    <div style="color:#cccccc; font-size:0.85rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center;">
+                            box-shadow: 0 4px 20px {border_glow}; transition: all 0.3s ease; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;">
+                    <div style="color:#cccccc; font-size:0.85rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; justify-content:center;">
                         {label} {tooltip_html}
                     </div>
                     <div style="color:{color}; font-size:1.5rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
