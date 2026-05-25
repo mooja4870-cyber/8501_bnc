@@ -36,7 +36,11 @@ class TradingConfig:
     # ── 리스크 한도 ────────────────────────────────────
     MAX_DRAWDOWN_PCT: float = 0.10        # 최대 낙폭 10% 초과 시 전략 중단
     DAILY_LOSS_LIMIT_USDT: float = 4.0   # 일일 손실 한도 (원금 대비 ~10% 수준인 $4.0 적용)
-    DAILY_PROFIT_LIMIT_USDT: float = 0.8  # 일일 익절 잠금 한도 (원금 대비 ~2% 수준인 $0.80 도달 시 진입 제한)
+    # 자동 익절 잠금 설정
+    USE_AUTO_PROFIT_LIMIT: bool = True  # 매일 00시 총 잔고 기반으로 익절 잠금 한도 자동 산출 여부
+    AUTO_DAILY_PROFIT_PCT: float = 0.20 # 자동 산출 시 적용할 총 잔고 대비 비율 (기본 20%)
+    
+    DAILY_PROFIT_LIMIT_USDT: float = 0.8  # 일일 익절 잠금 한도 (수동 설정용)
     MIN_REQUIRED_BALANCE_USDT: float = 1.0 # 최소 필요 잔고 (기본값 1.0 USDT)
     
     # ── 포지션 로테이션 (Stale Position Rotation) 설정 ──

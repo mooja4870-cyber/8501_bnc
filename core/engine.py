@@ -307,12 +307,23 @@ class QuantumEngine:
         }
 
     async def _health_check_loop(self):
+        self._last_auto_limit_date = None
         while True:
             await asyncio.sleep(60)
             if not self.is_ready or self._state == EngineState.ERROR:
                 continue
             try:
-                await self.client.get_balance()
+                balance = await self.client.get_balance()
+                
+                # 매일 자정 자동 익절 잠금 산출 로직 (KST 기준)
+                today = datetime.now(timezone(timedelta(hours=9))).date()
+                if self.cfg.USE_AUTO_PROFIT_LIMIT and today != self._last_auto_limit_date:
+                    total_balance = balance.get("total", 0)
+                    if total_balance > 0:
+                        self.cfg.DAILY_PROFIT_LIMIT_USDT = round(total_balance * self.cfg.AUTO_DAILY_PROFIT_PCT, 2)
+                        self._last_auto_limit_date = today
+                        logger.info(f"오늘의 익절 잠금 목표치 자동 갱신: {self.cfg.DAILY_PROFIT_LIMIT_USDT} USDT (총 잔고의 {self.cfg.AUTO_DAILY_PROFIT_PCT*100}%)")
+                        
             except Exception as e:
                 logger.error(f"[HEALTH CHECK] 연결 유실 감지: {e}")
                 self._error_msg = str(e)
