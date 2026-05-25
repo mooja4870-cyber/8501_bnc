@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.0.4"
+    return "v2.0.5"
 
 APP_VERSION = get_git_tag()
 
@@ -1128,15 +1128,15 @@ with tabs[0]:
             except:
                 seed_money = 30.0
             
-            dpnl_pct = (dpnl / seed_money) * 100 if seed_money > 0 else 0.0
+            dpnl_pct = (dpnl / daily_target) * 100 if daily_target > 0 else 0.0
             is_locked = dpnl >= daily_target
             
             lock_text = " 🔴 LOCKED" if is_locked else ""
-            delta_str = f"{dpnl_pct:+.2f}%{lock_text}"
+            delta_str = f"{dpnl_pct:+.1f}%{lock_text}"
             
             sign = "+" if dpnl >= 0 else "-"
             render_terminal_metric("목표 익절 잠금", f"{sign}${abs(dpnl):.2f}/{daily_target:.2f}", delta=delta_str, is_pnl=True,
-                                   tooltip="초기화 이후 24시간 동안의 누적 확정 수익 합계 / 1일 목표수익 금액입니다.<br>하단 퍼센티지는 초기화 시점 원금 대비 현재의 확정 수익률을 뜻하며, 목표 달성 시 신규 진입이 차단됩니다.")
+                                   tooltip="초기화 이후 24시간 동안의 누적 확정 수익 합계 / 1일 목표수익 금액입니다.<br>하단 퍼센티지는 1일 목표수익 대비 달성률을 뜻하며, 100% 목표 달성 시 신규 진입이 차단됩니다.")
 
         st.markdown("---")
 
