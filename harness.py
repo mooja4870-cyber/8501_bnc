@@ -1,14 +1,12 @@
-# AI QUANTUM - Test Harness (v2)
+# AI QUANTUM - Test Harness (v2 Async Compatible)
 # 실제 UI(Streamlit) 없이 엔진의 핵심 로직을 독립적으로 검증하는 하네스
 # --mock 플래그로 실 API 없이 전체 흐름 테스트 가능
-# """
 import time
 import os
-import sys
 import argparse
+import asyncio
 from dotenv import load_dotenv
 from core.engine import QuantumEngine
-
 
 def run_harness(use_mock: bool = False):
     print("=" * 60)
@@ -16,23 +14,25 @@ def run_harness(use_mock: bool = False):
     print("=" * 60)
 
     engine = QuantumEngine()
+    # 엔진의 백그라운드 이벤트 루프가 뜰 때까지 잠시 대기
+    time.sleep(0.5)
 
     if use_mock:
         from core.mock_exchange import MockBinanceClient
         mock = MockBinanceClient()
-        mock.load_markets()
+        # mock.load_markets()는 async 메서드이므로 엔진 루프에서 실행 후 대기
+        asyncio.run_coroutine_threadsafe(mock.load_markets(), engine._loop).result()
         mock.set_scenario("default")
 
-        # 엔진에 Mock 클라이언트 직접 주입
         engine.client = mock
         from core.scanner import Scanner
         from core.trader import AutoTrader
         engine.scanner = Scanner(mock)
         engine.trader = AutoTrader(mock)
         engine.scanner.on_signal = engine.trader.on_signal
-        engine.scanner.on_scan_complete = engine._check_closed_positions
+        engine.scanner.on_scan_complete = engine._check_closed_positions_async
         engine._initialized = True
-        print("[INIT] Mock Engine Initialized")
+        print("[INIT] Mock Engine Initialized (Async)")
     else:
         load_dotenv(override=True)
         api_key = os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY")
