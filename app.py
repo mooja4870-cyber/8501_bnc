@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.3"
+    return "v1.0.4"
 
 APP_VERSION = get_git_tag()
 
@@ -266,11 +266,17 @@ st.markdown(
         border-radius: 6px !important;
         white-space: nowrap !important;
     }
+    @keyframes live-blink {
+        0% { opacity: 1; box-shadow: inset 0 0 15px rgba(16, 185, 129, 0.4), 0 0 15px rgba(16, 185, 129, 0.6); border-color: rgba(16, 185, 129, 0.8); }
+        50% { opacity: 0.6; box-shadow: inset 0 0 5px rgba(16, 185, 129, 0.1), 0 0 5px rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.3); }
+        100% { opacity: 1; box-shadow: inset 0 0 15px rgba(16, 185, 129, 0.4), 0 0 15px rgba(16, 185, 129, 0.6); border-color: rgba(16, 185, 129, 0.8); }
+    }
     .header-badge-live {
-        border-color: rgba(16, 185, 129, 0.4) !important;
-        color: var(--terminal-green) !important;
-        background: rgba(16, 185, 129, 0.08) !important;
-        box-shadow: inset 0 0 8px rgba(16, 185, 129, 0.05) !important;
+        border-color: rgba(16, 185, 129, 0.8) !important;
+        color: #10b981 !important;
+        font-weight: 800 !important;
+        background: rgba(16, 185, 129, 0.15) !important;
+        animation: live-blink 1.2s infinite ease-in-out !important;
     }
     .header-badge-live .dot {
         width: 8px; height: 8px;
@@ -965,7 +971,13 @@ with col_time:
     )
 
 with col_status:
-    if st.session_state.auto_trading:
+    _engine = st.session_state.get("engine")
+    is_live = False
+    if _engine and _engine.is_ready:
+        if getattr(_engine, "_state", None) and _engine._state.name == "TRADING":
+            is_live = True
+
+    if is_live:
         st.markdown(
             '<div class="header-btn-like header-badge-live">'
             '<span class="dot"></span>LIVE CONNECTION</div>',
