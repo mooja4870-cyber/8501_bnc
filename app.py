@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.6"
+    return "v1.0.7"
 
 APP_VERSION = get_git_tag()
 
@@ -1249,7 +1249,7 @@ with tabs[0]:
         daily_avg_roi = total_pnl_pct / elapsed_days
         
         # [v1.2.44] 매매 이력 기반 실시간 승률 계산 (분할 체결 통합 로직)
-        all_trades = engine.get_trade_history(limit=100)
+        all_trades = load_local_trade_history()
         
         # 성과 측정 시작 시각(perf_start_dt) 이후의 '청산' 거래만 필터링
         today_exits = []
