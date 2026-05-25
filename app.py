@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.8"
+    return "v1.0.9"
 
 APP_VERSION = get_git_tag()
 
@@ -1052,7 +1052,7 @@ with tabs[0]:
         # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
         m1, m2, m3, m4, m5, m6 = st.columns(6)
         
-        def render_terminal_metric(label, value, delta=None, is_pnl=False):
+        def render_terminal_metric(label, value, delta=None, is_pnl=False, tooltip=None):
             if is_pnl:
                 try:
                     val_num = float(str(value).split('/')[0].replace('$','').replace(',','').replace('+',''))
@@ -1061,8 +1061,8 @@ with tabs[0]:
                 color = "#ef4444" if val_num >= 0 else "#3b82f6"
                 border_glow = "rgba(239, 68, 68, 0.15)" if val_num >= 0 else "rgba(59, 130, 246, 0.15)"
             else:
-                color = "#ffffff" # 일반 지표는 중립 색상(White) 적용
-                border_glow = "rgba(0, 224, 255, 0.12)" # 아쿠아 블루
+                color = "#ffffff"
+                border_glow = "rgba(0, 224, 255, 0.12)"
             
             delta_html = ""
             if delta is not None:
@@ -1073,12 +1073,18 @@ with tabs[0]:
                 except ValueError:
                     d_color = "#ef4444" if "🔴" in str(delta) or "LOCKED" in str(delta) else "#10b981"
                     delta_html = f'<div style="color:{d_color}; font-size:0.9rem; margin-top:2px; font-family:\'JetBrains Mono\'; font-weight:700;">{delta}</div>'
+            
+            tooltip_html = ""
+            if tooltip:
+                tooltip_html = f'<span class="terminal-tooltip" style="margin-left:6px;">ℹ<span class="tooltip-text">{tooltip}</span></span>'
                 
             st.markdown(
                 f"""
                 <div style="background:#0f0f0f; border:1px solid #262626; padding:12px; border-radius:8px; height:105px;
                             box-shadow: 0 4px 20px {border_glow}; transition: all 0.3s ease;">
-                    <div style="color:#cccccc; font-size:0.85rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em;">{label}</div>
+                    <div style="color:#cccccc; font-size:0.85rem; font-family:\'JetBrains Mono\'; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center;">
+                        {label} {tooltip_html}
+                    </div>
                     <div style="color:{color}; font-size:1.5rem; font-family:\'JetBrains Mono\'; font-weight:700; margin-top:4px;">{value}</div>
                     {delta_html}
                 </div>
@@ -1087,22 +1093,28 @@ with tabs[0]:
             )
 
         with m1:
-            render_terminal_metric("💰 총 잔고 (USDT)", f"${dash['total_balance']:,.2f}")
+            render_terminal_metric("💰 총 잔고", f"${dash['total_balance']:,.2f}", 
+                                   tooltip="거래소 지갑에 있는 실제 총 자산(USDT)입니다.<br><br>미실현 손익(PnL)은 아직 포함되지 않은, 가용 증거금과 사용 중인 증거금의 총합입니다.")
         with m2:
             total_upnl = sum(p["pnl_usdt"] for p in positions)
-            render_terminal_metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}", is_pnl=True)
+            render_terminal_metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}", is_pnl=True,
+                                   tooltip="현재 열려있는 모든 포지션의 미실현 손익(Unrealized PnL) 총합입니다.<br><br>수수료 및 펀딩비가 실시간으로 반영된 예상 수익입니다.")
         with m3:
             dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
-            render_terminal_metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}", is_pnl=True)
+            render_terminal_metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}", is_pnl=True,
+                                   tooltip="오늘 하루 동안 포지션을 청산(종료)하여 실제로 지갑에 확정된 수익(Realized PnL)의 총합입니다.")
         with m4:
-            render_terminal_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}")
+            render_terminal_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}",
+                                   tooltip="현재 진입한 포지션들을 유지하기 위해 묶여있는 담보금(Margin)입니다.<br><br>레버리지가 곱해진 포지션 전체 규모가 아닌 순수 담보금입니다.")
         with m5:
-            render_terminal_metric("가용 증거금", f"${dash['free_margin']:,.2f}")
+            render_terminal_metric("가용 증거금", f"${dash['free_margin']:,.2f}",
+                                   tooltip="추가로 새로운 포지션에 진입할 때 사용할 수 있는 여유 현금입니다.<br><br>가용 증거금이 부족하면 스캐너가 신호를 띄워도 신규 진입이 차단됩니다.")
         with m6:
             daily_target = CFG.DAILY_PROFIT_LIMIT_USDT
             is_locked = dpnl >= daily_target
             lock_status_text = "🔴 LOCKED (진입 차단)" if is_locked else "🟢 RUNNING (감시 중)"
-            render_terminal_metric("목표 익절 잠금", f"+${dpnl:.2f} / ${daily_target:.2f}", delta=lock_status_text, is_pnl=True)
+            render_terminal_metric("목표 익절 잠금", f"+${dpnl:.2f} / ${daily_target:.2f}", delta=lock_status_text, is_pnl=True,
+                                   tooltip=f"금일 실현 손익이 하루 목표치({daily_target:.2f} USDT)에 도달하면 신규 진입을 강제 차단하여 번 돈을 지키는 기능입니다.")
 
         st.markdown("---")
 
