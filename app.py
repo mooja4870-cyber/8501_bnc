@@ -67,11 +67,11 @@ st.markdown(
     html, body, [data-testid="stAppViewContainer"] {
         background-color: var(--terminal-bg) !important;
         background-image: 
-            /* 중앙 방사형 딥블루 글로우 (요청하신 스타일) */
-            radial-gradient(circle at 50% 45%, rgba(35, 45, 95, 0.35) 0%, rgba(15, 20, 35, 0.1) 50%, transparent 80%),
-            /* 아주 흐릿한 격자무늬 (가로세로 약 1cm 크기: 38px) */
-            linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            /* 중앙에 밝고 외곽으로 갈수록 어두워지는 딥블루 방사형 그래디언트 */
+            radial-gradient(circle at 50% 50%, rgba(35, 60, 105, 0.8) 0%, rgba(10, 15, 30, 0.95) 55%, rgba(3, 4, 8, 1) 100%),
+            /* 흐릿한 격자무늬 (가로세로 약 1cm 크기: 38px) 유지 */
+            linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
         background-size: 100% 100%, 38px 38px, 38px 38px;
         background-attachment: fixed;
         color: var(--terminal-text) !important;
@@ -1178,7 +1178,7 @@ with tabs[0]:
                             if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
                                 # [v1.2.52] 버튼 클릭 즉시 세션 캐시에 추가하여 화면에서 지움
                                 st.session_state.closing_symbols.add(p['symbol'])
-                                if engine.client.close_position(p["symbol"], p["side"]):
+                                if engine.close_position(p["symbol"], p["side"]):
                                     if engine.trader:
                                         engine.trader.trigger_symbol_cooldown(p['symbol'], 60)
                                     st.toast(f"✅ {p['symbol']} 청산 완료")
@@ -1196,7 +1196,7 @@ with tabs[0]:
                 unsafe_allow_html=True,
             )
             engine: QuantumEngine = st.session_state.engine
-            logs = engine.scanner.get_logs(30) if engine.scanner else ["[SYS] 엔진 미연결"]
+            logs = engine.get_scanner_logs(30) if engine.scanner else ["[SYS] 엔진 미연결"]
             
             if logs:
                 # 최신 로그(마지막 요소)에 특수 스타일 적용

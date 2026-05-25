@@ -167,4 +167,6 @@
 
 
 v 2 . 0 . 0 - a s y n c   -   A s y n c   E n g i n e   A r c h i t e c t u r e   R e f a c t o r i n g   &   C h a o s   E n g i n e e r i n g   V a l i d a t i o n  
+ v 2 . 0 . 1 - a s y n c - h o t f i x   -   F i x   U I   c o r o u t i n e   T y p e E r r o r   f o r   g e t _ l o g s   a n d   c l o s e _ p o s i t i o n  
+ v 2 . 0 . 1 - a s y n c - h o t f i x   -   F i x   U I   c o r o u t i n e   T y p e E r r o r   f o r   g e t _ l o g s   a n d   c l o s e _ p o s i t i o n  
  

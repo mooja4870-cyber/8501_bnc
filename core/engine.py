@@ -106,6 +106,29 @@ class QuantumEngine:
         future = asyncio.run_coroutine_threadsafe(self._get_dashboard_data_async(), self._loop)
         return future.result()
 
+    def get_scanner_logs(self, last_n: int = 50) -> list[str]:
+        if not self.scanner:
+            return ["[SYS] 엔진 미연결"]
+        future = asyncio.run_coroutine_threadsafe(self.scanner.get_logs(last_n), self._loop)
+        return future.result()
+
+    def clear_scanner_cache(self) -> None:
+        if self.scanner:
+            future = asyncio.run_coroutine_threadsafe(self.scanner.clear_cache(), self._loop)
+            future.result()
+
+    def close_position(self, symbol: str, side: str) -> bool:
+        if not self.is_ready:
+            return False
+        future = asyncio.run_coroutine_threadsafe(self.client.close_position(symbol, side), self._loop)
+        return future.result()
+
+    def close_all_positions(self) -> int:
+        if not self.is_ready:
+            return 0
+        future = asyncio.run_coroutine_threadsafe(self.client.close_all_positions(), self._loop)
+        return future.result()
+
     def get_scan_results(self) -> List[Dict]:
         if not self.scanner: return []
         future = asyncio.run_coroutine_threadsafe(self.scanner.get_results(), self._loop)
