@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.14"
+    return "v1.0.15"
 
 APP_VERSION = get_git_tag()
 
@@ -1480,7 +1480,7 @@ with tabs[1]:
                 )
             else:
                 st.markdown(
-                    '<p style="color:#666;font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;margin-top:5px;">⏹ 스캐너 중지 상태 (자동매매 ON 시 시작)</p>',
+                    '<p style="color:#ef4444;font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;margin-top:5px;font-weight:700;">⏹ 스캔 엔진 중지.... (자동매매 ON 시 시작)</p>',
                     unsafe_allow_html=True
                 )
         with c_time:
