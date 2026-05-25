@@ -35,7 +35,7 @@ class AutoTrader:
         self.orders_today: int = _s.get("orders_today", 0)
         self.daily_pnl_usdt: float = _s.get("daily_pnl_usdt", 0.0)
         self.trade_log: List[Dict] = []
-        self._today: date = date.today()
+        self._cycle_start_time: str = _s.get("cycle_start_time", "")
 
         self.recently_entered: Dict[str, datetime] = {}
         self.global_cooldown_until: Optional[datetime] = None
@@ -190,15 +190,15 @@ class AutoTrader:
         return True, "OK"
 
     def _reset_daily_if_needed(self):
-        today = date.today()
-        if today != self._today:
-            self.daily_pnl_usdt = 0.0
-            self.orders_today = 0
-            self._today = today
-            _s = stats_store.load_stats()
-            _s["orders_today"] = 0
-            _s["daily_pnl_usdt"] = 0.0
-            stats_store.save_stats(_s)
+        from datetime import datetime, timedelta
+        now_kst = datetime.utcnow() + timedelta(hours=9)
+        _s = stats_store.load_stats()
+        current_cycle = _s.get("cycle_start_time", "")
+        
+        if current_cycle and current_cycle != self._cycle_start_time:
+            self.daily_pnl_usdt = _s.get("daily_pnl_usdt", 0.0)
+            self.orders_today = _s.get("orders_today", 0)
+            self._cycle_start_time = current_cycle
 
     def _log_trade(self, sig: Signal, status: str, reason: str = "", result: Optional[Dict] = None):
         entry = {
