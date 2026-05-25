@@ -170,4 +170,5 @@ v 2 . 0 . 0 - a s y n c   -   A s y n c   E n g i n e   A r c h i t e c t u r e 
  v 2 . 0 . 1 - a s y n c - h o t f i x   -   F i x   U I   c o r o u t i n e   T y p e E r r o r   f o r   g e t _ l o g s   a n d   c l o s e _ p o s i t i o n  
  v 2 . 0 . 1 - a s y n c - h o t f i x   -   F i x   U I   c o r o u t i n e   T y p e E r r o r   f o r   g e t _ l o g s   a n d   c l o s e _ p o s i t i o n  
  v 2 . 0 . 2 - a s y n c - h o t f i x   -   R e s i z e   T T M - S q u e e z e - E M A   t i t l e   t e x t   t o   9 5 %   o f   c u r r e n t   s i z e  
+ v 1 . 0 . 1   -   U p d a t e   U I   v e r s i o n   d i s p l a y   t o   1 . 0 . 1   a s   p e r   r e q u e s t  
  

@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.0"
+    return "v1.0.1"
 
 APP_VERSION = get_git_tag()
 
