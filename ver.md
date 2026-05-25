@@ -1,3 +1,4 @@
+| v3.5.4 | 2026-05-25 | [UI/UX] 앱 배경 스타일을 우상향 글로우에서 중앙 방사형 딥블루 글로우로 변경, 사이드바 'API 연결 설정' 라벨 및 대시보드 'STRATEGY ENGINE PARAMETERS' 라벨 문구 삭제 | UI/UX |
 | v3.5.3 | 2026-05-24 | v3.5.3 | UI |
 | v3.5.2 | 2026-05-24 | [Config] Git Pre-commit 훅(.pre-commit-config.yaml) 설정 및 자동화 릴리즈 툴(release.py) 스크립트 추가 | Config |
 | v3.5.1 | 2026-05-24 | [UI] 사이드바 버전(v1.0.0) 텍스트 폰트 크기 122% 확대 적용, 모든 슬라이더/인풋/선택 위젯 값 변경 시 실시간 st.toast 팝업 알림 구현 및 requirements.txt 버전 관리 반영 | UI |
