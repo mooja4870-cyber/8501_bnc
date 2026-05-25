@@ -77,6 +77,10 @@ def log_trade(data: dict):
         ts = data.get("timestamp")
         if hasattr(ts, "strftime"):
             ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
+        elif isinstance(ts, (int, float)):
+            # UTC 밀리초(ms)로 간주하고 KST 텍스트로 변환
+            dt = datetime.fromtimestamp(ts / 1000.0, timezone.utc)
+            ts_str = dt.astimezone(KST).strftime("%Y-%m-%d %H:%M:%S")
         else:
             ts_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
 
