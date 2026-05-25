@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v1.0.4"
+    return "v1.0.5"
 
 APP_VERSION = get_git_tag()
 
@@ -697,10 +697,7 @@ with st.sidebar:
                 st.error(msg)
 
     st.markdown("---")
-    st.markdown(
-        '<p style="font-family:IBM Plex Mono;font-size:0.9rem;color:#cccccc;letter-spacing:0.08em;">🕹️ 매매 제어</p>',
-        unsafe_allow_html=True,
-    )
+
 
     auto = st.toggle(
         "🤖 자동매매 가동 (ON/OFF)",
