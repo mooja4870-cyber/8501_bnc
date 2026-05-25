@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.0.7"
+    return "v2.0.9"
 
 APP_VERSION = get_git_tag()
 
@@ -1260,16 +1260,6 @@ with tabs[0]:
         # ── 고밀도 터미널 메트릭 바 (Image 1 Style) ──────────
         _st = stats_store.load_stats()
         
-        # 데이터 계산
-        total_pnl = _st.get("total_pnl_usdt", 0.0)
-        daily_pnl = engine.trader.daily_pnl_usdt if (engine and getattr(engine, 'trader', None)) else _st.get("daily_pnl_usdt", 0.0)
-        
-        # [v1.2.37] 수익률 계산 기준 업데이트 (stats.json 로드)
-        seed_money = _st.get("seed_money", 30.0) # 기준 자산 (동적 로드)
-        total_pnl_pct = ((dash['total_balance'] / seed_money) - 1) * 100 if seed_money > 0 else 0.0
-        # 24시간 변동률도 시드 대비 비율로 표시
-        daily_pnl_pct = (daily_pnl / seed_money) * 100 if seed_money > 0 else 0.0
-        
         # [v1.2.40] 일 평균 수익률 계산 보정 (최소 1일 기준 - 뻥튀기 방지)
         perf_start_str = _st.get("perf_start_time", "2026-05-15 00:00:00")
         try:
@@ -1281,9 +1271,8 @@ with tabs[0]:
         elapsed_seconds = (now_kst - perf_start_dt).total_seconds()
         # 경과 일수 계산 (보수적 접근: 최소 1.0일로 나누어 첫날 과장 방지)
         elapsed_days = max(elapsed_seconds / 86400.0, 1.0)
-        daily_avg_roi = total_pnl_pct / elapsed_days
         
-        # [v1.2.44] 매매 이력 기반 실시간 승률 계산 (분할 체결 통합 로직)
+        # [v1.2.44] 매매 이력 기반 실시간 실적 집계 (초기화 버튼 클릭 시각 기준)
         all_trades = load_local_trade_history()
         
         # 성과 측정 시작 시각(perf_start_dt) 이후의 '청산' 거래만 필터링
@@ -1303,14 +1292,31 @@ with tabs[0]:
                     except Exception:
                         pass
         
-        # 주문 번호(order_id)별로 그룹화하여 분할 체결 건을 1건으로 통합
+        # 주문 번호(order_id)별로 그룹화하여 분할 체결 건 통합 및 일일 수익금 직접 합산
         order_results = {}
+        daily_pnl = 0.0
         for t in today_exits:
             oid = t.get('order_id')
+            pnl_val = float(t.get('pnl', 0))
+            daily_pnl += pnl_val  # UI 표시용 정확한 합산
             if oid:
                 if oid not in order_results:
                     order_results[oid] = 0.0
-                order_results[oid] += float(t.get('pnl', 0))
+                order_results[oid] += pnl_val
+        
+        # 데이터 계산
+        total_pnl = _st.get("total_pnl_usdt", 0.0)
+        
+        # 엔진의 트레이더 변수도 UI의 실제 값과 동기화 (진입 잠금 목적)
+        if engine and getattr(engine, 'trader', None):
+            engine.trader.daily_pnl_usdt = round(daily_pnl, 4)
+            
+        # [v1.2.37] 수익률 계산 기준 업데이트 (stats.json 로드)
+        seed_money = _st.get("seed_money", 30.0) # 기준 자산 (동적 로드)
+        total_pnl_pct = ((dash['total_balance'] / seed_money) - 1) * 100 if seed_money > 0 else 0.0
+        # 24시간 변동률도 시드 대비 비율로 표시
+        daily_pnl_pct = (daily_pnl / seed_money) * 100 if seed_money > 0 else 0.0
+        daily_avg_roi = total_pnl_pct / elapsed_days
         
         # 통합된 주문별 손익 결과로 승/패 카운트
         wins = len([pnl for pnl in order_results.values() if pnl > 0])
