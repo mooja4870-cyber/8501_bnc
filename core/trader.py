@@ -161,9 +161,6 @@ class AutoTrader:
         if self.daily_pnl_usdt <= -self.cfg.DAILY_LOSS_LIMIT_USDT:
             return False, f"일일 손실 한도 초과: {self.daily_pnl_usdt:.2f} USDT"
 
-        if self.daily_pnl_usdt >= self.cfg.DAILY_PROFIT_LIMIT_USDT:
-            return False, f"일일 목표 익절 한도 달성 완료: {self.daily_pnl_usdt:.2f} >= {self.cfg.DAILY_PROFIT_LIMIT_USDT:.2f} USDT. 당일 추가 진입을 잠금 처리합니다."
-
         balance = await self.client.get_balance()
         total = balance.get("total", 0)
         if total < self.cfg.MIN_REQUIRED_BALANCE_USDT:

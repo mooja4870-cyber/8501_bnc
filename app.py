@@ -959,8 +959,6 @@ with st.sidebar:
                         on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True))
         st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
                         on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True))
-        st.number_input("💵 일일 익절 잠금 (USDT)", 0.1, 100.0, float(CFG.DAILY_PROFIT_LIMIT_USDT), step=0.1, key="sb_daily_profit_limit",
-                        on_change=sync_p, args=("sb_daily_profit_limit", "main_daily_profit_limit", "DAILY_PROFIT_LIMIT_USDT"))
 
 # ══════════════════════════════════════════════════════
 # 메인 헤더 (한 줄 배치)
@@ -1056,7 +1054,7 @@ with tabs[0]:
         }
 
         # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
-        m1, m2, m3, m4, m5, m6 = st.columns(6)
+        m1, m2, m3, m4, m5 = st.columns(5)
         
         def render_terminal_metric(label, value, delta=None, is_pnl=False, tooltip=None):
             if is_pnl:
@@ -1115,23 +1113,7 @@ with tabs[0]:
         with m5:
             render_terminal_metric("가용 증거금", f"${dash['free_margin']:,.2f}",
                                    tooltip="추가로 새로운 포지션에 진입할 때 사용할 수 있는 여유 현금입니다.<br><br>가용 증거금이 부족하면 스캐너가 신호를 띄워도 신규 진입이 차단됩니다.")
-        with m6:
-            daily_target = CFG.DAILY_PROFIT_LIMIT_USDT
-            try:
-                _st = stats_store.load_stats()
-                seed_money = _st.get("seed_money", 30.0)
-            except:
-                seed_money = 30.0
-            
-            dpnl_pct = (dpnl / seed_money) * 100 if seed_money > 0 else 0.0
-            is_locked = dpnl >= daily_target
-            
-            lock_text = " 🔴 LOCKED" if is_locked else ""
-            delta_str = f"{dpnl_pct:+.2f}%{lock_text}"
-            
-            sign = "+" if dpnl >= 0 else "-"
-            render_terminal_metric("목표 익절 잠금", f"{sign}${abs(dpnl):.2f}/{daily_target:.2f}", delta=delta_str, is_pnl=True,
-                                   tooltip="초기화 이후 24시간 동안의 누적 확정 수익 합계 / 1일 목표수익 금액입니다.<br>하단 퍼센티지는 초기화 시점 원금 대비 현재의 확정 수익률을 뜻하며, 목표 달성 시 신규 진입이 차단됩니다.")
+
 
         st.markdown("---")
 
@@ -1327,12 +1309,7 @@ with tabs[0]:
         avg_arrow = "↑" if daily_avg_roi >= 0 else "↓"
         win_arrow = "↑" if win_rate > 50.0 else "↓"
 
-        # 일일 익절 잠금 계산 (확정 수익 기준)
-        daily_profit_limit = CFG.DAILY_PROFIT_LIMIT_USDT
-        is_locked = daily_pnl >= daily_profit_limit
-        lock_status = "🔴 LOCKED" if is_locked else "🟢 RUNNING"
-        lock_status_color = "#ef4444" if is_locked else "#10b981"
-        lock_value_color = "#ef4444" if daily_pnl >= 0 else "#3b82f6"
+
         
         st.markdown(
             f"""
@@ -1388,23 +1365,7 @@ with tabs[0]:
                         <span style="font-size:0.7rem;">{win_arrow}</span> {wins}W / {losses}L
                     </div>
                 </div>
-                <!-- 일일 익절 잠금 -->
-                <div class="terminal-metric-item">
-                    <div class="terminal-metric-label">
-                        일일 익절 잠금
-                        <span class="terminal-tooltip">
-                            ℹ
-                            <span class="tooltip-text">
-                                [계산식] 당일 실현 손익 / 하루 목표 익절액<br><br>
-                                초기화 버튼 클릭 시 즉시 0으로 리셋되며, 이후 설정된 하루 목표치({CFG.DAILY_PROFIT_LIMIT_USDT:.2f} USDT)에 도달하면 신규 포지션 진입을 강제로 차단(LOCKED)합니다.
-                            </span>
-                        </span>
-                    </div>
-                    <div class="terminal-metric-value" style="color:{lock_value_color};">{daily_pnl:+.2f}/{daily_profit_limit:.2f}</div>
-                    <div class="terminal-metric-sub" style="color:{lock_status_color}; font-weight:bold;">
-                        <span style="font-size:0.7rem;">●</span> {lock_status}
-                    </div>
-                </div>
+
                 <!-- MDD 한도 -->
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">
@@ -1775,8 +1736,6 @@ with tabs[4]:
                         on_change=sync_p, args=("main_tp", "sb_tp", "TAKE_PROFIT_PCT", True))
         st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
                         on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True))
-        st.number_input("💵 일일 익절 잠금 (USDT)", 0.1, 100.0, float(CFG.DAILY_PROFIT_LIMIT_USDT), step=0.1, key="main_daily_profit_limit",
-                        on_change=sync_p, args=("main_daily_profit_limit", "sb_daily_profit_limit", "DAILY_PROFIT_LIMIT_USDT"))
         st.number_input("🛡️ 일일 손실 한도 (USDT)", 1.0, 100.0, float(CFG.DAILY_LOSS_LIMIT_USDT), step=1.0, key="main_daily_loss_limit",
                         on_change=sync_p, args=("main_daily_loss_limit", "main_daily_loss_limit", "DAILY_LOSS_LIMIT_USDT"))
 
@@ -1819,7 +1778,6 @@ with tabs[4]:
         f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.92rem;color:#cccccc;line-height:2;">
         손익비: 1 : {CFG.TAKE_PROFIT_PCT / CFG.STOP_LOSS_PCT:.1f} &nbsp;|&nbsp;
         증거금/종목: ${CFG.MARGIN_USDT:.2f} USDT &nbsp;|&nbsp;
-        일일 익절 한도: ${CFG.DAILY_PROFIT_LIMIT_USDT:.2f} USDT &nbsp;|&nbsp;
         일일 손실 한도: ${CFG.DAILY_LOSS_LIMIT_USDT:.2f} USDT <br>
         RSI 설정: 기간 {CFG.RSI_PERIOD} &nbsp;|&nbsp;
         롱 진입 상한: {CFG.RSI_OVERBOUGHT:.1f} &nbsp;|&nbsp;
