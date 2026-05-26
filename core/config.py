@@ -65,8 +65,8 @@ class TradingConfig:
     SSL_PERIOD: int = 10                   # SSL 기간 (기본값 10)
     TIMEFRAME: str = "15m"                 # 캔들 타임프레임 (기본값 15m)
     RSI_PERIOD: int = 14                   # RSI 기간 (기본값 14)
-    RSI_OVERBOUGHT: float = 60.0           # 롱 진입 제한 RSI 상한선 (기본값 60.0)
-    RSI_OVERSOLD: float = 40.0             # 숏 진입 제한 RSI 하한선 (기본값 40.0)
+    RSI_OVERBOUGHT: float = 75.0           # 롱 진입 제한 RSI 상한선 (기본값 75.0)
+    RSI_OVERSOLD: float = 25.0             # 숏 진입 제한 RSI 하한선 (기본값 25.0)
     MOMENTUM_WINDOW: int = 3               # AKMCD 모멘텀 전환 진입 유효 봉수 (기본값 3, 1일 시 기존 극단적 조건)
     TTM_MOM_PERIOD: int = 20               # TTM Squeeze 모멘텀 선형회귀 기간 (기본값 20)
 

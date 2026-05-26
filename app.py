@@ -19,7 +19,7 @@ from core.trader import AutoTrader
 from core.engine import QuantumEngine, EngineState
 import importlib
 import core.config
-importlib.reload(core.config)
+# importlib.reload(core.config) # Removed reload to prevent breaking shared config references in background thread
 from core.config import CFG
 
 import core.stats as stats_store
@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.1.1"
+    return "v2.1.3"
 
 APP_VERSION = get_git_tag()
 
@@ -641,10 +641,19 @@ def sync_p(src_key: str, dst_key: str, cfg_attr: str, is_pct: bool = False):
     for k in dst_keys:
         st.session_state[k] = val
 
-    if is_pct:
-        setattr(CFG, cfg_attr, val / 100.0)
-    else:
-        setattr(CFG, cfg_attr, val)
+    real_val = val / 100.0 if is_pct else val
+    setattr(CFG, cfg_attr, real_val)
+
+    # [v2.1.3] 백그라운드 엔진 및 서브모듈(trader, scanner, strategy)의 실시간 설정 동기화
+    _engine = st.session_state.get("engine")
+    if _engine:
+        setattr(_engine.cfg, cfg_attr, real_val)
+        if _engine.trader:
+            setattr(_engine.trader.cfg, cfg_attr, real_val)
+        if _engine.scanner:
+            setattr(_engine.scanner.cfg, cfg_attr, real_val)
+            if _engine.scanner.strategy:
+                setattr(_engine.scanner.strategy.cfg, cfg_attr, real_val)
 
     # [v3.5.1] 설정 값 변경 알림 팝업 추가
     st.toast(f"⚙️ 설정 값이 변경되었습니다: {cfg_attr} ➔ {val}{'%' if is_pct else ''}")
@@ -909,11 +918,22 @@ with st.sidebar:
         st.session_state.settings_rsi_overbought = float(preset["RSI_OVERBOUGHT"])
         st.session_state.settings_rsi_oversold = float(preset["RSI_OVERSOLD"])
 
-        # ── 5) Trader 엔진 방향 설정 동기화 ──
+        # ── 5) Trader 및 스캐너/엔진 전역 설정 실시간 동기화 ──
         _engine = st.session_state.get("engine")
-        if _engine and _engine.trader:
-            _engine.trader.allow_long = preset["ALLOW_LONG"]
-            _engine.trader.allow_short = preset["ALLOW_SHORT"]
+        if _engine:
+            for k, v in preset.items():
+                setattr(_engine.cfg, k, v)
+            if _engine.trader:
+                _engine.trader.allow_long = preset["ALLOW_LONG"]
+                _engine.trader.allow_short = preset["ALLOW_SHORT"]
+                for k, v in preset.items():
+                    setattr(_engine.trader.cfg, k, v)
+            if _engine.scanner:
+                for k, v in preset.items():
+                    setattr(_engine.scanner.cfg, k, v)
+                if _engine.scanner.strategy:
+                    for k, v in preset.items():
+                        setattr(_engine.scanner.strategy.cfg, k, v)
 
     # [v1.2.90] 인터랙티브 프로 트레이딩 컨트롤러 (동기화 로직 적용)
     
