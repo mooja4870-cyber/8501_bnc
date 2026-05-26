@@ -1365,7 +1365,6 @@ with tabs[0]:
                         <span style="font-size:0.7rem;">{win_arrow}</span> {wins}W / {losses}L
                     </div>
                 </div>
-
                 <!-- MDD 한도 -->
                 <div class="terminal-metric-item">
                     <div class="terminal-metric-label">
