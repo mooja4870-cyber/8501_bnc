@@ -13,10 +13,10 @@ class TradingConfig:
     BASE_URL: str = "https://fapi.binance.com"
 
     # ── 포지션 설정 ──────────────────────────────────────
-    LEVERAGE: int = 5                      # 레버리지 (잔고 $38.94 고려 안전한 5x 적용)
+    LEVERAGE: int = 10                     # 레버리지 (잔고 $38.94 고려 안전한 10x 적용)
     MARGIN_MODE: str = "isolated"          # 격리 마진
-    MARGIN_USDT: float = 4.0               # 1회 진입 증거금 (원금 대비 ~10% 수준인 $4.0 적용)
-    MAX_POSITIONS: int = 3                # 최대 동시 보유 종목 수 (원금 고려 3개 적용)
+    MARGIN_USDT: float = 10.0              # 1회 진입 증거금 (원금 대비 ~10% 수준인 $10.0 적용)
+    MAX_POSITIONS: int = 4                # 최대 동시 보유 종목 수 (원금 고려 4개 적용)
     MAX_HOLDING_HOURS: float = 4.0        # 강제 청산 타임아웃 (4시간 - 15m 봉 16개 분량)
     ALLOW_LONG: bool = True
     ALLOW_SHORT: bool = True
@@ -35,7 +35,7 @@ class TradingConfig:
 
     # ── 리스크 한도 ────────────────────────────────────
     MAX_DRAWDOWN_PCT: float = 0.10        # 최대 낙폭 10% 초과 시 전략 중단
-    DAILY_LOSS_LIMIT_USDT: float = 4.0   # 일일 손실 한도 (원금 대비 ~10% 수준인 $4.0 적용)
+    DAILY_LOSS_LIMIT_USDT: float = 7.0   # 일일 손실 한도 (원금 대비 ~10% 수준인 $7.0 적용)
     DAILY_PROFIT_LIMIT_USDT: float = 0.8  # 일일 익절 잠금 한도 (원금 대비 ~2% 수준인 $0.80 도달 시 진입 제한)
     MIN_REQUIRED_BALANCE_USDT: float = 1.0 # 최소 필요 잔고 (기본값 1.0 USDT)
     

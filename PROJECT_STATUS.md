@@ -1,6 +1,9 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v2.1.5] Strategy Parameter Defaults Re-setting:**
+  - [Config] 대시보드 기본 전략 파라미터 설정을 사용자 지정 값(레버리지 10x, 증거금 10 USDT, 최대 포지션 4개, 스캔 주기 30초, 익절 1.5%, 손절 1.0%, 일일 손실 한도 7 USDT 등)으로 재정의 완료.
+  - [Config] `.env` 설정 파일도 해당 사용자 지정 기본값과 완전히 일치하도록 동기화 수정 완료.
 - **[v2.1.4] ICP/USDT Trade Sync & Old Trade Match Resolution:**
   - [Core/Bugfix] 청산 감지 시 CCXT fetch_my_trades 시간순 정렬 오류로 과거 오래된 청산 거래가 매칭되어 오늘 청산 기록이 누락되고 통계가 오염되던 버그 수정 (`reversed(recent_trades)` 탐색 적용).
   - [Core/Bugfix] 수동 동기화 스크립트 검증을 통하여 누락된 금일의 `ICP/USDT` 손실 거래 및 `RENDER/USDT` 등 거래소 실제 내역이 `trade_history.csv`에 성공적으로 기록됨을 검증 완료.
