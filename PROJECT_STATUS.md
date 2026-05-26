@@ -1,6 +1,9 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v2.1.4] ICP/USDT Trade Sync & Old Trade Match Resolution:**
+  - [Core/Bugfix] 청산 감지 시 CCXT fetch_my_trades 시간순 정렬 오류로 과거 오래된 청산 거래가 매칭되어 오늘 청산 기록이 누락되고 통계가 오염되던 버그 수정 (`reversed(recent_trades)` 탐색 적용).
+  - [Core/Bugfix] 수동 동기화 스크립트 검증을 통하여 누락된 금일의 `ICP/USDT` 손실 거래 및 `RENDER/USDT` 등 거래소 실제 내역이 `trade_history.csv`에 성공적으로 기록됨을 검증 완료.
 - **[v3.2.9] Ghost Holding Positions Resolution:**
   - [Core/UI] 실제 보유하지 않은 포지션이 로컬 기록 상의 미청산 상태로 인해 '보유 중'으로 계속 남아있던 심각한 데이터 불일치 버그 해결.
   - [Core/UI] `core/history_helper.py` 내 진입/청산 페어링 로직에 `active_positions_set` 크로스체크 프로세스 결합.

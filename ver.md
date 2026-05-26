@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v2.1.4 | 2026-05-26 23:36:00 | [Core/Bugfix] 청산 감지 시 CCXT fetch_my_trades 시간순 정렬 오류로 과거 오래된 청산 거래가 매칭되어 오늘 청산 기록이 누락되고 통계가 오염되던 버그 수정 (reversed(recent_trades) 탐색 적용) | Core/Bugfix |
 | v2.1.3 | 2026-05-26 19:54:00 | [Core/Bugfix] Streamlit 세션 리로드 시 config 모듈 재로드(importlib.reload)에 따른 백그라운드 엔진 설정 동기화 누락 버그 해결 및 기본 RSI 필터 제한 완화(75% / 25%) 적용 | Core/Bugfix |
 | v2.1.2 | 2026-05-26 16:56:00 | [UI] SINCE 날짜 시간 표기 오타 수정 (10.34 -> 10:34) | UI/UX |
 

@@ -332,7 +332,7 @@ class QuantumEngine:
                     pnl = 0.0
                     try:
                         recent_trades = await self._maybe_await(self.client.get_trade_history(symbol=sym, limit=5))
-                        exit_trade = next((t for t in recent_trades if t.get("category") == "청산"), None)
+                        exit_trade = next((t for t in reversed(recent_trades) if t.get("category") == "청산"), None)
                         if exit_trade and not self._is_trade_logged(exit_trade):
                             pnl = exit_trade.get("pnl", 0.0)
                             csv_log({
