@@ -1,7 +1,8 @@
-﻿# 🚀 AI QUANTUM - Version History
+# 🚀 AI QUANTUM - Version History
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v2.1.2 | 2026-05-26 16:56:00 | [UI] SINCE 날짜 시간 표기 오타 수정 (10.34 -> 10:34) | UI/UX |
 
 | v2.1.1 | 2026-05-26 10:41:00 | [Core/UI] 목표 익절 잠금 및 일일 익절 잠금 기능/대시보드 UI 완전 제거 | Core/UI |
 
