@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v2.4.6 | 2026-05-28 01:36:00 | [UI] 1) 사이드바 로고 영역의 가동 시작 시각(SINCE)을 2026.05.28 01:34로 수정 및 app.py 버전 동기화 | UI |
 | v2.4.5 | 2026-05-28 01:26:00 | [Config/UI] 1) 1회 진입 증거금(MARGIN_USDT) 기본값을 10 USDT에서 5 USDT로 하향 조정 및 .env 연동 | Config/UI |
 | v2.4.4 | 2026-05-28 01:15:00 | [Config/UI/Test] 1) core/config.py 내 트레일링 스탑 설정(TRAILING_ACTIVATE_PCT, TRAILING_CALLBACK_PCT)을 정식 필드로 등록, 2) 사이드바 및 설정 탭에 트레일링 발동/콜백 조작 위젯 추가 및 .env 실시간 저장 연동, 3) tests/test_strategy.py 내 pandas(pd) 임포트 누락으로 인한 NameError 수정, 4) app.py 내 get_git_tag() 리턴 버전을 v2.4.4로 동기화 수정 | Config/UI/Test |
 | v2.4.3 | 2026-05-28 01:10:00 | [Core/UI] 1) core/exchange.py 내 close_position 시 size에 amount_to_precision 적용하여 정밀도 불일치로 인한 청산 실패 원천 제거, 2) app.py 내 모든 종목 일괄 청산 버튼 클릭 시 active_positions를 즉각 closing_symbols에 등록하여 UI 상에서 지연 없이 바로 사라지도록 즉각 은폐 로직 보강 | Core/UI |

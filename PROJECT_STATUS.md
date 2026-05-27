@@ -1,6 +1,8 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v2.4.6] 사이드바 가동 시작 시각(SINCE) 수정:**
+  - [UI] 사이드바 로고 영역에 노출되는 봇 가동 시작 시각(SINCE) 문자열을 `2026.05.28 01:34`로 수정 및 앱 메타 버전을 `v2.4.6`으로 업데이트 완료했습니다.
 - **[v2.4.5] 1회 진입 증거금 기본값 하향 조정:**
   - [Config/UI] `core/config.py` 및 `.env` 파일의 `MARGIN_USDT` 기본값을 10 USDT에서 5 USDT로 하향 조정하여, 대시보드 로드 시 초기 1회 진입 기본 부담을 경감했습니다.
 - **[v2.4.4] 트레일링 스탑 설정 UI 추가 및 연동:**
