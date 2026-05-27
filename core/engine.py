@@ -378,7 +378,8 @@ class QuantumEngine:
             logger.error(f"청산 감지 오류: {e}")
 
     async def _run_position_rotation_check_async(self, raw_positions: List[Dict]):
-        return
+        if not self.cfg.ROTATION_ENABLED:
+            return
 
 
         scan_results = await self._maybe_await(self.scanner.get_results())

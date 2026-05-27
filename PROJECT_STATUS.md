@@ -1,6 +1,9 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v2.4.1] 포지션 로테이션 체크 로직 조건부 활성화 및 테스트 복구:**
+  - [Core] `core/engine.py` 내 비활성화되어 있던 `_run_position_rotation_check_async` 메소드의 시작부에 `if not self.cfg.ROTATION_ENABLED: return` 조건을 추가하여 로테이션 검사를 복구했습니다.
+  - [Test] `test_rotation.py`를 포함한 전체 97개 단위/통합 테스트 케이스가 100% 무오류 통과함을 완료했습니다.
 - **[v2.4.0] 핵심 설정 변수 최소화 및 테스트 호환성 확보:**
   - [Config/Core] `core/config.py` 파일의 비노출 변수를 전면 정리하여 UI에 노출되는 19개 핵심 변수만 남겼습니다.
   - [Core] `TradingConfig`에 `__getattr__` 메소드를 구현하여 기존 핵심 로직 및 테스트가 정상 호환되도록 처리했습니다.
