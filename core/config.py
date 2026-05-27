@@ -74,7 +74,7 @@ def save_config_dict_to_env(config_dict: dict):
 class TradingConfig:
     # ── 포지션 및 운용 설정 ──────────────────────────────
     LEVERAGE: int = get_env_int("LEVERAGE", 10)                     # 레버리지 (기본 10x)
-    MARGIN_USDT: float = get_env_float("MARGIN_USDT", 10.0)         # 1회 진입 증거금 (기본 10.0 USDT)
+    MARGIN_USDT: float = get_env_float("MARGIN_USDT", 5.0)         # 1회 진입 증거금 (기본 5.0 USDT)
     MAX_POSITIONS: int = get_env_int("MAX_POSITIONS", 4)            # 최대 동시 보유 종목 수 (기본 4개)
     SCAN_INTERVAL_SEC: int = get_env_int("SCAN_INTERVAL_SEC", 30)   # 스캔 주기(초) (기본 30초)
     MIN_VOLUME_USDT: float = get_env_float("MIN_VOLUME_USDT", 1_000_000.0)   # 최소 24h 거래대금 (기본 1,000,000 USDT)

@@ -1,6 +1,8 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v2.4.5] 1회 진입 증거금 기본값 하향 조정:**
+  - [Config/UI] `core/config.py` 및 `.env` 파일의 `MARGIN_USDT` 기본값을 10 USDT에서 5 USDT로 하향 조정하여, 대시보드 로드 시 초기 1회 진입 기본 부담을 경감했습니다.
 - **[v2.4.4] 트레일링 스탑 설정 UI 추가 및 연동:**
   - [Config/UI] `core/config.py` 내의 `TRAILING_ACTIVATE_PCT` (기본 1.5%) 및 `TRAILING_CALLBACK_PCT` (기본 0.43%) 변수를 정식 필드로 등재하고, `.env` 로더에 연동 완료했습니다.
   - [UI] 사이드바 "🛡️ 리스크 및 한도 설정" 및 설정 탭의 우측 손익 설정 컬럼에 트레일링 스탑 발동 조건 및 콜백 비율 조정 위젯을 신설하고 실시간 `.env` 저장 프로세스와 동기화했습니다.
