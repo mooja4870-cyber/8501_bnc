@@ -83,6 +83,8 @@ class TradingConfig:
     TAKE_PROFIT_PCT: float = get_env_float("TAKE_PROFIT_PCT", 0.015)          # 익절 1.5% (기본값)
     STOP_LOSS_PCT: float = get_env_float("STOP_LOSS_PCT", 0.01)               # 손절 1.0% (기본값)
     DAILY_LOSS_LIMIT_USDT: float = get_env_float("DAILY_LOSS_LIMIT_USDT", 7.0) # 일일 손실 한도 (기본 7.0 USDT)
+    TRAILING_ACTIVATE_PCT: float = get_env_float("TRAILING_ACTIVATE_PCT", 0.015) # 트레일링 스탑 발동 1.5% (기본값)
+    TRAILING_CALLBACK_PCT: float = get_env_float("TRAILING_CALLBACK_PCT", 0.0043) # 트레일링 스탑 콜백 0.43% (기본값)
 
     # ── 지표 파라미터 ──────────────────────────────────
     BB_PERIOD: int = get_env_int("BB_PERIOD", 20)                    # AKMCD 볼린저밴드 기간 (기본값 20)
@@ -112,8 +114,6 @@ class TradingConfig:
             "ALLOW_SHORT": get_env_bool("ALLOW_SHORT", True),
             "USE_EMA200_FILTER": get_env_bool("USE_EMA200_FILTER", True),
             "USE_RSI_FILTER": get_env_bool("USE_RSI_FILTER", True),
-            "TRAILING_ACTIVATE_PCT": get_env_float("TRAILING_ACTIVATE_PCT", 0.015),
-            "TRAILING_CALLBACK_PCT": get_env_float("TRAILING_CALLBACK_PCT", 0.003),
             "AUTO_TUNE_SL_TP": get_env_bool("AUTO_TUNE_SL_TP", False),
             "MAX_DRAWDOWN_PCT": get_env_float("MAX_DRAWDOWN_PCT", 0.10),
             "DAILY_PROFIT_LIMIT_USDT": get_env_float("DAILY_PROFIT_LIMIT_USDT", 0.8),

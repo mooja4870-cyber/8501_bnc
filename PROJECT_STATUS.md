@@ -1,6 +1,10 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v2.4.4] 트레일링 스탑 설정 UI 추가 및 연동:**
+  - [Config/UI] `core/config.py` 내의 `TRAILING_ACTIVATE_PCT` (기본 1.5%) 및 `TRAILING_CALLBACK_PCT` (기본 0.43%) 변수를 정식 필드로 등재하고, `.env` 로더에 연동 완료했습니다.
+  - [UI] 사이드바 "🛡️ 리스크 및 한도 설정" 및 설정 탭의 우측 손익 설정 컬럼에 트레일링 스탑 발동 조건 및 콜백 비율 조정 위젯을 신설하고 실시간 `.env` 저장 프로세스와 동기화했습니다.
+  - [Test] 97개 유닛 테스트의 무오류 통과를 정상 재확인 완료했습니다.
 - **[v2.4.3] 청산 강건성 확보 및 일괄 청산 UI 지연 제거:**
   - [Core] `core/exchange.py` 내 `close_position` 실행 시 수량에 `amount_to_precision`을 적용하여 소수점 자릿수 불일치에 따른 API 청산 실패 위험을 완전히 해소했습니다.
   - [UI] 사이드바 상단 "모든 종목 일괄청산" 버튼을 클릭할 경우 즉시 활성 포지션 목록의 모든 심볼을 은폐 세션 리스트(`closing_symbols`)에 등록하도록 로직을 보강하여, 거래소 API 리프레시 지연과 무관하게 포지션 카드가 즉시 제거되도록 UI 반응성을 보장했습니다.

@@ -927,6 +927,8 @@ with st.sidebar:
         st.session_state.sb_rsi_period = preset["RSI_PERIOD"]
         st.session_state.sb_rsi_overbought = float(preset["RSI_OVERBOUGHT"])
         st.session_state.sb_rsi_oversold = float(preset["RSI_OVERSOLD"])
+        st.session_state.sb_trailing_activate = round(preset["TRAILING_ACTIVATE_PCT"] * 100, 2)
+        st.session_state.sb_trailing_callback = round(preset["TRAILING_CALLBACK_PCT"] * 100, 2)
         st.session_state.sb_ssl_period = CFG.SSL_PERIOD  # SSL은 프리셋에 없으므로 현재값 유지
 
         # ── 3) 메인 탭 위젯 세션 상태 동기화 ──
@@ -942,6 +944,8 @@ with st.sidebar:
         st.session_state.main_rsi_period = preset["RSI_PERIOD"]
         st.session_state.main_rsi_overbought = float(preset["RSI_OVERBOUGHT"])
         st.session_state.main_rsi_oversold = float(preset["RSI_OVERSOLD"])
+        st.session_state.main_trailing_activate = round(preset["TRAILING_ACTIVATE_PCT"] * 100, 2)
+        st.session_state.main_trailing_callback = round(preset["TRAILING_CALLBACK_PCT"] * 100, 2)
         st.session_state.main_scan_interval = preset["SCAN_INTERVAL_SEC"]
         st.session_state.main_min_vol = float(preset["MIN_VOLUME_USDT"])
 
@@ -1019,6 +1023,10 @@ with st.sidebar:
                         on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True))
         st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
                         on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True))
+        st.number_input("⏱️ 트레일링 발동 (%)", 0.1, 20.0, float(CFG.TRAILING_ACTIVATE_PCT * 100), step=0.1, key="sb_trailing_activate",
+                        on_change=sync_p, args=("sb_trailing_activate", "main_trailing_activate", "TRAILING_ACTIVATE_PCT", True))
+        st.number_input("↩️ 트레일링 콜백 (%)", 0.05, 5.0, float(CFG.TRAILING_CALLBACK_PCT * 100), step=0.05, key="sb_trailing_callback",
+                        on_change=sync_p, args=("sb_trailing_callback", "main_trailing_callback", "TRAILING_CALLBACK_PCT", True))
 
 # ══════════════════════════════════════════════════════
 # 메인 헤더 (한 줄 배치)
@@ -1952,6 +1960,10 @@ with tabs[4]:
                         on_change=sync_p, args=("main_tp", "sb_tp", "TAKE_PROFIT_PCT", True))
         st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
                         on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True))
+        st.number_input("⏱️ 트레일링 발동 (%)", 0.1, 20.0, float(CFG.TRAILING_ACTIVATE_PCT * 100), step=0.1, key="main_trailing_activate",
+                        on_change=sync_p, args=("main_trailing_activate", "sb_trailing_activate", "TRAILING_ACTIVATE_PCT", True))
+        st.number_input("↩️ 트레일링 콜백 (%)", 0.05, 5.0, float(CFG.TRAILING_CALLBACK_PCT * 100), step=0.05, key="main_trailing_callback",
+                        on_change=sync_p, args=("main_trailing_callback", "sb_trailing_callback", "TRAILING_CALLBACK_PCT", True))
         st.number_input("🛡️ 일일 손실 한도 (USDT)", 1.0, 100.0, float(CFG.DAILY_LOSS_LIMIT_USDT), step=1.0, key="main_daily_loss_limit",
                         on_change=sync_p, args=("main_daily_loss_limit", "main_daily_loss_limit", "DAILY_LOSS_LIMIT_USDT"))
 
