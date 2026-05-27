@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.2.1"
+    return "v2.2.3"
 
 APP_VERSION = get_git_tag()
 
@@ -45,31 +45,8 @@ st.set_page_config(
 )
 
 # ── 대시보드 보안 (로그인) ───────────────────────────────────────────
-def check_password():
-    """Returns `True` if the user had the correct password."""
+# 보안 요구사항 해제로 패스워드 검증 제거됨
 
-    def password_entered():
-        if st.session_state.get("dashboard_password", "") == os.getenv("DASHBOARD_PASSWORD", "COco@@5454"):
-            st.session_state["password_correct"] = True
-            if "dashboard_password" in st.session_state:
-                st.session_state["dashboard_password"] = ""  # 보안을 위해 입력값 초기화
-        else:
-            st.session_state["password_correct"] = False
-
-    if "password_correct" not in st.session_state:
-        st.markdown("### 🔒 AI QUANTUM 접속 대기 중...")
-        st.text_input("대시보드 접속 비밀번호를 입력하세요", type="password", on_change=password_entered, key="dashboard_password")
-        return False
-    elif not st.session_state["password_correct"]:
-        st.markdown("### 🔒 AI QUANTUM 접속 대기 중...")
-        st.text_input("대시보드 접속 비밀번호를 입력하세요", type="password", on_change=password_entered, key="dashboard_password")
-        st.error("😕 비밀번호가 틀렸습니다.")
-        return False
-    else:
-        return True
-
-if not check_password():
-    st.stop()  # 비밀번호를 맞추기 전까지 아래의 모든 렌더링 차단
 
 # ── Wall Street Professional Terminal CSS ─────────────────────────────
 st.markdown(
