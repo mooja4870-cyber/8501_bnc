@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.1.7"
+    return "v2.1.8"
 
 APP_VERSION = get_git_tag()
 
@@ -49,7 +49,7 @@ def check_password():
     """Returns `True` if the user had the correct password."""
 
     def password_entered():
-        if st.session_state["dashboard_password"] == os.getenv("DASHBOARD_PASSWORD", "quantum1234"):
+        if st.session_state["dashboard_password"] == os.getenv("DASHBOARD_PASSWORD", "COco@@5454"):
             st.session_state["password_correct"] = True
             del st.session_state["dashboard_password"]  # 보안을 위해 입력값 삭제
         else:
