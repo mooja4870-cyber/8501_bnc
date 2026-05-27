@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.1.9"
+    return "v2.2.0"
 
 APP_VERSION = get_git_tag()
 
@@ -1465,6 +1465,93 @@ with tabs[0]:
             time.sleep(0.5)
             st.rerun()
 
+        # ── 기간별 누적 수익률 차트 ──────────────────────────
+        st.markdown("---")
+        st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">📈 PERFORMANCE CHART (초기화 이후 누적 수익률)</p>', unsafe_allow_html=True)
+        
+        chart_seed_money = _st.get("seed_money", 30.0)
+
+        # 매매 이력 불러와서 청산 거래만 필터링
+        raw_trades = load_local_trade_history()
+        paired_trades = aggregate_and_pair_trades(raw_trades)
+        
+        chart_data = []
+        for p in paired_trades:
+            if str(p.get("status", "")).startswith("청산 완료"):
+                exit_t = p.get("exit_time")
+                if exit_t:
+                    # tz-naive 변환 후 필터링
+                    exit_t_naive = pd.to_datetime(exit_t).replace(tzinfo=None)
+                    if exit_t_naive >= perf_start_dt:
+                        chart_data.append({
+                            "time": exit_t_naive,
+                            "pnl_usdt": float(p.get("pnl_usdt", 0.0))
+                        })
+        
+        if len(chart_data) == 0:
+            st.info("초기화 이후 기록된 청산 매매 내역이 없습니다.")
+        else:
+            df_chart = pd.DataFrame(chart_data)
+            df_chart.sort_values("time", inplace=True)
+            df_chart.set_index("time", inplace=True)
+            
+            # 기간 선택 드롭다운
+            tf_options_map = {
+                "1분": "1min",
+                "5분": "5min",
+                "15분": "15min",
+                "1시간": "1h",
+                "4시간": "4h",
+                "1일": "1d"
+            }
+            col_sel1, _ = st.columns([2, 8])
+            with col_sel1:
+                selected_tf_label = st.selectbox("시간 단위 선택", list(tf_options_map.keys()), index=2)
+            
+            selected_tf = tf_options_map[selected_tf_label]
+            
+            # 선택된 기간으로 리샘플링
+            df_resampled = df_chart.resample(selected_tf).sum()
+            
+            # 누적합(cumsum) 계산
+            df_resampled["cumulative_pnl"] = df_resampled["pnl_usdt"].cumsum()
+            df_resampled["roi_pct"] = (df_resampled["cumulative_pnl"] / chart_seed_money) * 100
+            
+            # 시작점(0%) 행을 앞에 추가
+            df_plot = df_resampled.reset_index()
+            start_row = pd.DataFrame({
+                "time": [perf_start_dt],
+                "pnl_usdt": [0.0],
+                "cumulative_pnl": [0.0],
+                "roi_pct": [0.0]
+            })
+            df_plot = pd.concat([start_row, df_plot], ignore_index=True)
+            
+            # 선그래프 그리기 (Step 형태: hv)
+            fig = px.line(
+                df_plot, 
+                x="time", 
+                y="roi_pct", 
+                labels={"time": "시간", "roi_pct": "누적 수익률 (%)"},
+                line_shape="hv",
+                color_discrete_sequence=["#00e0ff"]
+            )
+            
+            fig.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)",
+                paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=0, r=0, t=20, b=0),
+                height=350,
+                xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", title=""),
+                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", tickformat=".2f", suffix="%"),
+                font=dict(family="JetBrains Mono", size=11, color="#cccccc")
+            )
+            
+            # 0% 기준선 추가 및 투명 글로우 효과
+            fig.add_hline(y=0, line_dash="dash", line_color="rgba(255,255,255,0.2)")
+            fig.update_traces(fill="tozeroy", fillcolor="rgba(0, 224, 255, 0.1)", line=dict(width=2))
+            
+            st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
