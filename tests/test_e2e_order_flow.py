@@ -6,6 +6,7 @@ import pytest
 import sys
 import os
 import time
+import asyncio
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -18,14 +19,14 @@ from core.config import CFG
 def test_full_order_flow_e2e():
     # 1. Mock 거래소 및 트레이더 초기화
     mock = MockBinanceClient()
-    mock.load_markets()
+    asyncio.run(mock.load_markets())
     mock.set_scenario("default")
     
     trader = AutoTrader(mock)
     trader.enable()
     
     # 초기 잔고 상태 기록
-    initial_balance = mock.get_balance()
+    initial_balance = asyncio.run(mock.get_balance())
     assert initial_balance["total"] == 100.0
     assert initial_balance["free"] == 80.0
     assert initial_balance["used"] == 20.0
@@ -47,19 +48,19 @@ def test_full_order_flow_e2e():
     )
     
     # 3. 리스크 게이트 검증
-    ok, reason = trader._risk_check(long_signal)
+    ok, reason = asyncio.run(trader._risk_check(long_signal))
     assert ok is True
     assert reason == "OK"
     
     # 4. 주문 실행 (Signal 수신 → 리스크 게이트 통과 → 주문 실행)
     orders_before = trader.orders_today
-    trader.on_signal(long_signal)
+    asyncio.run(trader.on_signal(long_signal))
     
     # 5. 주문 수량 및 상태 검증
     assert trader.orders_today == orders_before + 1
     
     # 6. Mock 거래소 상태 변화 확인
-    positions = mock.get_positions()
+    positions = asyncio.run(mock.get_positions())
     assert len(positions) == 1
     pos = positions[0]
     
@@ -70,12 +71,12 @@ def test_full_order_flow_e2e():
     assert pos["margin"] > 0
     
     # 잔고 업데이트 검증
-    balance_after = mock.get_balance()
+    balance_after = asyncio.run(mock.get_balance())
     assert balance_after["free"] == initial_balance["free"] - CFG.MARGIN_USDT
     assert balance_after["used"] == initial_balance["used"] + CFG.MARGIN_USDT
     
     # OCO (SL/TP) 설정 검증을 위해 거래 이력에서 order_id 조회 및 검증
-    trades = mock.get_trade_history()
+    trades = asyncio.run(mock.get_trade_history(symbol="BTC/USDT:USDT"))
     assert len(trades) > 0
     entry_trade = [t for t in trades if t["symbol"] == "BTC/USDT:USDT" and t["category"] == "진입"][0]
     assert entry_trade["side"] == "buy"
@@ -83,12 +84,12 @@ def test_full_order_flow_e2e():
     
     # 7. 포지션 강제 청산(손익 청산) 시뮬레이션
     pnl_usdt = pos["pnl_usdt"]
-    success = mock.close_position("BTC/USDT:USDT", "long")
+    success = asyncio.run(mock.close_position("BTC/USDT:USDT", "long"))
     assert success is True
     
     # 청산 완료 후 잔고 상태 최종 검증
-    final_balance = mock.get_balance()
-    assert len(mock.get_positions()) == 0
+    final_balance = asyncio.run(mock.get_balance())
+    assert len(asyncio.run(mock.get_positions())) == 0
     assert final_balance["total"] == initial_balance["total"] + pnl_usdt
 
 

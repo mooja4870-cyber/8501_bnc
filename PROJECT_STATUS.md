@@ -1,6 +1,10 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v2.4.0] 핵심 설정 변수 최소화 및 테스트 호환성 확보:**
+  - [Config/Core] `core/config.py` 파일의 비노출 변수를 전면 정리하여 UI에 노출되는 19개 핵심 변수만 남겼습니다.
+  - [Core] `TradingConfig`에 `__getattr__` 메소드를 구현하여 기존 핵심 로직 및 테스트가 정상 호환되도록 처리했습니다.
+  - [Test] `test_risk.py`, `test_entry_params.py`, `test_regression.py`, `test_performance.py` 등 비동기 테스트 케이스에 `asyncio.run`을 적용하여 100% 완전 무오류 통과를 검증 완료했습니다.
 - **[v2.3.0] 거래량 서지 필터(Volume Surge Filter) 기능 추가:**
   - [Core/Strategy] 진입 전략 지표 계산 시 최근 20봉(VOLUME_SURGE_PERIOD) 평균 대비 현재 봉의 거래량 배수(VOLUME_SURGE_MULTIPLIER = 1.5배) 필터 신설 및 롱/숏 진입 신호 차단 로직(`Signal.vol_surge_ok`) 구현.
   - [UI] 사이드바 및 설정 탭에 거래량 서지 필터 제어 위젯 추가, 스캐너 표에 필터 만족 여부(✅/❌) 열 추가, 포지션 진입 가이드 반영.

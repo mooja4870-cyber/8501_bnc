@@ -21,8 +21,9 @@ from core.config import CFG, TradingConfig
 
 class TestRegressionSuite:
     def setup_method(self):
+        import asyncio
         self.mock = MockBinanceClient()
-        self.mock.load_markets()
+        asyncio.run(self.mock.load_markets())
         self.mock.set_scenario("default")
         self.scanner = Scanner(self.mock)
 
@@ -97,7 +98,8 @@ class TestRegressionSuite:
 
     def test_regression_bulk_tickers_optimization(self):
         """Bulk tickers fetch check to ensure scanner query overhead is reduced"""
-        tickers = self.mock.get_tickers()
+        import asyncio
+        tickers = asyncio.run(self.mock.get_tickers())
         assert len(tickers) > 0
         assert "BTC/USDT:USDT" in tickers
         assert tickers["BTC/USDT:USDT"]["volume"] > 0
@@ -154,7 +156,8 @@ class TestRegressionSuite:
             "BTC/USDT:USDT": {"last": 60000.0, "quoteVolume": 100000000.0, "bid": 59990.0, "ask": 60010.0, "percentage": 1.1},
         })
         
-        tickers = client.get_tickers()
+        import asyncio
+        tickers = asyncio.run(client.get_tickers())
         
         assert "ETH/USDT:USDT" in tickers
         assert tickers["ETH/USDT:USDT"]["last"] == 3000.0
@@ -164,7 +167,7 @@ class TestRegressionSuite:
         
         # 예외 처리 검증
         client.exchange.fetch_tickers = MagicMock(side_effect=Exception("Binance Rate Limit (HTTP 418)"))
-        tickers_err = client.get_tickers()
+        tickers_err = asyncio.run(client.get_tickers())
         assert tickers_err == {}
 
 

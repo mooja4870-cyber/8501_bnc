@@ -23,8 +23,9 @@ def test_performance_and_memory_profiling():
     tracemalloc.start()
     
     # 2. Mock 인스턴스 준비
+    import asyncio
     mock = MockBinanceClient()
-    mock.load_markets()
+    asyncio.run(mock.load_markets())
     scanner = Scanner(mock)
     
     # 3. 메모리 측정 시작 스냅샷
@@ -34,7 +35,7 @@ def test_performance_and_memory_profiling():
     
     # 4. 스캔 1회 시간 측정
     start_time = time.time()
-    scanner._run_once()
+    asyncio.run(scanner._run_once())
     duration = time.time() - start_time
     
     # 5. 메모리 측정 종료 스냅샷

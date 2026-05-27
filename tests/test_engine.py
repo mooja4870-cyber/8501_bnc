@@ -2,7 +2,7 @@
 AI QUANTUM — E2E 통합 테스트
 Mock 환경에서 QuantumEngine 전체 흐름(Init → Scan → Signal → Trade → Close) 검증
 """
-import pytest, sys, os, time
+import pytest, sys, os, time, asyncio
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.engine import QuantumEngine, EngineState
@@ -15,14 +15,14 @@ def _create_mock_engine(scenario="default"):
     """Mock 엔진 팩토리"""
     engine = QuantumEngine()
     mock = MockBinanceClient()
-    mock.load_markets()
+    asyncio.run(mock.load_markets())
     mock.set_scenario(scenario)
 
     engine.client = mock
     engine.scanner = Scanner(mock)
     engine.trader = AutoTrader(mock)
     engine.scanner.on_signal = engine.trader.on_signal
-    engine.scanner.on_scan_complete = engine._check_closed_positions
+    engine.scanner.on_scan_complete = engine._check_closed_positions_async
     engine._initialized = True
     engine._state = EngineState.CONNECTED
     return engine, mock
@@ -38,25 +38,33 @@ class TestFSM:
     def test_connected_to_scanning(self):
         e, _ = _create_mock_engine()
         e.start_scanner()
+        time.sleep(0.1)
         assert e.state == EngineState.SCANNING
 
     def test_scanning_to_trading(self):
         e, _ = _create_mock_engine()
         e.start_scanner()
+        time.sleep(0.1)
         e.enable_trading()
+        time.sleep(0.1)
         assert e.state == EngineState.TRADING
 
     def test_trading_to_scanning(self):
         e, _ = _create_mock_engine()
         e.start_scanner()
+        time.sleep(0.1)
         e.enable_trading()
+        time.sleep(0.1)
         e.disable_trading()
+        time.sleep(0.1)
         assert e.state == EngineState.SCANNING
 
     def test_stop_returns_connected(self):
         e, _ = _create_mock_engine()
         e.start_scanner()
+        time.sleep(0.1)
         e.stop_scanner()
+        time.sleep(0.1)
         assert e.state == EngineState.CONNECTED
 
 
@@ -71,6 +79,7 @@ class TestHealthCheck:
     def test_health_reflects_state(self):
         e, _ = _create_mock_engine()
         e.start_scanner()
+        time.sleep(0.1)
         h = e.get_health()
         assert h["scanner_running"] is True
         assert h["engine_state"] == "SCANNING"
@@ -114,7 +123,7 @@ class TestSingleton:
         from core.trader import AutoTrader
 
         mock = MockBinanceClient()
-        mock.load_markets()
+        asyncio.run(mock.load_markets())
         e.client = mock
         e.scanner = Scanner(mock)
         e.trader = AutoTrader(mock)
