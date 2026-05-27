@@ -38,6 +38,7 @@ class TestPositionRotation:
         self.cfg.ROTATION_MIN_SIGNALS = 3
         self.cfg.ROTATION_STALE_HOURS = 1.5
         self.cfg.ROTATION_FLOW_CHECK = "momentum"
+        self.cfg.MAX_HOLDING_HOURS = 4.0
 
     def test_rotation_executed_on_bad_momentum(self):
         """1안 모멘텀 이탈에 따라 정체 포지션 로테이션 청산이 성공적으로 수행되는지 검증"""

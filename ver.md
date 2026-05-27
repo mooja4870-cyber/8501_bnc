@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v2.4.2 | 2026-05-28 01:05:00 | [Config/UI/Test] 1) core/config.py가 .env 파일 환경 변수값을 읽어 로드하도록 개선, 2) UI 위젯 및 프리셋 값 변경 시 실시간으로 .env 파일에 자동 저장/반영되도록 동기화 구현, 3) test_rotation.py의 로컬 독립성 강화를 위해 MAX_HOLDING_HOURS=4.0 명시적 격리 설정 | Config/UI/Test |
 | v2.4.1 | 2026-05-28 00:49:00 | [Core/Test] 1) core/engine.py 내 포지션 로테이션 체크 로직 조건부 활성화(__getattr__ 호환성 확보), 2) test_rotation.py 및 전체 유닛 테스트 정상 통과 복구 | Core/Test |
 | v2.4.0 | 2026-05-28 00:43:00 | [Config/Core/Test] 1) core/config.py 내 UI 비노출 설정 변수 제거 및 19개 핵심 변수 최소화, 2) 하위 호환성용 __getattr__ 구현, 3) 전체 비동기 테스트 케이스 수정 및 패키지 100% 통과 검증 | Config/Core/Test |
 | v2.3.0 | 2026-05-28 00:32:15 | [Core/Strategy/UI] 거래량 서지 필터(Volume Surge Filter) 도입 및 대시보드 스캐너/설정 탭 연동, 유닛 테스트 보완 | Core/Strategy/UI |

@@ -1,6 +1,10 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v2.4.2] UI 설정값 및 프리셋 .env 실시간 연동 보존 구현:**
+  - [Config/UI] `core/config.py` 파일 내 설정 변수 초기 로드 시 `.env` 환경 변수 값을 우선 동적으로 파싱하여 연동하도록 개선했습니다.
+  - [UI] 사이드바와 설정 탭의 모든 변수 조작(`sync_p` 호출) 및 다중기간 최적 프리셋 로딩 시 변경된 설정값을 `.env` 파일에 실시간 영구 기록/반영하도록 설계하였습니다. 이로써 세션 새로고침 및 서비스 재기동 시 조정한 기본값이 완벽하게 복원됩니다.
+  - [Test] 로컬 `.env` 값 변경에 구애받지 않도록 `test_rotation.py` 내 `MAX_HOLDING_HOURS=4.0` 격리 명시 코드를 보강하여, 97개 전 유닛 테스트 패스를 정상적으로 재검증 완료하였습니다.
 - **[v2.4.1] 포지션 로테이션 체크 로직 조건부 활성화 및 테스트 복구:**
   - [Core] `core/engine.py` 내 비활성화되어 있던 `_run_position_rotation_check_async` 메소드의 시작부에 `if not self.cfg.ROTATION_ENABLED: return` 조건을 추가하여 로테이션 검사를 복구했습니다.
   - [Test] `test_rotation.py`를 포함한 전체 97개 단위/통합 테스트 케이스가 100% 무오류 통과함을 완료했습니다.

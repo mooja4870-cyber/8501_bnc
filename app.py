@@ -662,6 +662,13 @@ def sync_p(src_key: str, dst_key: str, cfg_attr: str, is_pct: bool = False):
     real_val = val / 100.0 if is_pct else val
     setattr(CFG, cfg_attr, real_val)
 
+    # 설정 변경사항을 .env 파일에 실시간 영구 기록
+    from core.config import update_env_value
+    try:
+        update_env_value(cfg_attr, real_val)
+    except Exception as e:
+        st.warning(f"설정 저장 오류: {e}")
+
     # [v2.1.3] 백그라운드 엔진 및 서브모듈(trader, scanner, strategy)의 실시간 설정 동기화
     _engine = st.session_state.get("engine")
     if _engine:
@@ -900,6 +907,13 @@ with st.sidebar:
         CFG.RSI_PERIOD = preset["RSI_PERIOD"]
         CFG.RSI_OVERSOLD = preset["RSI_OVERSOLD"]
         CFG.RSI_OVERBOUGHT = preset["RSI_OVERBOUGHT"]
+
+        # 프리셋 설정 전체를 .env 파일에 실시간 영구 기록
+        from core.config import save_config_dict_to_env
+        try:
+            save_config_dict_to_env(preset)
+        except Exception as e:
+            st.warning(f"프리셋 저장 오류: {e}")
 
         # ── 2) 사이드바 위젯 세션 상태 동기화 ──
         st.session_state.sb_leverage = preset["LEVERAGE"]
