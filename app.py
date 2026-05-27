@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.2.3"
+    return "v2.3.0"
 
 APP_VERSION = get_git_tag()
 
@@ -602,6 +602,14 @@ def init_session():
         "rsi_auto_switch": CFG.USE_RSI_FILTER,
         "active_preset": "기본 (Stable)",
         "closing_symbols": set(), # [v1.2.52] 잔상 방지용 청산 대기 목록
+        "sb_use_vol_surge": CFG.USE_VOLUME_SURGE_FILTER,
+        "sb_vol_surge_period": CFG.VOLUME_SURGE_PERIOD,
+        "sb_vol_surge_mult": CFG.VOLUME_SURGE_MULTIPLIER,
+        "main_use_vol_surge": CFG.USE_VOLUME_SURGE_FILTER,
+        "main_vol_surge_period": CFG.VOLUME_SURGE_PERIOD,
+        "main_vol_surge_mult": CFG.VOLUME_SURGE_MULTIPLIER,
+        "settings_vol_surge_period": CFG.VOLUME_SURGE_PERIOD,
+        "settings_vol_surge_mult": CFG.VOLUME_SURGE_MULTIPLIER,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -975,6 +983,14 @@ with st.sidebar:
         with col_rsi2:
             st.number_input("🔴 RSI 숏 진입 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="sb_rsi_oversold",
                             on_change=sync_p, args=("sb_rsi_oversold", "main_rsi_oversold,settings_rsi_oversold", "RSI_OVERSOLD"))
+
+    with st.expander("🔊 거래량 서지 필터 설정", expanded=False):
+        st.toggle("🔊 거래량 서지 필터 활성화", value=st.session_state.sb_use_vol_surge, key="sb_use_vol_surge",
+                  on_change=sync_p, args=("sb_use_vol_surge", "main_use_vol_surge", "USE_VOLUME_SURGE_FILTER"))
+        st.number_input("⏱️ 거래량 서지 평균 기간", 5, 100, int(st.session_state.sb_vol_surge_period), step=1, key="sb_vol_surge_period",
+                        on_change=sync_p, args=("sb_vol_surge_period", "main_vol_surge_period,settings_vol_surge_period", "VOLUME_SURGE_PERIOD"))
+        st.number_input("📏 거래량 서지 배수", 1.0, 10.0, float(st.session_state.sb_vol_surge_mult), step=0.1, key="sb_vol_surge_mult",
+                        on_change=sync_p, args=("sb_vol_surge_mult", "main_vol_surge_mult,settings_vol_surge_mult", "VOLUME_SURGE_MULTIPLIER"))
 
     with st.expander("⚙️ 운용 및 포지션 설정", expanded=False):
         st.number_input("🚀 레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="sb_leverage",
@@ -1650,12 +1666,21 @@ with tabs[1]:
                 df_scan = df_scan[df_scan["signal"] == "none"]
 
             # 표시용 포맷
+            cols = ["symbol", "price", "change_pct", "volume_m", "signal", "strength", "ema_ok", "macd_ok", "bb_ok", "ema200_ok", "ema200"]
+            col_names = ["종목", "현재가", "등락(%)", "거래대금(M)", "신호", "강도(%)", "추세 방향 일치", "스퀴즈 돌파", "모멘텀 방향", "EMA 200 가드", "EMA 200 가격"]
+
             if CFG.USE_RSI_FILTER:
-                cols = ["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","ema200_ok","ema200","rsi_ok","rsi"]
-                col_names = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","추세 방향 일치","스퀴즈 돌파","모멘텀 방향","EMA 200 가드","EMA 200 가격","RSI 필터","RSI 수치"]
-            else:
-                cols = ["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","ema200_ok","ema200"]
-                col_names = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","추세 방향 일치","스퀴즈 돌파","모멘텀 방향","EMA 200 가드","EMA 200 가격"]
+                cols += ["rsi_ok", "rsi"]
+                col_names += ["RSI 필터", "RSI 수치"]
+
+            if CFG.USE_VOLUME_SURGE_FILTER:
+                cols += ["vol_surge_ok"]
+                col_names += ["거래량 서지"]
+
+            # DataFrame에 존재하는 열만 필터링하여 KeyError 방지
+            valid_pairs = [(c, n) for c, n in zip(cols, col_names) if c in df_scan.columns]
+            cols = [p[0] for p in valid_pairs]
+            col_names = [p[1] for p in valid_pairs]
 
             display = df_scan[cols].copy()
             display.columns = col_names
@@ -1666,6 +1691,8 @@ with tabs[1]:
             display["EMA 200 가드"] = display["EMA 200 가드"].map({True:"✅",False:"❌"})
             if "RSI 필터" in display.columns:
                 display["RSI 필터"] = display["RSI 필터"].map({True:"✅",False:"❌"})
+            if "거래량 서지" in display.columns:
+                display["거래량 서지"] = display["거래량 서지"].map({True:"✅",False:"❌"})
 
 
             def style_pnl(val):
@@ -1828,6 +1855,7 @@ with tabs[3]:
         st.markdown("- **캔들 색상:** 현재 봉의 종가가 이전 봉보다 높은 상승 상태 <span style='color:#ffcc00;'>☞ 양봉 모멘텀 동기화</span>", unsafe_allow_html=True)
         st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 위** <span style='color:#ffcc00;'>☞ 상승 대세 부합 (필수)</span>", unsafe_allow_html=True)
         st.markdown("- **RSI 진입 가드:** RSI가 60 미만인 안전 구간 <span style='color:#ffcc00;'>☞ 추격 매수 노이즈 필터링</span>", unsafe_allow_html=True)
+        st.markdown("- **거래량 서지 가드:** 현재 거래량이 이전 평균 대비 급증 상태 <span style='color:#ffcc00;'>☞ 변동성 및 자금 유입 수반 확인</span>", unsafe_allow_html=True)
 
     with c2:
         st.markdown("**🔴 SHORT 포지션 진입 조건**")
@@ -1846,6 +1874,7 @@ with tabs[3]:
         st.markdown("- **캔들 색상:** 현재 봉의 종가가 이전 봉보다 낮은 하락 상태 <span style='color:#ff3b30;'>☞ 음봉 모멘텀 동기화</span>", unsafe_allow_html=True)
         st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 아래** <span style='color:#ff3b30;'>☞ 하락 대세 부합 (필수)</span>", unsafe_allow_html=True)
         st.markdown("- **RSI 진입 가드:** RSI가 40 초과인 안전 구간 <span style='color:#ff3b30;'>☞ 추격 매도 노이즈 필터링</span>", unsafe_allow_html=True)
+        st.markdown("- **거래량 서지 가드:** 현재 거래량이 이전 평균 대비 급증 상태 <span style='color:#ff3b30;'>☞ 변동성 및 자금 유입 수반 확인</span>", unsafe_allow_html=True)
 
     st.markdown("---")
     
@@ -1940,13 +1969,32 @@ with tabs[4]:
 
     st.markdown("---")
     st.markdown(
+        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#ff9900;letter-spacing:0.1em;margin-top:10px;">VOLUME SURGE FILTER PARAMETERS</p>',
+        unsafe_allow_html=True,
+    )
+    v1, v2, v3 = st.columns(3)
+    with v1:
+        st.toggle("거래량 서지 필터 활성화", value=st.session_state.main_use_vol_surge, key="main_use_vol_surge",
+                  on_change=sync_p, args=("main_use_vol_surge", "sb_use_vol_surge", "USE_VOLUME_SURGE_FILTER"))
+    with v2:
+        st.number_input("거래량 서지 평균 기간", 5, 100, int(st.session_state.settings_vol_surge_period), step=1, key="settings_vol_surge_period",
+                        on_change=sync_p, args=("settings_vol_surge_period", "sb_vol_surge_period,main_vol_surge_period", "VOLUME_SURGE_PERIOD"))
+    with v3:
+        st.number_input("거래량 서지 배수", 1.0, 10.0, float(st.session_state.settings_vol_surge_mult), step=0.1, key="settings_vol_surge_mult",
+                        on_change=sync_p, args=("settings_vol_surge_mult", "sb_vol_surge_mult,main_vol_surge_mult", "VOLUME_SURGE_MULTIPLIER"))
+
+    st.markdown("---")
+    st.markdown(
         f"""<div style="font-family:'IBM Plex Mono',monospace;font-size:0.92rem;color:#cccccc;line-height:2;">
         손익비: 1 : {CFG.TAKE_PROFIT_PCT / CFG.STOP_LOSS_PCT:.1f} &nbsp;|&nbsp;
         증거금/종목: ${CFG.MARGIN_USDT:.2f} USDT &nbsp;|&nbsp;
         일일 손실 한도: ${CFG.DAILY_LOSS_LIMIT_USDT:.2f} USDT <br>
         RSI 설정: 기간 {CFG.RSI_PERIOD} &nbsp;|&nbsp;
         롱 진입 상한: {CFG.RSI_OVERBOUGHT:.1f} &nbsp;|&nbsp;
-        숏 진입 하한: {CFG.RSI_OVERSOLD:.1f}
+        숏 진입 하한: {CFG.RSI_OVERSOLD:.1f} <br>
+        거래량 서지: 활성화 {CFG.USE_VOLUME_SURGE_FILTER} &nbsp;|&nbsp;
+        평균 기간 {CFG.VOLUME_SURGE_PERIOD} &nbsp;|&nbsp;
+        배수 {CFG.VOLUME_SURGE_MULTIPLIER:.1f}배
         </div>""",
         unsafe_allow_html=True,
     )

@@ -1,6 +1,10 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v2.3.0] 거래량 서지 필터(Volume Surge Filter) 기능 추가:**
+  - [Core/Strategy] 진입 전략 지표 계산 시 최근 20봉(VOLUME_SURGE_PERIOD) 평균 대비 현재 봉의 거래량 배수(VOLUME_SURGE_MULTIPLIER = 1.5배) 필터 신설 및 롱/숏 진입 신호 차단 로직(`Signal.vol_surge_ok`) 구현.
+  - [UI] 사이드바 및 설정 탭에 거래량 서지 필터 제어 위젯 추가, 스캐너 표에 필터 만족 여부(✅/❌) 열 추가, 포지션 진입 가이드 반영.
+  - [Test] `test_volume_surge_blocking` 테스트 신설 및 async 클라이언트 연동 문제 완전 해결 완료.
 - **[v2.1.5] Strategy Parameter Defaults Re-setting:**
   - [Config] 대시보드 기본 전략 파라미터 설정을 사용자 지정 값(레버리지 10x, 증거금 10 USDT, 최대 포지션 4개, 스캔 주기 30초, 익절 1.5%, 손절 1.0%, 일일 손실 한도 7 USDT 등)으로 재정의 완료.
   - [Config] `.env` 설정 파일도 해당 사용자 지정 기본값과 완전히 일치하도록 동기화 수정 완료.

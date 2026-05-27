@@ -70,6 +70,11 @@ class TradingConfig:
     MOMENTUM_WINDOW: int = 3               # AKMCD 모멘텀 전환 진입 유효 봉수 (기본값 3, 1일 시 기존 극단적 조건)
     TTM_MOM_PERIOD: int = 20               # TTM Squeeze 모멘텀 선형회귀 기간 (기본값 20)
 
+    # ── 거래량 서지 필터 설정 ──────────────────────────
+    USE_VOLUME_SURGE_FILTER: bool = True     # 거래량 서지 필터 활성화 여부
+    VOLUME_SURGE_PERIOD: int = 20            # 거래량 서지 기간
+    VOLUME_SURGE_MULTIPLIER: float = 1.5     # 거래량 서지 배수 (MA 대비 거래량 배수)
+
     # ── 백테스트 설정 ──────────────────────────────────
     BT_COMMISSION: float = 0.0005         # 수수료 0.05%
     BT_SLIPPAGE: float = 0.0003          # 슬리피지 0.03%

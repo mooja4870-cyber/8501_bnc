@@ -185,6 +185,7 @@ class Scanner:
                     "rsi_ok": sig.rsi_ok,
                     "ema200": round(sig.ema200, 2) if sig.ema200 is not None else 0.0,
                     "ema200_ok": sig.ema200_ok,
+                    "vol_surge_ok": sig.vol_surge_ok,
                     "reason": sig.reason,
                     "timestamp": datetime.now(),
                 })

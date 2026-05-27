@@ -28,6 +28,7 @@ class Signal:
     rsi: float = 50.0       # RSI 값 (기본값 50.0)
     rsi_ok: bool = True     # RSI 필터 충족 여부 (기본값 True)
     ema200_ok: bool = True  # EMA 200 필터 충족 여부 (기본값 True)
+    vol_surge_ok: bool = True # 거래량 서지 필터 충족 여부 (기본값 True)
 
 
 
@@ -65,7 +66,7 @@ class StrategyEngine:
 
     def calculate_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
         """TTM Squeeze + 200 EMA 지표 계산"""
-        required_len = max(self.cfg.BB_PERIOD, self.cfg.EMA_PERIOD, self.cfg.TTM_MOM_PERIOD) + 10
+        required_len = max(self.cfg.BB_PERIOD, self.cfg.EMA_PERIOD, self.cfg.TTM_MOM_PERIOD, self.cfg.VOLUME_SURGE_PERIOD) + 10
         if len(df) < required_len:
             return pd.DataFrame()
 
@@ -133,6 +134,13 @@ class StrategyEngine:
         df['rsi'] = 100 - (100 / (1 + rs))
         df['rsi'] = df['rsi'].fillna(50.0)
 
+        # 7. Volume Surge Filter
+        volume = df['volume']
+        volume_ma = volume.rolling(self.cfg.VOLUME_SURGE_PERIOD).mean()
+        volume_surge = volume > (volume_ma * self.cfg.VOLUME_SURGE_MULTIPLIER)
+        df['volume_ma'] = volume_ma
+        df['volume_surge'] = volume_surge
+
         return df.dropna()
 
     def generate_signal(self, df: pd.DataFrame, symbol: str) -> Signal:
@@ -143,7 +151,8 @@ class StrategyEngine:
             symbol=symbol, direction="none", strength=0,
             ema_ok=False, bb_ok=False, macd_ok=False,
             close=0, ema200=0, bb_upper=0, bb_lower=0,
-            macd_hist=0, reason="데이터 부족", rsi=50.0, rsi_ok=False
+            macd_hist=0, reason="데이터 부족", rsi=50.0, rsi_ok=False,
+            vol_surge_ok=False
         )
 
         if df.empty or len(df) < 5:
@@ -206,7 +215,12 @@ class StrategyEngine:
         cond_long_rsi = (rsi_val < self.cfg.RSI_OVERBOUGHT) if self.cfg.USE_RSI_FILTER else True
         cond_short_rsi = (rsi_val > self.cfg.RSI_OVERSOLD) if self.cfg.USE_RSI_FILTER else True
 
-        # 5. UI 및 컬럼 표시용 상태 매핑 (명시적 bool 변환으로 numpy type 방지)
+        # 5. 거래량 서지 필터
+        vol_val = curr.get('volume', 0.0)
+        vol_ma = curr.get('volume_ma', 0.0)
+        vol_surge_ok = bool(curr.get('volume_surge', True)) if self.cfg.USE_VOLUME_SURGE_FILTER else True
+
+        # 6. UI 및 컬럼 표시용 상태 매핑 (명시적 bool 변환으로 numpy type 방지)
         ema_ok = bool(cond_long_trend if cond_long_mom else (cond_short_trend if cond_short_mom else False))
         macd_ok = bool(squeeze_fired)
         bb_ok = bool(cond_long_mom if cond_long_trend else (cond_short_mom if cond_short_trend else False))
@@ -229,8 +243,18 @@ class StrategyEngine:
                     close=close, ema200=ema200_val,
                     bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
                     macd_hist=macd_hist, rsi=rsi_val, rsi_ok=False,
-                    ema200_ok=bool(cond_long_trend),
+                    ema200_ok=bool(cond_long_trend), vol_surge_ok=vol_surge_ok,
                     reason=f"롱 조건 충족했으나 RSI 과열({rsi_val:.1f} >= {self.cfg.RSI_OVERBOUGHT})로 진입 차단"
+                )
+            if not vol_surge_ok:
+                return Signal(
+                    symbol=symbol, direction="none", strength=80,
+                    ema_ok=ema_ok, bb_ok=bb_ok, macd_ok=macd_ok,
+                    close=close, ema200=ema200_val,
+                    bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
+                    macd_hist=macd_hist, rsi=rsi_val, rsi_ok=cond_long_rsi,
+                    ema200_ok=bool(cond_long_trend), vol_surge_ok=False,
+                    reason=f"롱 조건 충족했으나 거래량 서지 미달(거래량: {vol_val:.1f} < MA: {vol_ma * self.cfg.VOLUME_SURGE_MULTIPLIER:.1f})로 진입 차단"
                 )
             strength = compute_strength(cond_long_trend, squeeze_fired, cond_long_mom, cond_long_candle)
             return Signal(
@@ -239,7 +263,7 @@ class StrategyEngine:
                 close=close, ema200=ema200_val,
                 bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
                 macd_hist=macd_hist, rsi=rsi_val, rsi_ok=True,
-                ema200_ok=bool(cond_long_trend),
+                ema200_ok=bool(cond_long_trend), vol_surge_ok=True,
                 reason=f"TTM 스퀴즈 롱 돌파 포착 (강도 {strength}%, RSI {rsi_val:.1f})"
             )
 
@@ -252,8 +276,18 @@ class StrategyEngine:
                     close=close, ema200=ema200_val,
                     bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
                     macd_hist=macd_hist, rsi=rsi_val, rsi_ok=False,
-                    ema200_ok=bool(cond_short_trend),
+                    ema200_ok=bool(cond_short_trend), vol_surge_ok=vol_surge_ok,
                     reason=f"숏 조건 충족했으나 RSI 과매도({rsi_val:.1f} <= {self.cfg.RSI_OVERSOLD})로 진입 차단"
+                )
+            if not vol_surge_ok:
+                return Signal(
+                    symbol=symbol, direction="none", strength=80,
+                    ema_ok=ema_ok, bb_ok=bb_ok, macd_ok=macd_ok,
+                    close=close, ema200=ema200_val,
+                    bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
+                    macd_hist=macd_hist, rsi=rsi_val, rsi_ok=cond_short_rsi,
+                    ema200_ok=bool(cond_short_trend), vol_surge_ok=False,
+                    reason=f"숏 조건 충족했으나 거래량 서지 미달(거래량: {vol_val:.1f} < MA: {vol_ma * self.cfg.VOLUME_SURGE_MULTIPLIER:.1f})로 진입 차단"
                 )
             strength = compute_strength(cond_short_trend, squeeze_fired, cond_short_mom, cond_short_candle)
             return Signal(
@@ -262,7 +296,7 @@ class StrategyEngine:
                 close=close, ema200=ema200_val,
                 bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
                 macd_hist=macd_hist, rsi=rsi_val, rsi_ok=True,
-                ema200_ok=bool(cond_short_trend),
+                ema200_ok=bool(cond_short_trend), vol_surge_ok=True,
                 reason=f"TTM 스퀴즈 숏 돌파 포착 (강도 {strength}%, RSI {rsi_val:.1f})"
             )
 
@@ -275,7 +309,7 @@ class StrategyEngine:
                 close=close, ema200=ema200_val,
                 bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
                 macd_hist=macd_hist, rsi=rsi_val, rsi_ok=cond_long_rsi,
-                ema200_ok=bool(cond_long_trend),
+                ema200_ok=bool(cond_long_trend), vol_surge_ok=vol_surge_ok,
                 reason="조건 일부 미충족 (스퀴즈 대기 또는 모멘텀/캔들색상 미확보)"
             )
 
@@ -287,7 +321,7 @@ class StrategyEngine:
                 close=close, ema200=ema200_val,
                 bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
                 macd_hist=macd_hist, rsi=rsi_val, rsi_ok=cond_short_rsi,
-                ema200_ok=bool(cond_short_trend),
+                ema200_ok=bool(cond_short_trend), vol_surge_ok=vol_surge_ok,
                 reason="조건 일부 미충족 (스퀴즈 대기 또는 모멘텀/캔들색상 미확보)"
             )
 
@@ -297,6 +331,6 @@ class StrategyEngine:
             close=close, ema200=ema200_val,
             bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
             macd_hist=macd_hist, rsi=rsi_val, rsi_ok=True,
-            ema200_ok=False,
+            ema200_ok=False, vol_surge_ok=vol_surge_ok,
             reason="추세 판독 불가 — 신호 없음"
         )

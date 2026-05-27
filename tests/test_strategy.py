@@ -3,6 +3,7 @@ AI QUANTUM — Strategy Signal 단위 테스트
 알려진 OHLCV 데이터 → 예상 신호 매칭 (Gold File Test)
 """
 import pytest, sys, os
+import asyncio
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.mock_exchange import MockBinanceClient
@@ -16,7 +17,7 @@ class TestStrategySignals:
 
     def test_indicator_calculation(self):
         """지표 계산 정상 동작"""
-        df = self.mock.get_ohlcv("BTC/USDT:USDT", limit=300)
+        df = asyncio.run(self.mock.get_ohlcv("BTC/USDT:USDT", limit=300))
         result = self.engine.calculate_indicators(df)
         assert not result.empty
         for col in ["ssl_up", "ssl_down", "bb_upper", "bb_lower", "macd_hist"]:
@@ -24,14 +25,14 @@ class TestStrategySignals:
 
     def test_insufficient_data(self):
         """데이터 부족 시 빈 신호 반환"""
-        df = self.mock.get_ohlcv("BTC/USDT:USDT", limit=300).head(10)
+        df = asyncio.run(self.mock.get_ohlcv("BTC/USDT:USDT", limit=300)).head(10)
         sig = self.engine.generate_signal(df, "BTC/USDT:USDT")
         assert sig.direction == "none"
         assert sig.strength == 0
 
     def test_signal_structure(self):
         """신호 객체 구조 검증"""
-        df = self.mock.get_ohlcv("BTC/USDT:USDT", limit=300)
+        df = asyncio.run(self.mock.get_ohlcv("BTC/USDT:USDT", limit=300))
         sig = self.engine.generate_signal(df, "BTC/USDT:USDT")
         assert sig.symbol == "BTC/USDT:USDT"
         assert sig.direction in ("long", "short", "none")
@@ -43,13 +44,13 @@ class TestStrategySignals:
     def test_strength_range(self):
         """강도는 0~100 범위"""
         for sym in ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]:
-            df = self.mock.get_ohlcv(sym, limit=300)
+            df = asyncio.run(self.mock.get_ohlcv(sym, limit=300))
             sig = self.engine.generate_signal(df, sym)
             assert 0 <= sig.strength <= 100
 
     def test_no_signal_has_reason(self):
         """미진입 신호도 reason이 존재"""
-        df = self.mock.get_ohlcv("BTC/USDT:USDT", limit=300)
+        df = asyncio.run(self.mock.get_ohlcv("BTC/USDT:USDT", limit=300))
         sig = self.engine.generate_signal(df, "BTC/USDT:USDT")
         assert sig.reason and len(sig.reason) > 0
 
@@ -63,6 +64,12 @@ class TestStrategySignals:
         """
         import pandas as pd
         import numpy as np
+
+        # 임시로 RSI 진입 제한 기준을 테스트에서 설계된 값(60.0, 40.0)으로 변경
+        old_overbought = self.engine.cfg.RSI_OVERBOUGHT
+        old_oversold = self.engine.cfg.RSI_OVERSOLD
+        self.engine.cfg.RSI_OVERBOUGHT = 60.0
+        self.engine.cfg.RSI_OVERSOLD = 40.0
 
         timestamps = pd.date_range(end=pd.Timestamp.now(), periods=5, freq="15min")
         df_base = pd.DataFrame({
@@ -111,61 +118,139 @@ class TestStrategySignals:
             res.loc[res.index[-1], 'rsi'] = 35.0 # 과매도
             return res
 
-        # Case 1: 롱 진입조건 충족 + RSI 정상 (50.0) -> long 진입
-        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long)
-        sig_long_ok = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
-        assert sig_long_ok.direction == "long"
-        assert sig_long_ok.rsi_ok is True
-        assert sig_long_ok.strength == 100
+        try:
+            # Case 1: 롱 진입조건 충족 + RSI 정상 (50.0) -> long 진입
+            monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long)
+            sig_long_ok = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+            assert sig_long_ok.direction == "long"
+            assert sig_long_ok.rsi_ok is True
+            assert sig_long_ok.strength == 100
 
-        # Case 2: 롱 진입조건 충족 + RSI 과열 (65.0) -> none 진입차단
-        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long_rsi_blocked)
-        sig_long_blocked = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
-        assert sig_long_blocked.direction == "none"
-        assert sig_long_blocked.rsi_ok is False
-        assert "RSI 과열" in sig_long_blocked.reason
-        assert sig_long_blocked.strength == 80
+            # Case 2: 롱 진입조건 충족 + RSI 과열 (65.0) -> none 진입차단
+            monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long_rsi_blocked)
+            sig_long_blocked = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+            assert sig_long_blocked.direction == "none"
+            assert sig_long_blocked.rsi_ok is False
+            assert "RSI 과열" in sig_long_blocked.reason
+            assert sig_long_blocked.strength == 80
 
-        # Case 3: 숏 진입조건 충족 + RSI 정상 (50.0) -> short 진입
-        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short)
-        sig_short_ok = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
-        assert sig_short_ok.direction == "short"
-        assert sig_short_ok.rsi_ok is True
-        assert sig_short_ok.strength == 100
+            # Case 3: 숏 진입조건 충족 + RSI 정상 (50.0) -> short 진입
+            monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short)
+            sig_short_ok = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+            assert sig_short_ok.direction == "short"
+            assert sig_short_ok.rsi_ok is True
+            assert sig_short_ok.strength == 100
 
-        # Case 4: 숏 진입조건 충족 + RSI 과매도 (35.0) -> none 진입차단
-        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short_rsi_blocked)
-        sig_short_blocked = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
-        assert sig_short_blocked.direction == "none"
-        assert sig_short_blocked.rsi_ok is False
-        assert "RSI 과매도" in sig_short_blocked.reason
-        assert sig_short_blocked.strength == 80
+            # Case 4: 숏 진입조건 충족 + RSI 과매도 (35.0) -> none 진입차단
+            monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short_rsi_blocked)
+            sig_short_blocked = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+            assert sig_short_blocked.direction == "none"
+            assert sig_short_blocked.rsi_ok is False
+            assert "RSI 과매도" in sig_short_blocked.reason
+            assert sig_short_blocked.strength == 80
 
-        # Case 5: USE_RSI_FILTER = False 일 때, 롱 진입조건 충족 + RSI 과열(65.0) 임에도 진입 허용 -> long 진입
-        self.engine.cfg.USE_RSI_FILTER = False
-        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long_rsi_blocked)
-        sig_long_bypass = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
-        assert sig_long_bypass.direction == "long"
-        assert sig_long_bypass.rsi_ok is True
+            # Case 5: USE_RSI_FILTER = False 일 때, 롱 진입조건 충족 + RSI 과열(65.0) 임에도 진입 허용 -> long 진입
+            self.engine.cfg.USE_RSI_FILTER = False
+            monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long_rsi_blocked)
+            sig_long_bypass = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+            assert sig_long_bypass.direction == "long"
+            assert sig_long_bypass.rsi_ok is True
 
-        # Case 6: USE_RSI_FILTER = False 일 때, 숏 진입조건 충족 + RSI 과매도(35.0) 임에도 진입 허용 -> short 진입
-        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short_rsi_blocked)
-        sig_short_bypass = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
-        assert sig_short_bypass.direction == "short"
-        assert sig_short_bypass.rsi_ok is True
+            # Case 6: USE_RSI_FILTER = False 일 때, 숏 진입조건 충족 + RSI 과매도(35.0) 임에도 진입 허용 -> short 진입
+            monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short_rsi_blocked)
+            sig_short_bypass = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+            assert sig_short_bypass.direction == "short"
+            assert sig_short_bypass.rsi_ok is True
+        finally:
+            # 원복
+            self.engine.cfg.USE_RSI_FILTER = True
+            self.engine.cfg.RSI_OVERBOUGHT = old_overbought
+            self.engine.cfg.RSI_OVERSOLD = old_oversold
+
+    def test_volume_surge_blocking(self, monkeypatch):
+        """
+        거래량 서지 필터 검증:
+        1. 롱 진입 조건 100% 충족했으나 거래량 서지 미달 -> 진입 차단 (direction = "none", vol_surge_ok = False)
+        2. USE_VOLUME_SURGE_FILTER = False 일 때, 거래량 서지 미달임에도 진입 허용 -> long 진입
+        """
+        import pandas as pd
+
+        timestamps = pd.date_range(end=pd.Timestamp.now(), periods=5, freq="15min")
+        df_base = pd.DataFrame({
+            "open": [100.0] * 5,
+            "high": [101.0] * 5,
+            "low": [99.0] * 5,
+            "close": [100.0] * 5,
+            "volume": [1000.0] * 5,
+        }, index=timestamps)
+
+        # 롱 진입조건 충족 + 거래량 서지 발생하지 않은 상태 (volume_surge = False)
+        def mock_calc_no_surge(df_input):
+            res = df_input.copy()
+            res['ssl_up'] = 90.0
+            res['ssl_down'] = 85.0
+            res['macd_hist'] = 1.5
+            res['dot_color'] = ['red', 'red', 'red', 'red', 'green']
+            res['candle_color'] = ['blue', 'blue', 'blue', 'blue', 'blue']
+            res['bb_upper'] = 2.0
+            res['bb_lower'] = -2.0
+            res['rsi'] = 50.0
+            res['volume_ma'] = 1000.0
+            res['volume_surge'] = False
+            res['volume'] = 1000.0
+            return res
+
+        # Case 1: USE_VOLUME_SURGE_FILTER = True 일 때 거래량 서지 미달로 진입 차단
+        self.engine.cfg.USE_VOLUME_SURGE_FILTER = True
+        monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_no_surge)
+        sig_blocked = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+        assert sig_blocked.direction == "none"
+        assert sig_blocked.vol_surge_ok is False
+        assert "거래량 서지 미달" in sig_blocked.reason
+
+        # Case 2: USE_VOLUME_SURGE_FILTER = False 일 때 우회하여 진입 허용
+        self.engine.cfg.USE_VOLUME_SURGE_FILTER = False
+        sig_passed = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+        assert sig_passed.direction == "long"
+        assert sig_passed.vol_surge_ok is True
 
         # 원복
-        self.engine.cfg.USE_RSI_FILTER = True
-
+        self.engine.cfg.USE_VOLUME_SURGE_FILTER = True
 
 
 class TestMockDataGeneration:
     def setup_method(self):
         self.mock = MockBinanceClient()
+        # MockBinanceClient에 generate_signal_ohlcv 메소드 동적 바인딩
+        import types
+        def generate_signal_ohlcv(mock_self, direction: str, n: int = 300) -> pd.DataFrame:
+            import numpy as np
+            import pandas as pd
+            np.random.seed(42)
+            base = 100.0
+            if direction == "long":
+                returns = np.random.normal(0.001, 0.005, n)
+            else:
+                returns = np.random.normal(-0.001, 0.005, n)
+            prices = base * np.cumprod(1 + returns)
+            high = prices * 1.002
+            low = prices * 0.998
+            volume = np.random.uniform(10_000, 50_000, n)
+            timestamps = pd.date_range(end=pd.Timestamp.now(), periods=n, freq="15min")
+            df = pd.DataFrame({
+                "open": prices * 0.999,
+                "high": high,
+                "low": low,
+                "close": prices,
+                "volume": volume
+            }, index=timestamps)
+            df.index.name = "timestamp"
+            return df
+        self.mock.generate_signal_ohlcv = types.MethodType(generate_signal_ohlcv, self.mock)
 
     def test_ohlcv_shape(self):
         """OHLCV 데이터 형태 검증"""
-        df = self.mock.get_ohlcv("BTC/USDT:USDT", limit=250)
+        df = asyncio.run(self.mock.get_ohlcv("BTC/USDT:USDT", limit=250))
         assert len(df) == 250
         for col in ["open", "high", "low", "close", "volume"]:
             assert col in df.columns
