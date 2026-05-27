@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.2.0"
+    return "v2.2.1"
 
 APP_VERSION = get_git_tag()
 
@@ -49,9 +49,10 @@ def check_password():
     """Returns `True` if the user had the correct password."""
 
     def password_entered():
-        if st.session_state["dashboard_password"] == os.getenv("DASHBOARD_PASSWORD", "COco@@5454"):
+        if st.session_state.get("dashboard_password", "") == os.getenv("DASHBOARD_PASSWORD", "COco@@5454"):
             st.session_state["password_correct"] = True
-            del st.session_state["dashboard_password"]  # 보안을 위해 입력값 삭제
+            if "dashboard_password" in st.session_state:
+                st.session_state["dashboard_password"] = ""  # 보안을 위해 입력값 초기화
         else:
             st.session_state["password_correct"] = False
 
@@ -1150,9 +1151,24 @@ with tabs[0]:
             render_terminal_metric("미실현 손익", f"${total_upnl:+.2f}", delta=f"{total_upnl:+.2f}", is_pnl=True,
                                    tooltip="현재 열려있는 모든 포지션의 미실현 손익(Unrealized PnL) 총합입니다.<br><br>수수료 및 펀딩비가 실시간으로 반영된 예상 수익입니다.")
         with m3:
-            dpnl = engine.trader.daily_pnl_usdt if engine.trader else 0.0
+            _st_tmp = stats_store.load_stats()
+            seed_money_tmp = _st_tmp.get("seed_money", 30.0)
+            total_pnl_pct_tmp = ((dash['total_balance'] / seed_money_tmp) - 1) * 100 if seed_money_tmp > 0 else 0.0
+            
+            perf_start_str_tmp = _st_tmp.get("perf_start_time", "2026-05-15 00:00:00")
+            try:
+                perf_start_dt_tmp = datetime.strptime(perf_start_str_tmp, "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                perf_start_dt_tmp = datetime(2026, 5, 15, 0, 0, 0)
+                
+            now_kst_tmp = datetime.utcnow() + timedelta(hours=9)
+            elapsed_seconds_tmp = (now_kst_tmp - perf_start_dt_tmp).total_seconds()
+            elapsed_days_tmp = max(elapsed_seconds_tmp / 86400.0, 1.0)
+            daily_avg_roi_tmp = total_pnl_pct_tmp / elapsed_days_tmp
+            
+            dpnl = seed_money_tmp * (daily_avg_roi_tmp / 100)
             render_terminal_metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}", is_pnl=True,
-                                   tooltip="초기화 클릭 시점부터 24시간 동안 포지션을 청산(종료)하여 실제로 지갑에 확정된 수익(Realized PnL)의 총합입니다.")
+                                   tooltip="초기화 시점의 '총 잔고'에 현재 '일 평균 수익률'을 곱하여 산출한 금액입니다.")
         with m4:
             render_terminal_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}",
                                    tooltip="현재 진입한 포지션들을 유지하기 위해 묶여있는 담보금(Margin)입니다.<br><br>레버리지가 곱해진 포지션 전체 규모가 아닌 순수 담보금입니다.")
@@ -1467,7 +1483,7 @@ with tabs[0]:
 
         # ── 기간별 누적 수익률 차트 ──────────────────────────
         st.markdown("---")
-        st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">📈 PERFORMANCE CHART (초기화 이후 누적 수익률)</p>', unsafe_allow_html=True)
+        st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">📈 PERFORMANCE CHART (시간대별 일 평균 수익률)</p>', unsafe_allow_html=True)
         
         chart_seed_money = _st.get("seed_money", 30.0)
 
@@ -1527,14 +1543,36 @@ with tabs[0]:
             })
             df_plot = pd.concat([start_row, df_plot], ignore_index=True)
             
+            # ★ 상단 '일 평균 수익률' 메트릭 수치와 100% 일치시키기 위해 현재 시점 데이터를 마지막에 연장 추가 ★
+            current_row = pd.DataFrame({
+                "time": [now_kst],
+                "pnl_usdt": [0.0],
+                "cumulative_pnl": [0.0],
+                "roi_pct": [total_pnl_pct]
+            })
+            df_plot = pd.concat([df_plot, current_row], ignore_index=True)
+            
+            # ── 일 평균 수익률(Daily Avg ROI) 변환 ──
+            def calc_daily_avg(row):
+                elapsed_sec = (row["time"] - perf_start_dt).total_seconds()
+                days = max(elapsed_sec / 86400.0, 1.0)
+                return row["roi_pct"] / days
+            
+            df_plot["daily_avg_roi"] = df_plot.apply(calc_daily_avg, axis=1)
+            
+            # ── 색상 결정 로직 (최종 수익률 기준) ──
+            final_roi = df_plot["daily_avg_roi"].iloc[-1]
+            line_color = "#ef4444" if final_roi >= 0 else "#3b82f6"
+            fill_color = "rgba(239, 68, 68, 0.1)" if final_roi >= 0 else "rgba(59, 130, 246, 0.1)"
+            
             # 선그래프 그리기 (Step 형태: hv)
             fig = px.line(
                 df_plot, 
                 x="time", 
-                y="roi_pct", 
-                labels={"time": "시간", "roi_pct": "누적 수익률 (%)"},
+                y="daily_avg_roi", 
+                labels={"time": "시간", "daily_avg_roi": "일 평균 수익률 (%)"},
                 line_shape="hv",
-                color_discrete_sequence=["#00e0ff"]
+                color_discrete_sequence=[line_color]
             )
             
             fig.update_layout(
@@ -1543,13 +1581,25 @@ with tabs[0]:
                 margin=dict(l=0, r=0, t=20, b=0),
                 height=350,
                 xaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", title=""),
-                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", tickformat=".2f", suffix="%"),
-                font=dict(family="JetBrains Mono", size=11, color="#cccccc")
+                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.05)", tickformat=".2f", ticksuffix="%"),
+                font=dict(family="JetBrains Mono", size=11, color="#cccccc"),
+                hoverlabel=dict(font_size=15, font_family="JetBrains Mono")
             )
             
             # 0% 기준선 추가 및 투명 글로우 효과
             fig.add_hline(y=0, line_dash="dash", line_color="rgba(255,255,255,0.2)")
-            fig.update_traces(fill="tozeroy", fillcolor="rgba(0, 224, 255, 0.1)", line=dict(width=2))
+            
+            # ★ 실시간 현재 '일 평균 수익률' 노란색 점선 추가 ★
+            fig.add_hline(
+                y=final_roi, 
+                line_dash="dot", 
+                line_color="rgba(255, 235, 59, 0.8)",
+                annotation_text=f"현재: {final_roi:.2f}%", 
+                annotation_position="top",
+                annotation_font=dict(color="rgba(255, 235, 59, 0.9)", size=16)
+            )
+            
+            fig.update_traces(fill="tozeroy", fillcolor=fill_color, line=dict(width=2))
             
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
