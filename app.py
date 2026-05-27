@@ -1206,6 +1206,9 @@ with tabs[0]:
                 if positions:
                     st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
                     if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
+                        # 모든 활성 포지션을 즉시 closing_symbols에 추가하여 UI 반응성 확보
+                        for p in positions:
+                            st.session_state.closing_symbols.add(p['symbol'])
                         count = engine.close_all_positions()
                         if count > 0:
                             if engine.trader:
@@ -1213,6 +1216,11 @@ with tabs[0]:
                             st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
                             time.sleep(1)
                             st.rerun()
+                        else:
+                            # 실패 시 은폐 취소
+                            for p in positions:
+                                st.session_state.closing_symbols.discard(p['symbol'])
+                            st.error("❌ 일괄 청산에 실패했거나 활성 포지션이 없습니다.")
 
             pos_placeholder = st.empty()
             with pos_placeholder.container():

@@ -418,7 +418,8 @@ class BinanceClient:
             if not target:
                 return False
 
-            await self.exchange.create_order(symbol=symbol, type="market", side=close_side, amount=target["size"], params={"reduceOnly": True})
+            amount = float(self.exchange.amount_to_precision(symbol, target["size"]))
+            await self.exchange.create_order(symbol=symbol, type="market", side=close_side, amount=amount, params={"reduceOnly": True})
             return True
         except Exception as e:
             logger.error(f"청산 실패 ({symbol}): {e}")
