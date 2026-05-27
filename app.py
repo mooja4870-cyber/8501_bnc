@@ -101,8 +101,8 @@ st.markdown(
             /* 중앙에 밝고 외곽으로 갈수록 어두워지는 딥블루 방사형 그래디언트 */
             radial-gradient(circle at 50% 50%, rgba(35, 60, 105, 0.8) 0%, rgba(10, 15, 30, 0.95) 55%, rgba(3, 4, 8, 1) 100%),
             /* 흐릿한 격자무늬 (가로세로 약 1cm 크기: 38px) 유지 */
-            linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
         background-size: 100% 100%, 38px 38px, 38px 38px;
         background-attachment: fixed;
         color: var(--terminal-text) !important;
@@ -204,6 +204,12 @@ st.markdown(
         color: var(--terminal-accent) !important;
         border: 1px solid rgba(0, 224, 255, 0.35) !important;
         font-weight: 700 !important;
+    }
+
+    /* 멀티셀렉트 태그 (버튼) */
+    span[data-baseweb="tag"] {
+        background-color: #333333 !important;
+        color: #e2e8f0 !important;
     }
 
     /* 인풋 필드 */
@@ -717,7 +723,7 @@ with st.sidebar:
         '2. TTM Squeeze 돌파: 볼린저 밴드와 켈트너 채널의 변동성 돌파 감지 (Squeeze OFF 시 진입)&#10;'
         '3. 모멘텀 및 캔들 색상 필터: 선행 추세 확증 (Momentum 히스토그램 및 캔들 색상 일치)&#10;'
         '4. RSI 필터: 과열권 진입 제한 및 추격 매매 노이즈 필터링">'
-        f'<span class="rainbow-text" style="font-size: 95%;">TTM-Squeeze-EMA</span><br><span style="font-size:calc(0.75rem * 1.33 * 1.22);">{APP_VERSION}</span><br><span style="font-size:15px; color:#888; font-family:\'JetBrains Mono\', monospace;">SINCE 2026.05.26 13:45</span></div>',
+        f'<span class="rainbow-text" style="font-size: 95%;">TTM-Squeeze-EMA</span><br><span style="font-size:calc(0.75rem * 1.33 * 1.22);">{APP_VERSION}</span><br><span style="font-size:15px; color:#888; font-family:\'JetBrains Mono\', monospace;">SINCE 2026.05.26 23:45</span></div>',
         unsafe_allow_html=True,
     )
 
