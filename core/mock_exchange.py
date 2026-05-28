@@ -209,7 +209,10 @@ class MockBinanceClient:
         return True
 
     async def close_all_positions(self) -> int:
-        count = len(self._positions)
-        for p in list(self._positions):
-            await self.close_position(p["symbol"], p["side"])
-        return count
+        positions_to_close = list(self._positions)
+        if not positions_to_close:
+            return 0
+        tasks = [self.close_position(p["symbol"], p["side"]) for p in positions_to_close]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        success_count = sum(1 for r in results if r is True)
+        return success_count

@@ -781,6 +781,111 @@ class TestClosePositionIdempotency:
         pytest.fail("close_position 내 'if not target: return True' 멱등성 패턴 없음 — 수정 필요")
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 11. BinanceClient 청산 로직 견고성 검증 (Rounding, Mismatch Guard, Polling Exception)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestBinanceClientRobustness:
+    """[v2.6.1] BinanceClient의 실제 청산 로직 견고성 검증 (Rounding, Mismatch Guard, Polling Exception)"""
+
+    @pytest.mark.anyio
+    async def test_close_position_side_mismatch_guard(self):
+        """인자로 전달받은 side와 상관없이 실제 포지션 방향(short)에 맞춰 buy 주문을 전송해야 함"""
+        from core.exchange import BinanceClient
+        client = BinanceClient("api_key", "secret_key")
+        
+        # Mock exchange methods
+        client.exchange = MagicMock()
+        client.exchange.amount_to_precision = MagicMock(return_value="1.0")
+        
+        client.cancel_all_orders = AsyncMock(return_value=True)
+        # 실제 포지션은 short인 상태 -> 검증 폴링 시에는 포지션이 0(없음)으로 반환되어 성공하는 시나리오
+        get_pos_mock = AsyncMock()
+        get_pos_mock.side_effect = [
+            [{"symbol": "BTC/USDT:USDT", "side": "short", "size": 1.0}],  # Initial check
+            []                                                           # Verification poll: closed
+        ]
+        client.get_positions = get_pos_mock
+        client._execute_with_retry = AsyncMock()
+        
+        # 인자로는 잘못된 'long'을 전달함
+        with patch("asyncio.sleep", AsyncMock()):
+            result = await client.close_position("BTC/USDT:USDT", "long")
+        
+        assert result is True
+        # short 포지션을 청산해야 하므로 close_side가 'buy'로 전송되었어야 함
+        client._execute_with_retry.assert_any_call(
+            client.exchange.create_order,
+            symbol="BTC/USDT:USDT",
+            type="market",
+            side="buy", # Mismatch guard worked!
+            amount=1.0,
+            params={"reduceOnly": True}
+        )
+
+    @pytest.mark.anyio
+    async def test_close_position_float_rounding(self):
+        """실수 표현 오차가 있는 수량(e.g., 0.06999999)에 대해 8자리 반올림이 동작하는지 검증"""
+        from core.exchange import BinanceClient
+        client = BinanceClient("api_key", "secret_key")
+        
+        client.exchange = MagicMock()
+        client.exchange.amount_to_precision = MagicMock(side_effect=lambda sym, val: f"{val:.3f}")
+        
+        client.cancel_all_orders = AsyncMock(return_value=True)
+        # 실제 포지션 long 상태 -> 검증 폴링 시에는 포지션이 0(없음)으로 반환되어 성공하는 시나리오
+        get_pos_mock = AsyncMock()
+        get_pos_mock.side_effect = [
+            [{"symbol": "BTC/USDT:USDT", "side": "long", "size": 0.0699999999}],  # Initial check
+            []                                                                    # Verification poll: closed
+        ]
+        client.get_positions = get_pos_mock
+        client._execute_with_retry = AsyncMock()
+        
+        with patch("asyncio.sleep", AsyncMock()):
+            result = await client.close_position("BTC/USDT:USDT", "long")
+        
+        assert result is True
+        # round(0.0699999999, 8) -> 0.07000000 -> amount_to_precision -> "0.070" -> amount = 0.07
+        client._execute_with_retry.assert_any_call(
+            client.exchange.create_order,
+            symbol="BTC/USDT:USDT",
+            type="market",
+            side="sell",
+            amount=0.07, # Rounded successfully
+            params={"reduceOnly": True}
+        )
+
+    @pytest.mark.anyio
+    async def test_close_position_polling_exception_handling(self):
+        """검증 폴링 루프 도중 예외가 발생하더라도 루프가 바로 붕괴되지 않고 무시하고 계속 폴링해야 함"""
+        from core.exchange import BinanceClient
+        client = BinanceClient("api_key", "secret_key")
+        
+        client.exchange = MagicMock()
+        client.exchange.amount_to_precision = MagicMock(return_value="1.0")
+        
+        client.cancel_all_orders = AsyncMock(return_value=True)
+        
+        # 첫 get_positions 호출 시(진입 확인 단계): 정상
+        # 그 다음 폴링 1회차: Exception 발생
+        # 그 다음 폴링 2회차: 포지션 없음 (청산 완료)
+        get_pos_mock = AsyncMock()
+        get_pos_mock.side_effect = [
+            [{"symbol": "BTC/USDT:USDT", "side": "long", "size": 1.0}], # Initial check
+            Exception("Temporary API Error"),                            # Poll #1: Error!
+            []                                                           # Poll #2: Success (Closed)
+        ]
+        client.get_positions = get_pos_mock
+        client._execute_with_retry = AsyncMock()
+        
+        # Patch sleep to speed up test
+        with patch("asyncio.sleep", AsyncMock()):
+            result = await client.close_position("BTC/USDT:USDT", "long")
+            
+        assert result is True # Polling exception was swallowed, didn't fail
+
+
 if __name__ == "__main__":
     import pytest
     pytest.main([__file__, "-v", "--tb=short"])

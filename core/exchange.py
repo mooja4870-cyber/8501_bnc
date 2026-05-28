@@ -555,8 +555,13 @@ class BinanceClient:
                         await self.cancel_all_orders(symbol)
                         return True
 
-                    close_side = "sell" if side == "long" else "buy"
-                    amount = float(self.exchange.amount_to_precision(symbol, target["size"]))
+                    # [v2.6.1] UI 및 호출 인자로 전달된 side에 상관없이 거래소 포지션 실제 방향을 기준으로 close_side 결정
+                    actual_side = target["side"].lower()
+                    close_side = "sell" if actual_side == "long" else "buy"
+                    
+                    # [v2.6.1] 파이썬 실수 표현 오차(0.07 -> 0.069999999999)로 인한 수량 절사 오류 방지차 8자리 반올림 적용
+                    raw_size = round(target["size"], 8)
+                    amount = float(self.exchange.amount_to_precision(symbol, raw_size))
                     if amount <= 0:
                         logger.info(f"[CLOSE] {symbol} 정밀도 변환 후 청산할 수량이 0 이하입니다.")
                         await self.cancel_all_orders(symbol)
@@ -577,16 +582,19 @@ class BinanceClient:
                     verified = False
                     for poll in range(10):
                         await asyncio.sleep(0.5)
-                        positions_check = await self.get_positions()
-                        target_check = next((p for p in positions_check if p["symbol"] == symbol), None)
-                        
-                        # 포지션이 없거나 수량이 거의 0인 경우 검증 완료
-                        if not target_check or abs(target_check["size"]) <= 1e-8:
-                            verified = True
-                            logger.info(f"[CLOSE VERIFIED] {symbol} 포지션 청산 최종 완료 확인 ({poll * 0.5 + 0.5}초 소요)")
-                            break
-                        else:
-                            logger.warning(f"[CLOSE POLL] {symbol} 청산 대기 중... 잔량 존재: {target_check['size']}")
+                        try:
+                            positions_check = await self.get_positions()
+                            target_check = next((p for p in positions_check if p["symbol"] == symbol), None)
+                            
+                            # 포지션이 없거나 수량이 거의 0인 경우 검증 완료
+                            if not target_check or abs(target_check["size"]) <= 1e-8:
+                                verified = True
+                                logger.info(f"[CLOSE VERIFIED] {symbol} 포지션 청산 최종 완료 확인 ({poll * 0.5 + 0.5}초 소요)")
+                                break
+                            else:
+                                logger.warning(f"[CLOSE POLL] {symbol} 청산 대기 중... 잔량 존재: {target_check['size']}")
+                        except Exception as pe:
+                            logger.warning(f"[CLOSE POLL ERROR] 포지션 상태 확인 중 오류 발생 (폴링 #{poll}): {pe}")
 
                     if verified:
                         # 5. 청산 후 남은 TP/SL 등 Orphan Order 최종 정리
@@ -604,9 +612,25 @@ class BinanceClient:
             return False
 
     async def close_all_positions(self) -> int:
-        positions = await self.get_positions()
+        try:
+            positions = await self.get_positions()
+        except Exception as e:
+            logger.error(f"일괄 청산 중 포지션 조회 실패: {e}")
+            return 0
+            
+        if not positions:
+            return 0
+            
+        # [v2.6.1] Streamlit UI 지연 및 타임아웃 방지를 위해 병렬 청산 실행 (asyncio.gather)
+        tasks = [self.close_position(p["symbol"], p["side"]) for p in positions]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
         success_count = 0
-        for p in positions:
-            if await self.close_position(p["symbol"], p["side"]):
+        for p, r in zip(positions, results):
+            if isinstance(r, Exception):
+                logger.error(f"일괄 청산 중 {p['symbol']} 청산 예외 발생: {r}")
+            elif r is True:
                 success_count += 1
+                
         return success_count
+

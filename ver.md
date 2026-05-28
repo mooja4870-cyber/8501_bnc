@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v2.6.1 | 2026-05-28 23:51:00 | [Core/Test] 포지션 청산 로직 강인성 보완: 1) 실수 표현 오차로 인한 절사 오류 방지차 8자리 반올림 적용, 2) 폴링 루프 내 get_positions 오류 발생 시 예외 처리 추가로 붕괴 방지, 3) bulk 청산 병렬 실행(asyncio.gather)으로 UI 프리징/타임아웃 해소, 4) UI/인자 side와 상관없이 실제 포지션 방향(target["side"]) 기반 close_side 판정, 5) 추가 보완 항목 테스트 코드 작성 완료 | Core/Test |
 | v2.6.0 | 2026-05-28 23:37:00 | [Core/UI/Test] 5개 필수 수정 통합 릴리즈: [수정1] core/strategy.py - 완성 캔들(iloc[-2]) 기준 신호 판단 전환으로 리페인팅 완전 제거 / [수정2] core/exchange.py - Binance 네이티브 TRAILING_STOP_MARKET 주문 진입 시 전송 / [수정3] core/exchange.py - 부분 체결 대응 실시간 수량 조회 기반 SL/TP 생성 (fetch_order 폴링 + 잔여 취소) / [수정4] app.py - 일방적 UI 은폐 캐시(Fast Hide) 제거, st.spinner 추가로 API 성공 확정 후에만 포지션 카드 제거 / [수정5] core/engine.py - 서킷 브레이커(일일 손실 한도 + MDD 초과 시 일괄 청산 및 봇 정지) 연동, test_exit_circuit_breaker.py 신규 추가 | Core/UI/Test |
 | v2.5.2 | 2026-05-28 19:04:00 | [Config] .vscode/settings.json 내의 python.defaultInterpreterPath 파이썬 가상환경 경로를 상대 경로로 변경하여 IDE 상의 경로 미확인 경고 해결 | Config |
 | v2.5.1 | 2026-05-28 19:01:00 | [Security] 대시보드 로그인 패스워드 검증 화면 및 검증 로직 제거 (접속 편의성 향상) | Security |
