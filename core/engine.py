@@ -377,6 +377,72 @@ class QuantumEngine:
                         await self._maybe_await(self.client.close_position(sym, side))
                         if self.trader:
                             self.trader.trigger_symbol_cooldown(sym, 60)
+            # [필수 수정 5] 서킷 브레이커 (일일 손실 및 최대 낙폭 MDD 감시 및 자동 차단)
+            # 자동매매가 활성화된 상태에서만 작동하도록 가드 처리
+            if self.trader and self.trader.enabled:
+                try:
+                    total_floating_pnl = sum(float(p.get("pnl_usdt", 0.0)) for p in raw_positions)
+                    realized_daily_pnl = (self.trader.daily_pnl_usdt if self.trader else 0.0) + total_floating_pnl
+                    
+                    # 1. 일일 손실 한도 체크
+                    if realized_daily_pnl <= -self.cfg.DAILY_LOSS_LIMIT_USDT:
+                        logger.critical(
+                            f"[CIRCUIT BREAKER] 일일 손실 한도 초과 감지! "
+                            f"실시간 일일 손익: {realized_daily_pnl:+.4f} USDT (실현 PnL: {self.trader.daily_pnl_usdt:+.4f}, 평가 PnL: {total_floating_pnl:+.4f}) <= 한도: -{self.cfg.DAILY_LOSS_LIMIT_USDT} USDT. "
+                            f"즉시 모든 포지션을 일괄 청산하고 봇을 정지합니다."
+                        )
+                        self.trader.disable()
+                        await self.client.close_all_positions()
+                        try:
+                            open_orders = await self._maybe_await(self.client.get_open_orders())
+                            for o in open_orders:
+                                await self._maybe_await(self.client.cancel_order(o["id"], o["symbol"]))
+                        except Exception as e:
+                            logger.error(f"서킷 브레이커 발동 후 미체결 주문 일괄 취소 실패: {e}")
+                        await self._stop_scanner_async()
+                        return
+                    
+                    # 2. 최대 낙폭 (MDD) 체크
+                    balance = await self.client.get_balance()
+                    total_balance = balance.get("total", 0.0)
+                    _stats = stats_store.load_stats()
+                    seed_money = _stats.get("seed_money", 0.0)
+                    if seed_money > 0:
+                        drawdown_pct = (seed_money - total_balance) / seed_money
+                        if drawdown_pct >= self.cfg.MAX_DRAWDOWN_PCT:
+                            logger.critical(
+                                f"[CIRCUIT BREAKER] 최대 낙폭(MDD) 초과 감지! "
+                                f"현재 낙폭: {drawdown_pct*100:.2f}% (기준 자산: {seed_money:.2f} USDT, 현재 자산: {total_balance:.2f} USDT) >= 한도: {self.cfg.MAX_DRAWDOWN_PCT*100:.2f}%. "
+                                f"즉시 모든 포지션을 일괄 청산하고 봇을 정지합니다."
+                            )
+                            self.trader.disable()
+                            await self.client.close_all_positions()
+                            try:
+                                open_orders = await self._maybe_await(self.client.get_open_orders())
+                                for o in open_orders:
+                                    await self._maybe_await(self.client.cancel_order(o["id"], o["symbol"]))
+                            except Exception as e:
+                                logger.error(f"서킷 브레이커 발동 후 미체결 주문 일괄 취소 실패: {e}")
+                            await self._stop_scanner_async()
+                            return
+                except Exception as cbe:
+                    logger.error(f"서킷 브레이커 감시 루프 오류: {cbe}")
+
+            # [v3.6.0] 미체결 진입용 지정가 주문(limit) 중 타임아웃 초과 건 자동 취소
+            if self.cfg.USE_LIMIT_ORDER:
+                try:
+                    open_orders = await self._maybe_await(self.client.get_open_orders())
+                    now_ms = time.time() * 1000
+                    timeout_ms = self.cfg.LIMIT_ORDER_TIMEOUT_MINUTES * 60 * 1000
+                    for o in open_orders:
+                        # OCO 역지정/익절 트리거 주문은 제외하고, 일반 limit 주문만 대상
+                        if o.get("type") == "limit":
+                            order_ts = o.get("timestamp")
+                            if order_ts and (now_ms - order_ts) > timeout_ms:
+                                logger.warning(f"[LIMIT TIMEOUT] 주문 {o['id']} ({o['symbol']}) {o['side']} - {self.cfg.LIMIT_ORDER_TIMEOUT_MINUTES}분 미체결로 자동 취소")
+                                await self._maybe_await(self.client.cancel_order(o["id"], o["symbol"]))
+                except Exception as oe:
+                    logger.error(f"미체결 지정가 주문 타임아웃 감지 중 오류: {oe}")
 
             self._prev_position_symbols = current
             await self._run_position_rotation_check_async(raw_positions)

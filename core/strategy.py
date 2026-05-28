@@ -158,8 +158,8 @@ class StrategyEngine:
         if df.empty or len(df) < 5:
             return empty_signal
 
-        curr = df.iloc[-1]
-        prev = df.iloc[-2]
+        curr = df.iloc[-2]  # 완성 캔들 기준 (리페인팅 방지)
+        prev = df.iloc[-3]  # 이전 완성 캔들
 
         close = curr['close']
         macd_hist = curr['macd_hist']

@@ -78,6 +78,9 @@ class TradingConfig:
     MAX_POSITIONS: int = get_env_int("MAX_POSITIONS", 4)            # 최대 동시 보유 종목 수 (기본 4개)
     SCAN_INTERVAL_SEC: int = get_env_int("SCAN_INTERVAL_SEC", 30)   # 스캔 주기(초) (기본 30초)
     MIN_VOLUME_USDT: float = get_env_float("MIN_VOLUME_USDT", 1_000_000.0)   # 최소 24h 거래대금 (기본 1,000,000 USDT)
+    USE_LIMIT_ORDER: bool = get_env_bool("USE_LIMIT_ORDER", True)   # 지정가 주문 여부 (기본 True)
+    LIMIT_TICK_OFFSET: int = get_env_int("LIMIT_TICK_OFFSET", 1)   # 지정가 진입 틱 오프셋 (기본 1틱)
+    LIMIT_ORDER_TIMEOUT_MINUTES: int = get_env_int("LIMIT_ORDER_TIMEOUT_MINUTES", 3) # 미체결 지정가 주문 자동취소 대기 시간(분) (기본 3분)
 
     # ── 손익 설정 ──────────────────────────────────────
     TAKE_PROFIT_PCT: float = get_env_float("TAKE_PROFIT_PCT", 0.015)          # 익절 1.5% (기본값)
@@ -88,7 +91,7 @@ class TradingConfig:
 
     # ── 지표 파라미터 ──────────────────────────────────
     BB_PERIOD: int = get_env_int("BB_PERIOD", 20)                    # AKMCD 볼린저밴드 기간 (기본값 20)
-    TIMEFRAME: str = os.getenv("TIMEFRAME", "15m").strip("'\"")      # 캔들 타임프레임 (기본값 15m)
+    TIMEFRAME: str = os.getenv("TIMEFRAME", "1h").strip("'\"")      # 캔들 타임프레임 (기본값 1h)
     BB_STD: float = get_env_float("BB_STD", 2.0)                     # AKMCD 볼린저밴드 배수 (기본값 2.0)
     TTM_KC_MULT: float = get_env_float("TTM_KC_MULT", 1.5)            # TTM Squeeze 켈트너채널 배수 (기본값 1.5)
     TTM_MOM_PERIOD: int = get_env_int("TTM_MOM_PERIOD", 20)          # TTM Squeeze 모멘텀 선형회귀 기간 (기본값 20)

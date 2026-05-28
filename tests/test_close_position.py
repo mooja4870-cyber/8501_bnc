@@ -425,7 +425,7 @@ class TestEmergencyRollback:
             order_call_count[0] += 1
             order_type = kwargs.get("type", "")
             # 시장가 진입(1번째) 성공, SL(2~4번째) 실패, Emergency 시장가 청산(5번째) 성공
-            if order_type == "market" and not kwargs.get("params", {}).get("reduceOnly", False):
+            if order_type in ("market", "limit") and not kwargs.get("params", {}).get("reduceOnly", False):
                 return {"id": "ENTRY-001", "average": 67000.0, "price": 67000.0}
             elif order_type == "STOP_MARKET":
                 raise Exception("SL 주문 강제 실패")

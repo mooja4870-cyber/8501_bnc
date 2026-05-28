@@ -6,7 +6,7 @@ import os
 import argparse
 import asyncio
 from dotenv import load_dotenv
-from core.engine import QuantumEngine
+from core.engine import QuantumEngine, EngineState
 
 def run_harness(use_mock: bool = False):
     print("=" * 60)
@@ -32,6 +32,7 @@ def run_harness(use_mock: bool = False):
         engine.scanner.on_signal = engine.trader.on_signal
         engine.scanner.on_scan_complete = engine._check_closed_positions_async
         engine._initialized = True
+        engine._state = EngineState.CONNECTED
         print("[INIT] Mock Engine Initialized (Async)")
     else:
         load_dotenv(override=True)
@@ -73,9 +74,11 @@ def run_harness(use_mock: bool = False):
     print(f"\n{'-' * 40}")
     print("[TEST 3] Trading Toggle")
     engine.enable_trading()
+    time.sleep(0.1)
     assert engine.trader.enabled, "매매 활성화 실패"
     print(f"  Trading: ENABLED | State: {engine.state.name}")
     engine.disable_trading()
+    time.sleep(0.1)
     assert not engine.trader.enabled, "매매 비활성화 실패"
     print(f"  Trading: DISABLED")
     print("  PASS")

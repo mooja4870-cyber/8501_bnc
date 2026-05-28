@@ -144,8 +144,28 @@ class MockBinanceClient:
         leverage = limits.get("leverage", {})
         return int(leverage.get("max", 20))
 
+    async def fetch_order(self, id: str, symbol: str) -> Dict:
+        for t in self._trade_history:
+            if t.get("order_id") == id:
+                return {
+                    "id": id,
+                    "symbol": symbol,
+                    "status": "closed",
+                    "filled": t.get("amount", 0.0),
+                    "amount": t.get("amount", 0.0),
+                    "price": t.get("price", 0.0)
+                }
+        for o in self._orders:
+            if o.get("id") == id:
+                return o
+        return {"id": id, "symbol": symbol, "status": "open", "filled": 0.0, "amount": 1.0}
+
     async def cancel_all_orders(self, symbol: str) -> bool:
         self._orders = [o for o in self._orders if o["symbol"] != symbol]
+        return True
+
+    async def cancel_order(self, order_id: str, symbol: str) -> bool:
+        self._orders = [o for o in self._orders if o["id"] != order_id]
         return True
 
     async def place_order(self, symbol: str, side: str, margin_usdt: float, stop_loss_pct: float = CFG.STOP_LOSS_PCT, take_profit_pct: float = CFG.TAKE_PROFIT_PCT) -> Optional[Dict]:

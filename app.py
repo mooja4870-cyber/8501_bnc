@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.5.2"
+    return "v2.6.0"
 
 APP_VERSION = get_git_tag()
 
@@ -84,8 +84,8 @@ st.markdown(
             /* 중앙에 밝고 외곽으로 갈수록 어두워지는 딥블루 방사형 그래디언트 */
             radial-gradient(circle at 50% 50%, rgba(35, 60, 105, 0.8) 0%, rgba(10, 15, 30, 0.95) 55%, rgba(3, 4, 8, 1) 100%),
             /* 흐릿한 격자무늬 (가로세로 약 1cm 크기: 38px) 유지 */
-            linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            linear-gradient(to right, rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
         background-size: 100% 100%, 38px 38px, 38px 38px;
         background-attachment: fixed;
         color: var(--terminal-text) !important;
@@ -608,6 +608,12 @@ def init_session():
         "rsi_auto_switch": CFG.USE_RSI_FILTER,
         "active_preset": "기본 (Stable)",
         "closing_symbols": set(), # [v1.2.52] 잔상 방지용 청산 대기 목록
+        "sb_order_mode": CFG.USE_LIMIT_ORDER,
+        "main_order_mode": CFG.USE_LIMIT_ORDER,
+        "sb_tick_offset": CFG.LIMIT_TICK_OFFSET,
+        "main_tick_offset": CFG.LIMIT_TICK_OFFSET,
+        "sb_order_timeout": CFG.LIMIT_ORDER_TIMEOUT_MINUTES,
+        "main_order_timeout": CFG.LIMIT_ORDER_TIMEOUT_MINUTES,
         "sb_use_vol_surge": CFG.USE_VOLUME_SURGE_FILTER,
         "sb_vol_surge_period": CFG.VOLUME_SURGE_PERIOD,
         "sb_vol_surge_mult": CFG.VOLUME_SURGE_MULTIPLIER,
@@ -747,14 +753,16 @@ with st.sidebar:
     st.markdown("---")
 
 
+    engine: QuantumEngine = st.session_state.engine
+    if engine.is_ready and engine.trader:
+        st.session_state.auto_trading = engine.trader.enabled
+
     auto = st.toggle(
         "🤖 자동매매 가동 (ON/OFF)",
         value=st.session_state.auto_trading,
         help="ON: 실시간 마켓 스캐너 및 자동 매매 엔진을 기동하여 TTM Squeeze + 200 EMA 전략 조건 충족 시 포지션을 자동으로 진입/청산합니다. / OFF: 실시간 스캔을 즉시 중단하고 신규 자동 진입을 차단합니다. (기존 보유 포지션은 유지됩니다)"
     )
 
-    engine: QuantumEngine = st.session_state.engine
-    
     if auto != st.session_state.auto_trading:
         st.session_state.auto_trading = auto
         if auto:
@@ -975,6 +983,21 @@ with st.sidebar:
 
     # [v1.2.90] 인터랙티브 프로 트레이딩 컨트롤러 (동기화 로직 적용)
     
+    st.toggle("⚡ 지정가 주문 (Limit Order)", value=st.session_state.sb_order_mode, key="sb_order_mode",
+              on_change=sync_p, args=("sb_order_mode", "main_order_mode", "USE_LIMIT_ORDER"),
+              help="ON: 지정가(Limit) 주문을 제출하여 수수료와 슬리피지를 절감합니다. / OFF: 시장가(Market) 주문을 제출하여 즉시 체결을 보장합니다.")
+
+    if st.session_state.sb_order_mode:
+        col_offset, col_timeout = st.columns(2)
+        with col_offset:
+            st.number_input("⚡ 진입 틱 오프셋", 0, 5, int(st.session_state.sb_tick_offset), step=1, key="sb_tick_offset",
+                            on_change=sync_p, args=("sb_tick_offset", "main_tick_offset", "LIMIT_TICK_OFFSET"),
+                            help="시장가 대비 몇 틱 유리/불리한 가격에 지정가 주문을 올릴지 설정합니다. (추세 진입 시 즉시 체결 유도를 위해 1틱 권장)")
+        with col_timeout:
+            st.number_input("⏱️ 미체결 취소 (분)", 1, 30, int(st.session_state.sb_order_timeout), step=1, key="sb_order_timeout",
+                            on_change=sync_p, args=("sb_order_timeout", "main_order_timeout", "LIMIT_ORDER_TIMEOUT_MINUTES"),
+                            help="지정가 주문 진입 후 체결되지 않고 대기할 최대 시간입니다. 설정한 시간이 경과하면 stale 신호 방지를 위해 미체결 주문을 자동 취소합니다.")
+
     with st.expander("📊 지표 및 스캐너 설정", expanded=False):
         st.number_input("📏 KC ATR 배수", 0.5, 5.0, float(CFG.TTM_KC_MULT), step=0.1, key="sb_kc_mult",
                         on_change=sync_p, args=("sb_kc_mult", "main_kc_mult", "TTM_KC_MULT"))
@@ -1108,20 +1131,18 @@ with tabs[0]:
                 st.error(f"오류 상세: {engine._error_msg}")
         raw_positions = dash.get("positions", [])
         
-        # [v1.2.52] 포지션 데이터 취득 및 잔상 방지 필터링
-        # 1. 수량이 0이거나 먼지 잔고($0.1 미만)인 경우 원천 차단
-        # 2. 방금 청산 버튼을 누른 종목(closing_symbols) 즉시 은폐 로직
+        # [v2.6.0] 포지션 데이터 취득 및 잔상 방지 필터링
+        # [필수 수정 4] 일방적 UI 은폐 캐시(Fast Hide) 제거:
+        # - 청산 버튼 클릭 즉시 화면에서 숨기는 방식을 제거
+        # - API close_position() 응답이 True로 확정된 후에만 st.rerun()으로 화면에서 제거
+        # - 수량 0 또는 먼지 잔고($0.1 미만)만 기본 필터로 적용
         positions = [
             p for p in raw_positions 
-            if p.get('amount_usdt', 0) > 0.1 
-            and p.get('symbol') not in st.session_state.closing_symbols
+            if p.get('amount_usdt', 0) > 0.1
         ]
         
-        # 3. 거래소 데이터와 동기화: 거래소에서 실제로 사라진 종목은 은폐 목록에서 제거
-        current_exchange_symbols = {p['symbol'] for p in raw_positions}
-        st.session_state.closing_symbols = {
-            s for s in st.session_state.closing_symbols if s in current_exchange_symbols
-        }
+        # [v2.6.0] closing_symbols는 더 이상 UI 은폐에 사용되지 않음 (빈 set 유지)
+        st.session_state.closing_symbols = set()
 
         # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
         m1, m2, m3, m4, m5 = st.columns(5)
@@ -1216,21 +1237,16 @@ with tabs[0]:
                 if positions:
                     st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
                     if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
-                        # 모든 활성 포지션을 즉시 closing_symbols에 추가하여 UI 반응성 확보
-                        for p in positions:
-                            st.session_state.closing_symbols.add(p['symbol'])
-                        count = engine.close_all_positions()
-                        if count > 0:
-                            if engine.trader:
-                                engine.trader.trigger_global_cooldown(60)
-                            st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
-                            time.sleep(1)
-                            st.rerun()
-                        else:
-                            # 실패 시 은폐 취소
-                            for p in positions:
-                                st.session_state.closing_symbols.discard(p['symbol'])
-                            st.error("❌ 일괄 청산에 실패했거나 활성 포지션이 없습니다.")
+                        with st.spinner("🔄 모든 활성 포지션을 일괄 청산하고 미체결 대기 주문을 정리하고 있습니다..."):
+                            count = engine.close_all_positions()
+                            if count > 0:
+                                if engine.trader:
+                                    engine.trader.trigger_global_cooldown(60)
+                                st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error("❌ 일괄 청산에 실패했거나 활성 포지션이 없습니다. 거래소 연결 상태나 API 로그를 확인하세요.")
 
             pos_placeholder = st.empty()
             with pos_placeholder.container():
@@ -1290,18 +1306,18 @@ with tabs[0]:
                             )
                             st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
                             if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
-                                # [v1.2.52] 버튼 클릭 즉시 세션 캐시에 추가하여 화면에서 지움
-                                st.session_state.closing_symbols.add(p['symbol'])
-                                if engine.close_position(p["symbol"], p["side"]):
+                                # [v2.6.0] 필수 수정 4: 일방적 은폐 캐시 완전 제거
+                                # st.spinner로 중복 클릭 방지 + API 성공 확정 후에만 화면 제거
+                                with st.spinner(f"⏳ {p['symbol']} 포지션 청산 실행 중 (거래소 확인 대기)..."):
+                                    ok = engine.close_position(p["symbol"], p["side"])
+                                if ok:
                                     if engine.trader:
                                         engine.trader.trigger_symbol_cooldown(p['symbol'], 60)
-                                    st.toast(f"✅ {p['symbol']} 청산 완료")
+                                    st.toast(f"✅ {p['symbol']} 청산 완료 — 거래소 수량 0 확인됨")
                                     time.sleep(0.5)
                                     st.rerun()
                                 else:
-                                    # 실패 시에는 다시 목록에서 제거 (보여줘야 하므로)
-                                    st.session_state.closing_symbols.discard(p['symbol'])
-                                    st.error(f"❌ {p['symbol']} 청산 실패")
+                                    st.error(f"❌ {p['symbol']} 청산 실패 — 거래소 상태를 확인하세요")
 
 
         with col_log:
@@ -1591,20 +1607,18 @@ with tabs[0]:
             
             df_plot["daily_avg_roi"] = df_plot.apply(calc_daily_avg, axis=1)
             
-            # ── 색상 결정 로직 (최종 수익률 기준) ──
+            # ── 색상 결정 로직 (최종 수익률 및 개별 막대 기준) ──
             final_roi = df_plot["daily_avg_roi"].iloc[-1]
-            line_color = "#ef4444" if final_roi >= 0 else "#3b82f6"
-            fill_color = "rgba(239, 68, 68, 0.1)" if final_roi >= 0 else "rgba(59, 130, 246, 0.1)"
+            bar_colors = ["#ef4444" if val >= 0 else "#3b82f6" for val in df_plot["daily_avg_roi"]]
             
-            # 선그래프 그리기 (Step 형태: hv)
-            fig = px.line(
-                df_plot, 
-                x="time", 
-                y="daily_avg_roi", 
-                labels={"time": "시간", "daily_avg_roi": "일 평균 수익률 (%)"},
-                line_shape="hv",
-                color_discrete_sequence=[line_color]
-            )
+            # 막대그래프(Bar) 그리기
+            fig = go.Figure(data=[go.Bar(
+                x=df_plot["time"],
+                y=df_plot["daily_avg_roi"],
+                marker_color=bar_colors,
+                name="일 평균 수익률",
+                hovertemplate="시간: %{x}<br>일 평균 수익률: %{y:.2f}%<extra></extra>"
+            )])
             
             fig.update_layout(
                 plot_bgcolor="rgba(0,0,0,0)",
@@ -1617,7 +1631,7 @@ with tabs[0]:
                 hoverlabel=dict(font_size=15, font_family="JetBrains Mono")
             )
             
-            # 0% 기준선 추가 및 투명 글로우 효과
+            # 0% 기준선 추가
             fig.add_hline(y=0, line_dash="dash", line_color="rgba(255,255,255,0.2)")
             
             # ★ 실시간 현재 '일 평균 수익률' 노란색 점선 추가 ★
@@ -1630,7 +1644,7 @@ with tabs[0]:
                 annotation_font=dict(color="rgba(255, 235, 59, 0.9)", size=16)
             )
             
-            fig.update_traces(fill="tozeroy", fillcolor=fill_color, line=dict(width=2))
+            fig.update_traces(marker_line_width=1, marker_line_color="rgba(0,0,0,0.3)")
             
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
@@ -1956,6 +1970,15 @@ with tabs[4]:
                         on_change=sync_p, args=("main_scan_interval", "sb_scan_interval", "SCAN_INTERVAL_SEC"))
         st.number_input("💵 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
                         on_change=sync_p, args=("main_min_vol", "sb_min_vol", "MIN_VOLUME_USDT"))
+        st.toggle("⚡ 지정가 주문 활성화 (Limit Order)", value=st.session_state.main_order_mode, key="main_order_mode",
+                  on_change=sync_p, args=("main_order_mode", "sb_order_mode", "USE_LIMIT_ORDER"))
+        if st.session_state.main_order_mode:
+            st.number_input("⚡ 진입 지정가 틱 오프셋", 0, 5, int(st.session_state.main_tick_offset), step=1, key="main_tick_offset",
+                            on_change=sync_p, args=("main_tick_offset", "sb_tick_offset", "LIMIT_TICK_OFFSET"),
+                            help="시장가 대비 몇 틱 유리/불리한 가격에 지정가 주문을 올릴지 설정합니다. (1틱 권장)")
+            st.number_input("⏱️ 미체결 지정가 취소 대기 시간 (분)", 1, 30, int(st.session_state.main_order_timeout), step=1, key="main_order_timeout",
+                            on_change=sync_p, args=("main_order_timeout", "sb_order_timeout", "LIMIT_ORDER_TIMEOUT_MINUTES"),
+                            help="지정가 주문 진입 후 체결되지 않고 대기할 최대 시간입니다.")
 
     with s2:
         st.number_input("🎯 익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",

@@ -98,6 +98,7 @@ class TestStrategySignals:
         def mock_calc_long_rsi_blocked(df_input):
             res = mock_calc_long(df_input)
             res.loc[res.index[-1], 'rsi'] = 65.0 # 과열
+            res.loc[res.index[-2], 'rsi'] = 65.0 # 완성 캔들 과열 추가
             return res
 
         # 3. 숏 진입 100% 만족하는 지표 결과 Mocking
@@ -117,6 +118,7 @@ class TestStrategySignals:
         def mock_calc_short_rsi_blocked(df_input):
             res = mock_calc_short(df_input)
             res.loc[res.index[-1], 'rsi'] = 35.0 # 과매도
+            res.loc[res.index[-2], 'rsi'] = 35.0 # 완성 캔들 과매도 추가
             return res
 
         try:
