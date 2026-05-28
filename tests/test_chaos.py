@@ -59,8 +59,11 @@ def test_chaos_api_outage():
             # 카오스 주입: API 에러 발생 시나리오
             mock.set_scenario("api_error")
             
-            # Dashboard 데이터를 가져올 때 에러가 발생하여 ERROR 상태로 전이되어야 함
-            await eng._get_dashboard_data_async()
+            # Dashboard 캐시를 갱신할 때 에러가 발생하여 ERROR 상태로 전이되어야 함
+            try:
+                await eng._update_dashboard_cache_async()
+            except Exception:
+                pass
             
             assert eng.state == EngineState.ERROR
             assert "Mock API Error" in eng._error_msg

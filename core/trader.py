@@ -64,6 +64,7 @@ class AutoTrader:
             return
 
         async with self._lock:
+            self.cfg = CFG.snapshot()
             self._reset_daily_if_needed()
 
             try:
@@ -129,6 +130,15 @@ class AutoTrader:
                 self._log_trade(sig, status="EXECUTED", result=result)
                 logger.info(f"[ORDER] {sig.symbol} {sig.direction.upper()} 실행 완료")
                 
+                # 주문 체결 완료 즉시 백그라운드 텔레메트리 캐시 갱신 트리거 (Non-blocking)
+                try:
+                    from core.engine import QuantumEngine
+                    engine = QuantumEngine.get_instance()
+                    if engine:
+                        asyncio.create_task(engine._update_dashboard_cache_async())
+                except Exception as ce:
+                    logger.warning(f"[TRADER] 주문 체결 후 캐시 갱신 실패: {ce}")
+
                 csv_log({
                     "timestamp": datetime.now(timezone(timedelta(hours=9))),
                     "symbol": sig.symbol,

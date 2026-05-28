@@ -103,6 +103,9 @@ class Scanner:
     async def _scan_loop(self):
         while self._running:
             try:
+                # 스레드 안전한 설정값 스냅샷 바인딩
+                self.cfg = CFG.snapshot()
+                self.strategy.cfg = self.cfg
                 await self._run_once()
             except asyncio.CancelledError:
                 break

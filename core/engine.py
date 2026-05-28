@@ -83,6 +83,12 @@ class QuantumEngine:
         
         self._async_lock = None 
 
+        # ── Dashboard Cache Telemetry Storage ─────────────────
+        self._cached_balance: Dict = {}
+        self._cached_positions: List[Dict] = []
+        self._last_cache_update_time: float = 0.0
+        self._cache_task: Optional[asyncio.Task] = None
+
     def _start_loop(self):
         asyncio.set_event_loop(self._loop)
         self._loop.run_forever()
@@ -125,16 +131,32 @@ class QuantumEngine:
             future = asyncio.run_coroutine_threadsafe(self.scanner.clear_cache(), self._loop)
             future.result()
 
+    async def _close_position_and_update_cache(self, symbol: str, side: str) -> bool:
+        result = await self.client.close_position(symbol, side)
+        try:
+            await self._update_dashboard_cache_async()
+        except Exception:
+            pass
+        return result
+
+    async def _close_all_positions_and_update_cache(self) -> int:
+        result = await self.client.close_all_positions()
+        try:
+            await self._update_dashboard_cache_async()
+        except Exception:
+            pass
+        return result
+
     def close_position(self, symbol: str, side: str) -> bool:
         if not self.is_ready:
             return False
-        future = asyncio.run_coroutine_threadsafe(self.client.close_position(symbol, side), self._loop)
+        future = asyncio.run_coroutine_threadsafe(self._close_position_and_update_cache(symbol, side), self._loop)
         return future.result()
 
     def close_all_positions(self) -> int:
         if not self.is_ready:
             return 0
-        future = asyncio.run_coroutine_threadsafe(self.client.close_all_positions(), self._loop)
+        future = asyncio.run_coroutine_threadsafe(self._close_all_positions_and_update_cache(), self._loop)
         return future.result()
 
     def get_scan_results(self) -> List[Dict]:
@@ -209,6 +231,10 @@ class QuantumEngine:
             self._async_lock = asyncio.Lock()
 
         async with self._async_lock:
+            if self._cache_task:
+                self._cache_task.cancel()
+                self._cache_task = None
+
             try:
                 self.client = BinanceClient(api_key, secret_key, passphrase)
                 if await self.client.load_markets():
@@ -218,11 +244,18 @@ class QuantumEngine:
                     self.scanner.on_signal = self.trader.on_signal
                     self.scanner.on_scan_complete = self._check_closed_positions_async
 
+                    # 1회 동기식 캐시 업데이트 수행 (UI 초기 로딩 데이터 확보)
+                    try:
+                        await self._update_dashboard_cache_async()
+                    except Exception as ce:
+                        logger.warning(f"초기 대시보드 텔레메트리 캐싱 실패 (무시하고 진행): {ce}")
+
                     self._initialized = True
                     self._recovery_attempts = 0
                     self._transition(EngineState.CONNECTED, "마켓 로드 성공")
                     
                     asyncio.create_task(self._health_check_loop())
+                    self._cache_task = asyncio.create_task(self._dashboard_cache_loop())
                     return True, "✅ 엔진 초기화 및 마켓 로드 성공"
 
                 self._error_msg = "마켓 정보 로드 실패"
@@ -281,26 +314,48 @@ class QuantumEngine:
         self._transition(EngineState.ERROR, "복구 실패")
         return False, f"❌ 복구 실패 (시도 #{self._recovery_attempts})"
 
+    async def _update_dashboard_cache_async(self):
+        """거래소 API를 호출하여 잔고와 포지션 캐시를 실시간 갱신"""
+        if not self.is_ready:
+            return
+        try:
+            # 병렬 호출로 네트워크 대기시간 최적화
+            balance, positions = await asyncio.gather(
+                self.client.get_balance(),
+                self.client.get_positions()
+            )
+            self._cached_balance = balance
+            self._cached_positions = positions
+            self._last_cache_update_time = time.time()
+        except Exception as e:
+            logger.error(f"[CACHE] 대시보드 캐시 갱신 실패: {e}")
+            self._error_msg = str(e)
+            if self._state not in (EngineState.ERROR, EngineState.RECOVERING):
+                self._transition(EngineState.ERROR, f"데이터 조회 실패: {e}")
+            raise e
+
+    async def _dashboard_cache_loop(self):
+        """백그라운드에서 10초 주기로 대시보드 텔레메트리 캐시 자동 갱신"""
+        while True:
+            try:
+                if self.is_ready and self._state not in (EngineState.ERROR, EngineState.RECOVERING):
+                    await self._update_dashboard_cache_async()
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                pass  # 에러는 _update_dashboard_cache_async 내부에서 로깅됨
+            await asyncio.sleep(10)
+
     async def _get_dashboard_data_async(self) -> Dict:
         if not self.is_ready:
             return {}
 
-        try:
-            balance = await self.client.get_balance()
-            positions = await self.client.get_positions()
-        except Exception as e:
-            logger.error(f"대시보드 데이터 조회 실패: {e}")
-            self._error_msg = str(e)
-            if self._state not in (EngineState.ERROR, EngineState.RECOVERING):
-                self._transition(EngineState.ERROR, f"데이터 조회 실패: {e}")
-            return {}
-
         return {
-            "total_balance": balance.get("total", 0),
-            "free_margin": balance.get("free", 0),
-            "used_margin": balance.get("used", 0),
-            "realized_pnl": balance.get("pnl", 0),
-            "positions": positions,
+            "total_balance": self._cached_balance.get("total", 0.0) if self._cached_balance else 0.0,
+            "free_margin": self._cached_balance.get("free", 0.0) if self._cached_balance else 0.0,
+            "used_margin": self._cached_balance.get("used", 0.0) if self._cached_balance else 0.0,
+            "realized_pnl": self._cached_balance.get("pnl", 0.0) if self._cached_balance else 0.0,
+            "positions": self._cached_positions,
             "is_scanning": self.scanner.is_running if self.scanner else False,
             "is_trading": self.trader.enabled if self.trader else False,
             "engine_state": self._state.name,
@@ -324,6 +379,7 @@ class QuantumEngine:
             return
         try:
             raw_positions = await self._maybe_await(self.client.get_positions())
+            self._cached_positions = raw_positions  # 캐시 갱신
             current = {p["symbol"] for p in raw_positions}
             closed = self._prev_position_symbols - current
 

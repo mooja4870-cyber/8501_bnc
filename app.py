@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.6.1"
+    return "v2.7.0"
 
 APP_VERSION = get_git_tag()
 
@@ -677,16 +677,7 @@ def sync_p(src_key: str, dst_key: str, cfg_attr: str, is_pct: bool = False):
     except Exception as e:
         st.warning(f"설정 저장 오류: {e}")
 
-    # [v2.1.3] 백그라운드 엔진 및 서브모듈(trader, scanner, strategy)의 실시간 설정 동기화
-    _engine = st.session_state.get("engine")
-    if _engine:
-        setattr(_engine.cfg, cfg_attr, real_val)
-        if _engine.trader:
-            setattr(_engine.trader.cfg, cfg_attr, real_val)
-        if _engine.scanner:
-            setattr(_engine.scanner.cfg, cfg_attr, real_val)
-            if _engine.scanner.strategy:
-                setattr(_engine.scanner.strategy.cfg, cfg_attr, real_val)
+    # [v2.7.0] 백그라운드 엔진 및 서브모듈은 스레드 안전하게 글로벌 CFG의 스냅샷을 주기적으로 가져와 사용합니다.
 
     # [v3.5.1] 설정 값 변경 알림 팝업 추가
     st.toast(f"⚙️ 설정 값이 변경되었습니다: {cfg_attr} ➔ {val}{'%' if is_pct else ''}")

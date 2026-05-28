@@ -106,6 +106,11 @@ class TradingConfig:
     VOLUME_SURGE_PERIOD: int = get_env_int("VOLUME_SURGE_PERIOD", 20)                 # 거래량 서지 기간 (기본 20봉)
     VOLUME_SURGE_MULTIPLIER: float = get_env_float("VOLUME_SURGE_MULTIPLIER", 1.5)   # 거래량 서지 배수 (기본 1.5배)
 
+    def snapshot(self):
+        """설정의 스레드 안전한 불변 스냅샷 복사본 반환"""
+        import copy
+        return copy.deepcopy(self)
+
     def __getattr__(self, name: str):
         """삭제된 설정 파라미터에 대한 하위 호환성 및 기본값 지원"""
         defaults = {

@@ -25,6 +25,8 @@ def _create_mock_engine(scenario="default"):
     engine.scanner.on_scan_complete = engine._check_closed_positions_async
     engine._initialized = True
     engine._state = EngineState.CONNECTED
+    # Populate the dashboard cache for test verification
+    asyncio.run(engine._update_dashboard_cache_async())
     return engine, mock
 
 
