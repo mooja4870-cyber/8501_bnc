@@ -11,6 +11,7 @@ venv/
 # IDE
 .vscode/
 .idea/
+.streamlit/
 
 # Runtime data
 data/stats.json
