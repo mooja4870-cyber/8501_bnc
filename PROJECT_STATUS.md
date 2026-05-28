@@ -1,6 +1,16 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v2.5.2] 파이썬 인터프리터 경로 설정 및 경고 해결:**
+  - [Config] `.vscode/settings.json` 내의 `python.defaultInterpreterPath` 파이썬 가상환경(venv) 경로 지정을 변수 치환 오류가 발생하는 `${workspaceFolder}` 형태에서 상대 경로(`venv/Scripts/python.exe`)로 변경하여 IDE 경고창을 완전히 해결했습니다.
+- **[v2.5.1] 대시보드 로그인 패스워드 검증 제거:**
+  - [Security] `app.py` 내 `check_password()` 메서드가 즉시 `True`를 반환하도록 하여, 초기 실행 시의 비밀번호 입력 단계를 완전 배제하고 접속 편의성을 향상했습니다.
+- **[v2.5.0] 대시보드 및 매매 이력 포지션 표시 버그 수정:**
+  - [Core/UI/UX] active_positions_set을 실제 잔고 수량(coins) 매핑 딕셔너리로 고도화하고 최신 진입부터 역순 수량 매칭하여 과거 유실/중복 포지션을 '청산 완료 (미기록)'로 자동 판정되도록 개선했습니다.
+- **[v2.4.9] 대시보드 로그인 패스워드 검증 화면 복구:**
+  - [Security] 대시보드 로그인 패스워드 검증 화면(DASHBOARD_PASSWORD: COco@@5454)을 임시 복구했습니다.
+- **[v2.4.8] 대시보드 로그인 패스워드 검증 화면 제거 및 볼륨 서지 기본값 변경:**
+  - [Security/Config] 1) 대시보드 로그인 패스워드 검증 화면 및 검증 로직 제거, 2) .env 내 USE_VOLUME_SURGE_FILTER=False 기본 비활성화로 포지션 진입 제한을 해제했습니다.
 - **[v2.4.7] API 주문 및 설정에 대한 강건성 재시도 래핑:**
   - [Core] `core/exchange.py` 내의 모든 주문 생성(`create_order`), 취소(`cancel_all_orders`), 마진 및 레버리지 설정 메서드를 지수 백오프 기반 재시도 루프(`_execute_with_retry`)로 래핑하여 시간 비동기화 및 네트워크 타임아웃으로 인한 즉시/일괄 청산 및 진입 오류를 원천 차단했습니다.
 - **[v2.4.6] 사이드바 가동 시작 시각(SINCE) 수정:**

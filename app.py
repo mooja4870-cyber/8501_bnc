@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.5.0"
+    return "v2.5.2"
 
 APP_VERSION = get_git_tag()
 
@@ -48,45 +48,7 @@ st.set_page_config(
 # ── 대시보드 보안 (로그인) ───────────────────────────────────────────
 def check_password():
     """Returns True if the user had the correct password."""
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-
-    if st.session_state.authenticated:
-        return True
-
-    # Show login form
-    col1, col2, col3 = st.columns([1, 1.8, 1])
-    with col2:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.markdown(
-            """
-            <div style="background: rgba(13, 17, 33, 0.45); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 30px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); text-align: center;">
-                <h2 style="color: #00e0ff; font-family: 'Pretendard', sans-serif; margin-bottom: 10px;">🔒 AI QUANTUM Terminal</h2>
-                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">시스템 보안을 위해 비밀번호를 입력하십시오.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        
-        # Center-aligned password input and button
-        password_input = st.text_input(
-            "PASSWORD", 
-            type="password", 
-            key="login_password", 
-            placeholder="비밀번호 입력", 
-            label_visibility="collapsed"
-        )
-        
-        correct_password = os.getenv("DASHBOARD_PASSWORD", "COco@@5454")
-        
-        if st.button("🔑 터미널 접속", use_container_width=True) or (password_input == correct_password):
-            if password_input == correct_password:
-                st.session_state.authenticated = True
-                st.rerun()
-            elif password_input:
-                st.error("❌ 비밀번호가 올바르지 않습니다.")
-
-    return False
+    return True
 
 if not check_password():
     st.stop()

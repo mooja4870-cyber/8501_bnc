@@ -170,7 +170,10 @@ class Scanner:
                 if df.empty:
                     continue
 
-                sig = self.strategy.generate_signal(df, sym)
+                # [v2.5.1] 실시간 스캔 시 미완성 캔들(마지막 캔들)은 지표 연산에서 배제하여 Repaint/오작동 방지
+                df_closed = df.iloc[:-1] if len(df) > 1 else df
+
+                sig = self.strategy.generate_signal(df_closed, sym)
                 results.append({
                     "symbol": sym,
                     "price": ticker.get("last", 0),

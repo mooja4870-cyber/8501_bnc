@@ -384,15 +384,41 @@ class BinanceClient:
             sl_price = float(self.exchange.price_to_precision(symbol, sl_price))
             tp_price = float(self.exchange.price_to_precision(symbol, tp_price))
 
-            try:
-                await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="STOP_MARKET", side=close_side, amount=float(amount), params={"stopPrice": sl_price, "reduceOnly": True})
-            except Exception as sle:
-                logger.error(f"Stop Loss 설정 실패 ({symbol}): {sle}")
+            # [v2.5.1] SL/TP OCO 주문 생성 실패 시 최대 3회 재시도 및 최종 실패 시 Emergency Rollback (긴급 청산)
+            sl_ok = False
+            for attempt in range(1, 4):
+                try:
+                    await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="STOP_MARKET", side=close_side, amount=float(amount), params={"stopPrice": sl_price, "reduceOnly": True})
+                    sl_ok = True
+                    break
+                except Exception as sle:
+                    logger.warning(f"Stop Loss 설정 시도 {attempt}회 실패 ({symbol}): {sle}")
+                    if attempt < 3:
+                        await asyncio.sleep(0.5)
 
-            try:
-                await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="TAKE_PROFIT_MARKET", side=close_side, amount=float(amount), params={"stopPrice": tp_price, "reduceOnly": True})
-            except Exception as tpe:
-                logger.error(f"Take Profit 설정 실패 ({symbol}): {tpe}")
+            tp_ok = False
+            if sl_ok:
+                for attempt in range(1, 4):
+                    try:
+                        await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="TAKE_PROFIT_MARKET", side=close_side, amount=float(amount), params={"stopPrice": tp_price, "reduceOnly": True})
+                        tp_ok = True
+                        break
+                    except Exception as tpe:
+                        logger.warning(f"Take Profit 설정 시도 {attempt}회 실패 ({symbol}): {tpe}")
+                        if attempt < 3:
+                            await asyncio.sleep(0.5)
+
+            if not sl_ok or not tp_ok:
+                logger.critical(f"[EMERGENCY] {symbol} 진입 주문은 체결되었으나 SL/TP 설정에 실패하여 긴급 청산(Rollback)을 시작합니다. (SL: {sl_ok}, TP: {tp_ok})")
+                try:
+                    # OCO 주문 중 하나만 성공했을 수 있으므로 전부 정리
+                    await self.cancel_all_orders(symbol)
+                    # 현재 진입한 포지션을 시장가로 즉시 청산
+                    await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="market", side=close_side, amount=float(amount), params={"reduceOnly": True})
+                    logger.critical(f"[EMERGENCY] {symbol} 긴급 청산(Rollback) 성공 완료")
+                except Exception as rollback_err:
+                    logger.critical(f"[EMERGENCY FAIL] {symbol} 긴급 청산(Rollback) 마저 실패!!! 즉각적인 수동 개입 필요: {rollback_err}")
+                return None
 
             result = {
                 "order_id": order.get("id"),
@@ -410,20 +436,28 @@ class BinanceClient:
             return None
 
     async def close_position(self, symbol: str, side: str) -> bool:
-        try:
-            await self.cancel_all_orders(symbol)
-            close_side = "sell" if side == "long" else "buy"
-            positions = await self.get_positions()
-            target = next((p for p in positions if p["symbol"] == symbol), None)
-            if not target:
-                return False
+        # [v2.5.1] 청산 주문 실패 시 최대 3회 재시도 및 크리티컬 경보 로그
+        for attempt in range(1, 4):
+            try:
+                await self.cancel_all_orders(symbol)
+                close_side = "sell" if side == "long" else "buy"
+                positions = await self.get_positions()
+                target = next((p for p in positions if p["symbol"] == symbol), None)
+                if not target:
+                    # 포지션이 이미 없는 경우 성공 처리
+                    return True
 
-            amount = float(self.exchange.amount_to_precision(symbol, target["size"]))
-            await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="market", side=close_side, amount=amount, params={"reduceOnly": True})
-            return True
-        except Exception as e:
-            logger.error(f"청산 실패 ({symbol}): {e}")
-            return False
+                amount = float(self.exchange.amount_to_precision(symbol, target["size"]))
+                await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="market", side=close_side, amount=amount, params={"reduceOnly": True})
+                logger.info(f"[CLOSE SUCCESS] {symbol} 포지션 청산 완료 (시도 {attempt}회)")
+                return True
+            except Exception as e:
+                logger.warning(f"청산 실패 시도 {attempt}회 ({symbol}): {e}")
+                if attempt < 3:
+                    await asyncio.sleep(1.0)
+        
+        logger.critical(f"[EMERGENCY FAIL] {symbol} 포지션 청산 최종 실패!!! 즉각적인 수동 개입 필요")
+        return False
 
     async def close_all_positions(self) -> int:
         positions = await self.get_positions()

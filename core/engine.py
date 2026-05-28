@@ -329,6 +329,12 @@ class QuantumEngine:
 
             if closed:
                 for sym in closed:
+                    # [v2.5.1] 포지션 청산 완료 감지 시 해당 심볼의 잔여 OCO 미체결 주문 즉시 정리
+                    try:
+                        await self._maybe_await(self.client.cancel_all_orders(sym))
+                    except Exception as ce:
+                        logger.error(f"청산 감지 후 잔여 OCO 주문 취소 실패 ({sym}): {ce}")
+
                     pnl = 0.0
                     try:
                         recent_trades = await self._maybe_await(self.client.get_trade_history(symbol=sym, limit=5))

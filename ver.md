@@ -2,6 +2,8 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v2.5.2 | 2026-05-28 19:04:00 | [Config] .vscode/settings.json 내의 python.defaultInterpreterPath 파이썬 가상환경 경로를 상대 경로로 변경하여 IDE 상의 경로 미확인 경고 해결 | Config |
+| v2.5.1 | 2026-05-28 19:01:00 | [Security] 대시보드 로그인 패스워드 검증 화면 및 검증 로직 제거 (접속 편의성 향상) | Security |
 | v2.5.0 | 2026-05-28 14:10:00 | [Core/UI/UX] 대시보드 및 매매 이력의 고스트/중복 '보유 중' 포지션 표기 버그 수정. active_positions_set을 실제 잔고 수량(coins) 매핑 딕셔너리로 고도화하고 최신 진입부터 역순 수량 매칭하여 과거 유실/중복 포지션을 '청산 완료 (미기록)'로 자동 판정되도록 개선 | Core/UI/UX |
 | v2.4.9 | 2026-05-28 14:05:00 | [Security] 대시보드 로그인 패스워드 검증 화면(DASHBOARD_PASSWORD: COco@@5454) 복구 | Security |
 | v2.4.8 | 2026-05-28 13:47:00 | [Security/Config] 1) 대시보드 로그인 패스워드 검증 화면 및 검증 로직 제거, 2) .env 내 USE_VOLUME_SURGE_FILTER=False 기본 비활성화로 포지션 진입 제한 해제 | Security/Config |
