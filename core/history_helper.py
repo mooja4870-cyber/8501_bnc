@@ -1,4 +1,4 @@
-﻿"""
+"""
 매매 이력 파싱, 병합 및 진입/청산 페어링 헬퍼 모듈
 """
 import os
@@ -326,57 +326,110 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
                         })
         
         # 스캔 후 남은 진입중인 포지션 표시
-        for entry in active_longs:
-            if entry["amount_remaining"] <= 1e-8:
-                continue
-            is_actually_holding = False
-            if active_positions_set is not None:
-                is_actually_holding = ((sym, "LONG") in active_positions_set)
-            else:
-                time_diff = pd.Timestamp.now() - entry["timestamp"]
-                if time_diff.total_seconds() < 24 * 3600:
-                    is_actually_holding = True
+        if active_positions_set is not None and isinstance(active_positions_set, dict):
+            # [v2.5.0] 최신 진입 건부터 실제 보유 수량만큼 매칭하여 중복 고스트 포지션(보유 중) 제거
+            # LONG 포지션 처리 (active_longs는 oldest to newest 이므로, reverse하여 newest to oldest로 매칭)
+            actual_long_coins = float(active_positions_set.get((sym, "LONG"), 0.0))
+            for entry in reversed(active_longs):
+                if entry["amount_remaining"] <= 1e-8:
+                    continue
+                if actual_long_coins > 1e-8:
+                    match_qty = min(entry["amount_remaining"], actual_long_coins)
+                    actual_long_coins -= match_qty
+                    status_str = "보유 중"
+                else:
+                    status_str = "청산 완료 (미기록)"
                 
-            status_str = "보유 중" if is_actually_holding else "청산 완료 (미기록)"
-            
-            paired_cycles.append({
-                "entry_time": entry["timestamp"],
-                "exit_time": None,
-                "symbol": sym,
-                "direction": "🟢 LONG",
-                "entry_price": entry["price"],
-                "exit_price": None,
-                "amount": entry["amount_remaining"],
-                "pnl_usdt": None,
-                "pnl_pct": None,
-                "status": status_str
-            })
+                paired_cycles.append({
+                    "entry_time": entry["timestamp"],
+                    "exit_time": None,
+                    "symbol": sym,
+                    "direction": "🟢 LONG",
+                    "entry_price": entry["price"],
+                    "exit_price": None,
+                    "amount": entry["amount_remaining"],
+                    "pnl_usdt": None,
+                    "pnl_pct": None,
+                    "status": status_str
+                })
+                
+            # SHORT 포지션 처리
+            actual_short_coins = float(active_positions_set.get((sym, "SHORT"), 0.0))
+            for entry in reversed(active_shorts):
+                if entry["amount_remaining"] <= 1e-8:
+                    continue
+                if actual_short_coins > 1e-8:
+                    match_qty = min(entry["amount_remaining"], actual_short_coins)
+                    actual_short_coins -= match_qty
+                    status_str = "보유 중"
+                else:
+                    status_str = "청산 완료 (미기록)"
+                
+                paired_cycles.append({
+                    "entry_time": entry["timestamp"],
+                    "exit_time": None,
+                    "symbol": sym,
+                    "direction": "🔴 SHORT",
+                    "entry_price": entry["price"],
+                    "exit_price": None,
+                    "amount": entry["amount_remaining"],
+                    "pnl_usdt": None,
+                    "pnl_pct": None,
+                    "status": status_str
+                })
+        else:
+            # 기존 세트 및 None 값 폴백 대응 로직
+            for entry in active_longs:
+                if entry["amount_remaining"] <= 1e-8:
+                    continue
+                is_actually_holding = False
+                if active_positions_set is not None:
+                    is_actually_holding = ((sym, "LONG") in active_positions_set)
+                else:
+                    time_diff = pd.Timestamp.now() - entry["timestamp"]
+                    if time_diff.total_seconds() < 24 * 3600:
+                        is_actually_holding = True
+                    
+                status_str = "보유 중" if is_actually_holding else "청산 완료 (미기록)"
+                
+                paired_cycles.append({
+                    "entry_time": entry["timestamp"],
+                    "exit_time": None,
+                    "symbol": sym,
+                    "direction": "🟢 LONG",
+                    "entry_price": entry["price"],
+                    "exit_price": None,
+                    "amount": entry["amount_remaining"],
+                    "pnl_usdt": None,
+                    "pnl_pct": None,
+                    "status": status_str
+                })
 
-        for entry in active_shorts:
-            if entry["amount_remaining"] <= 1e-8:
-                continue
-            is_actually_holding = False
-            if active_positions_set is not None:
-                is_actually_holding = ((sym, "SHORT") in active_positions_set)
-            else:
-                time_diff = pd.Timestamp.now() - entry["timestamp"]
-                if time_diff.total_seconds() < 24 * 3600:
-                    is_actually_holding = True
+            for entry in active_shorts:
+                if entry["amount_remaining"] <= 1e-8:
+                    continue
+                is_actually_holding = False
+                if active_positions_set is not None:
+                    is_actually_holding = ((sym, "SHORT") in active_positions_set)
+                else:
+                    time_diff = pd.Timestamp.now() - entry["timestamp"]
+                    if time_diff.total_seconds() < 24 * 3600:
+                        is_actually_holding = True
+                    
+                status_str = "보유 중" if is_actually_holding else "청산 완료 (미기록)"
                 
-            status_str = "보유 중" if is_actually_holding else "청산 완료 (미기록)"
-            
-            paired_cycles.append({
-                "entry_time": entry["timestamp"],
-                "exit_time": None,
-                "symbol": sym,
-                "direction": "🔴 SHORT",
-                "entry_price": entry["price"],
-                "exit_price": None,
-                "amount": entry["amount_remaining"],
-                "pnl_usdt": None,
-                "pnl_pct": None,
-                "status": status_str
-            })
+                paired_cycles.append({
+                    "entry_time": entry["timestamp"],
+                    "exit_time": None,
+                    "symbol": sym,
+                    "direction": "🔴 SHORT",
+                    "entry_price": entry["price"],
+                    "exit_price": None,
+                    "amount": entry["amount_remaining"],
+                    "pnl_usdt": None,
+                    "pnl_pct": None,
+                    "status": status_str
+                })
 
     # 전체 사이클을 최신 종료 시각(exit_time이 없으면 entry_time) 기준으로 내림차순 정렬
     def sort_key(x):

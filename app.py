@@ -32,7 +32,7 @@ load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
 def get_git_tag():
-    return "v2.4.9"
+    return "v2.5.0"
 
 APP_VERSION = get_git_tag()
 
@@ -1789,14 +1789,14 @@ with tabs[1]:
 with tabs[2]:
     engine: QuantumEngine = st.session_state.engine
 
-    # 실제 보유 중인 포지션 세트 추출
+    # 실제 보유 중인 포지션 세트 추출 (중복 고스트 방지를 위해 보유 수량(coins) 매핑 딕셔너리로 적용)
     active_positions_set = None
     if st.session_state.api_connected and engine.is_ready:
         try:
             dash = engine.get_dashboard_data()
             live_pos = dash.get("positions", [])
             active_positions_set = {
-                (p["symbol"], p["side"].upper())
+                (p["symbol"], p["side"].upper()): float(p.get("coins", p.get("size", 0)))
                 for p in live_pos if abs(p.get("size", 0)) > 0
             }
         except Exception:
