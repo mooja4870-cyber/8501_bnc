@@ -1,6 +1,8 @@
 # Project Status: AI QUANTUM OKX Auto-Trader
 
 ## Current Status
+- **[v2.4.7] API 주문 및 설정에 대한 강건성 재시도 래핑:**
+  - [Core] `core/exchange.py` 내의 모든 주문 생성(`create_order`), 취소(`cancel_all_orders`), 마진 및 레버리지 설정 메서드를 지수 백오프 기반 재시도 루프(`_execute_with_retry`)로 래핑하여 시간 비동기화 및 네트워크 타임아웃으로 인한 즉시/일괄 청산 및 진입 오류를 원천 차단했습니다.
 - **[v2.4.6] 사이드바 가동 시작 시각(SINCE) 수정:**
   - [UI] 사이드바 로고 영역에 노출되는 봇 가동 시작 시각(SINCE) 문자열을 `2026.05.28 01:34`로 수정 및 앱 메타 버전을 `v2.4.6`으로 업데이트 완료했습니다.
 - **[v2.4.5] 1회 진입 증거금 기본값 하향 조정:**

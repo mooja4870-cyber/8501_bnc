@@ -308,7 +308,7 @@ class BinanceClient:
 
     async def set_margin_mode(self, symbol: str, margin_mode: str = "isolated") -> bool:
         try:
-            await self.exchange.set_margin_mode(margin_mode.upper(), symbol)
+            await self._execute_with_retry(self.exchange.set_margin_mode, margin_mode.upper(), symbol)
             logger.info(f"마진 모드 설정 완료: {symbol} {margin_mode}")
             return True
         except Exception as e:
@@ -317,7 +317,7 @@ class BinanceClient:
 
     async def set_leverage(self, symbol: str, leverage: int) -> bool:
         try:
-            await self.exchange.set_leverage(leverage, symbol)
+            await self._execute_with_retry(self.exchange.set_leverage, leverage, symbol)
             logger.info(f"레버리지 설정 완료: {symbol} {leverage}x")
             return True
         except Exception as e:
@@ -340,7 +340,7 @@ class BinanceClient:
 
     async def cancel_all_orders(self, symbol: str) -> bool:
         try:
-            await self.exchange.cancel_all_orders(symbol)
+            await self._execute_with_retry(self.exchange.cancel_all_orders, symbol)
             logger.info(f"모든 주문 취소 완료: {symbol}")
             return True
         except Exception as e:
@@ -367,7 +367,7 @@ class BinanceClient:
             amount = notional / (price * contract_size)
             amount = self.exchange.amount_to_precision(symbol, amount)
 
-            order = await self.exchange.create_order(symbol=symbol, type="market", side=side, amount=float(amount))
+            order = await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="market", side=side, amount=float(amount))
             entry_price = float(order.get("average") or order.get("price") or price)
 
             if side == "buy":
@@ -385,12 +385,12 @@ class BinanceClient:
             tp_price = float(self.exchange.price_to_precision(symbol, tp_price))
 
             try:
-                await self.exchange.create_order(symbol=symbol, type="STOP_MARKET", side=close_side, amount=float(amount), params={"stopPrice": sl_price, "reduceOnly": True})
+                await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="STOP_MARKET", side=close_side, amount=float(amount), params={"stopPrice": sl_price, "reduceOnly": True})
             except Exception as sle:
                 logger.error(f"Stop Loss 설정 실패 ({symbol}): {sle}")
 
             try:
-                await self.exchange.create_order(symbol=symbol, type="TAKE_PROFIT_MARKET", side=close_side, amount=float(amount), params={"stopPrice": tp_price, "reduceOnly": True})
+                await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="TAKE_PROFIT_MARKET", side=close_side, amount=float(amount), params={"stopPrice": tp_price, "reduceOnly": True})
             except Exception as tpe:
                 logger.error(f"Take Profit 설정 실패 ({symbol}): {tpe}")
 
@@ -419,7 +419,7 @@ class BinanceClient:
                 return False
 
             amount = float(self.exchange.amount_to_precision(symbol, target["size"]))
-            await self.exchange.create_order(symbol=symbol, type="market", side=close_side, amount=amount, params={"reduceOnly": True})
+            await self._execute_with_retry(self.exchange.create_order, symbol=symbol, type="market", side=close_side, amount=amount, params={"reduceOnly": True})
             return True
         except Exception as e:
             logger.error(f"청산 실패 ({symbol}): {e}")

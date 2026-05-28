@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v2.4.7 | 2026-05-28 09:05:00 | [Core] 1) core/exchange.py 내 모든 주문 작성/취소 및 레버리지/마진 설정 API 호출을 _execute_with_retry 지수 백오프 재시도 루프로 래핑하여 시간 비동기화 및 네트워크 타임아웃에 따른 청산/진입 실패 방지 | Core |
 | v2.4.6 | 2026-05-28 01:36:00 | [UI] 1) 사이드바 로고 영역의 가동 시작 시각(SINCE)을 2026.05.28 01:34로 수정 및 app.py 버전 동기화 | UI |
 | v2.4.5 | 2026-05-28 01:26:00 | [Config/UI] 1) 1회 진입 증거금(MARGIN_USDT) 기본값을 10 USDT에서 5 USDT로 하향 조정 및 .env 연동 | Config/UI |
 | v2.4.4 | 2026-05-28 01:15:00 | [Config/UI/Test] 1) core/config.py 내 트레일링 스탑 설정(TRAILING_ACTIVATE_PCT, TRAILING_CALLBACK_PCT)을 정식 필드로 등록, 2) 사이드바 및 설정 탭에 트레일링 발동/콜백 조작 위젯 추가 및 .env 실시간 저장 연동, 3) tests/test_strategy.py 내 pandas(pd) 임포트 누락으로 인한 NameError 수정, 4) app.py 내 get_git_tag() 리턴 버전을 v2.4.4로 동기화 수정 | Config/UI/Test |
