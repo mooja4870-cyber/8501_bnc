@@ -1,4 +1,4 @@
-# Project Status: AI QUANTUM OKX Auto-Trader
+# Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
 - **[v2.4.7] API 주문 및 설정에 대한 강건성 재시도 래핑:**

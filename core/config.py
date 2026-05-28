@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading System
+AI QUANTUM — Binance Auto-Trading System
 핵심 설정 파라미터 (사이드바 및 설정 탭 전용, .env 연동)
 """
 import os

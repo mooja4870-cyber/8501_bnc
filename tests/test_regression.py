@@ -75,7 +75,7 @@ class TestRegressionSuite:
 
     def test_regression_quote_volume_fallback(self):
         """Regression 3: quoteVolume 누락 시 baseVolume * last로 자동 백업 계산 검증"""
-        # OKX fetch_ticker API에서 quoteVolume이 None(또는 누락)으로 반환되었을 때를 시뮬레이션
+        # Binance fetch_ticker API에서 quoteVolume이 None(또는 누락)으로 반환되었을 때를 시뮬레이션
         t_raw = {
             "symbol": "BTC/USDT:USDT",
             "last": 50000.0,

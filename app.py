@@ -45,7 +45,50 @@ st.set_page_config(
 )
 
 # ── 대시보드 보안 (로그인) ───────────────────────────────────────────
-# 보안 요구사항 해제로 패스워드 검증 제거됨
+def check_password():
+    """Returns True if the user had the correct password."""
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+
+    if st.session_state.authenticated:
+        return True
+
+    # Show login form
+    col1, col2, col3 = st.columns([1, 1.8, 1])
+    with col2:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style="background: rgba(13, 17, 33, 0.45); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 30px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); text-align: center;">
+                <h2 style="color: #00e0ff; font-family: 'Pretendard', sans-serif; margin-bottom: 10px;">🔒 AI QUANTUM Terminal</h2>
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">시스템 보안을 위해 비밀번호를 입력하십시오.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        
+        # Center-aligned password input and button
+        password_input = st.text_input(
+            "PASSWORD", 
+            type="password", 
+            key="login_password", 
+            placeholder="비밀번호 입력", 
+            label_visibility="collapsed"
+        )
+        
+        correct_password = os.getenv("DASHBOARD_PASSWORD", "COco@@5454")
+        
+        if st.button("🔑 터미널 접속", use_container_width=True) or (password_input == correct_password):
+            if password_input == correct_password:
+                st.session_state.authenticated = True
+                st.rerun()
+            elif password_input:
+                st.error("❌ 비밀번호가 올바르지 않습니다.")
+
+    return False
+
+if not check_password():
+    st.stop()
 
 
 # ── Wall Street Professional Terminal CSS ─────────────────────────────
@@ -616,14 +659,10 @@ def init_session():
             st.session_state[k] = v
 
     # .env 값이 있으면 UI 입력창 세션 상태 강제 초기화
-    for state_key, env_keys in [("api_key_input", ["BINANCE_API_KEY", "OKX_API_KEY"]), 
-                                ("secret_input", ["BINANCE_SECRET_KEY", "OKX_SECRET_KEY"]), 
-                                ("pass_input", ["BINANCE_PASSPHRASE", "OKX_PASSPHRASE"])]:
-        env_val = ""
-        for k in env_keys:
-            env_val = os.getenv(k, "")
-            if env_val:
-                break
+    for state_key, env_key in [("api_key_input", "BINANCE_API_KEY"), 
+                               ("secret_input", "BINANCE_SECRET_KEY"), 
+                               ("pass_input", "BINANCE_PASSPHRASE")]:
+        env_val = os.getenv(env_key, "")
         if env_val and (state_key not in st.session_state or not st.session_state[state_key]):
             st.session_state[state_key] = env_val
 
@@ -684,9 +723,9 @@ def sync_p(src_key: str, dst_key: str, cfg_attr: str, is_pct: bool = False):
     st.toast(f"⚙️ 설정 값이 변경되었습니다: {cfg_attr} ➔ {val}{'%' if is_pct else ''}")
 
 if not st.session_state.api_connected:
-    ak = os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY", "")
-    sk = os.getenv("BINANCE_SECRET_KEY") or os.getenv("OKX_SECRET_KEY", "")
-    pw = os.getenv("BINANCE_PASSPHRASE") or os.getenv("OKX_PASSPHRASE", "")
+    ak = os.getenv("BINANCE_API_KEY", "")
+    sk = os.getenv("BINANCE_SECRET_KEY", "")
+    pw = os.getenv("BINANCE_PASSPHRASE", "")
     if ak and sk:
         connect_api(ak, sk, pw)
 
@@ -722,20 +761,20 @@ with st.sidebar:
     st.markdown("---")
 
     api_key = st.text_input(
-        "🔑 API Key", value=os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY", ""), type="password", key="api_key_input"
+        "🔑 API Key", value=os.getenv("BINANCE_API_KEY", ""), type="password", key="api_key_input"
     )
     secret_key = st.text_input(
-        "🔑 Secret Key", value=os.getenv("BINANCE_SECRET_KEY") or os.getenv("OKX_SECRET_KEY", ""), type="password", key="secret_input"
+        "🔑 Secret Key", value=os.getenv("BINANCE_SECRET_KEY", ""), type="password", key="secret_input"
     )
     passphrase = st.text_input(
-        "🔑 Passphrase (Optional)", value=os.getenv("BINANCE_PASSPHRASE") or os.getenv("OKX_PASSPHRASE", ""), type="password", key="pass_input"
+        "🔑 Passphrase (Optional)", value=os.getenv("BINANCE_PASSPHRASE", ""), type="password", key="pass_input"
     )
 
     if st.button("🔗  Binance 연결", use_container_width=True):
         with st.spinner("연결 중..."):
-            ak = api_key if api_key else (os.getenv("BINANCE_API_KEY") or os.getenv("OKX_API_KEY", ""))
-            sk = secret_key if secret_key else (os.getenv("BINANCE_SECRET_KEY") or os.getenv("OKX_SECRET_KEY", ""))
-            pw = passphrase if passphrase else (os.getenv("BINANCE_PASSPHRASE") or os.getenv("OKX_PASSPHRASE", ""))
+            ak = api_key if api_key else os.getenv("BINANCE_API_KEY", "")
+            sk = secret_key if secret_key else os.getenv("BINANCE_SECRET_KEY", "")
+            pw = passphrase if passphrase else os.getenv("BINANCE_PASSPHRASE", "")
             success, msg = connect_api(ak, sk, pw)
             if success:
                 st.success(msg)
