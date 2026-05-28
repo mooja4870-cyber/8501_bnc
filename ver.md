@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v2.8.0 | 2026-05-29 07:47:00 | [Core/Strategy/Test] OKX 봇 매매기법 이식 및 최적화: 1) 스퀴즈 돌파 시 RSI 필터 우회(면제)로 강력한 추세 진입 포착, 2) 스퀴즈 진입 Lookback 윈도우 탐색 및 dot_color 상태 전환 시점 확장 탐색(방안 B) 적용, 3) ATR 및 멀티플라이어 기반 동적 손절(SL)/익절(TP) 계산 연동(USE_DYNAMIC_SLTP), 4) anyio backend asyncio 고정 피팅 및 147개 유닛 테스트 100% 통과 검증 완료 | Core/Strategy/Test |
 | v2.7.0 | 2026-05-28 23:58:00 | [Architecture/Performance] 대시보드 비동기 캐시화 및 설정값 스냅샷 바인딩 적용: 1) Streamlit UI의 REST API 동기 블로킹 방지를 위한 백그라운드 텔레메트리 10초 주기 캐시 업데이트 구현, 2) 포지션 종료/주문 체결 등 이벤트 발생 시 즉각 캐시를 강제 갱신하여 UI 실시간 반응성 보장, 3) 런타임 경쟁 상태 및 스레드 안전성 확보를 위한 Scanner/AutoTrader 실행 주기별 config 스냅샷 바인딩 구현, 4) UI의 직접적인 엔진 서브모듈 config 가변 갱신 코드 제거 및 Decoupling 완료, 5) 신규 유닛 테스트 작성 및 검증 통과 | Core/Architecture |
 | v2.6.1 | 2026-05-28 23:51:00 | [Core/Test] 포지션 청산 로직 강인성 보완: 1) 실수 표현 오차로 인한 절사 오류 방지차 8자리 반올림 적용, 2) 폴링 루프 내 get_positions 오류 발생 시 예외 처리 추가로 붕괴 방지, 3) bulk 청산 병렬 실행(asyncio.gather)으로 UI 프리징/타임아웃 해소, 4) UI/인자 side와 상관없이 실제 포지션 방향(target["side"]) 기반 close_side 판정, 5) 추가 보완 항목 테스트 코드 작성 완료 | Core/Test |
 | v2.6.0 | 2026-05-28 23:37:00 | [Core/UI/Test] 5개 필수 수정 통합 릴리즈: [수정1] core/strategy.py - 완성 캔들(iloc[-2]) 기준 신호 판단 전환으로 리페인팅 완전 제거 / [수정2] core/exchange.py - Binance 네이티브 TRAILING_STOP_MARKET 주문 진입 시 전송 / [수정3] core/exchange.py - 부분 체결 대응 실시간 수량 조회 기반 SL/TP 생성 (fetch_order 폴링 + 잔여 취소) / [수정4] app.py - 일방적 UI 은폐 캐시(Fast Hide) 제거, st.spinner 추가로 API 성공 확정 후에만 포지션 카드 제거 / [수정5] core/engine.py - 서킷 브레이커(일일 손실 한도 + MDD 초과 시 일괄 청산 및 봇 정지) 연동, test_exit_circuit_breaker.py 신규 추가 | Core/UI/Test |

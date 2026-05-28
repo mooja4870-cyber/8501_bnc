@@ -4,10 +4,14 @@
 """
 import os
 import csv
+import threading
 from datetime import datetime, timezone, timedelta
 
 KST = timezone(timedelta(hours=9))
 LOG_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "trade_history.csv")
+
+# ── CSV File Access Lock for Thread-Safety ──────────────────────
+_csv_lock = threading.Lock()
 
 def _ensure_file():
     """CSV 파일 및 헤더 생성 및 업데이트"""
@@ -59,45 +63,46 @@ def log_trade(data: dict):
     매매 내역 한 줄 추가
     data keys: timestamp, symbol, type, side, price, amount, pnl_usdt, pnl_pct, leverage, order_id, trade_id
     """
-    try:
-        _ensure_file()
-        _load_cache()
-        
-        oid = f"ID_{data.get('order_id', '')}"
-        tid = str(data.get("trade_id", ""))
-        status = data.get("type", "")
-        
-        cache_key = f"{oid}_{tid}_{status}"
-        if (oid != "ID_" or tid != "") and cache_key in _logged_cache:
-            return  # 중복 기록 차단
+    with _csv_lock:
+        try:
+            _ensure_file()
+            _load_cache()
             
-        _logged_cache.add(cache_key)
-        
-        # 한국 시간 변환 (Timestamp 객체인 경우 처리)
-        ts = data.get("timestamp")
-        if hasattr(ts, "strftime"):
-            ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            ts_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
-
-        with open(LOG_FILE, "a", encoding="utf-8-sig", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                ts_str,
-                data.get("symbol", ""),
-                data.get("type", ""),
-                data.get("side", ""),
-                data.get("price", 0),
-                data.get("amount", 0),
-                data.get("pnl_usdt", 0),
-                data.get("pnl_pct", 0),
-                data.get("leverage", ""),
-                f"ID_{data.get('order_id', '')}",
-                data.get("trade_id", "")
-            ])
-    except Exception as e:
-        # 매매에 영향을 주지 않기 위해 에러는 출력만 하고 무시
-        print(f"[LOGGER ERROR] {e}")
+            oid = f"ID_{data.get('order_id', '')}"
+            tid = str(data.get("trade_id", ""))
+            status = data.get("type", "")
+            
+            cache_key = f"{oid}_{tid}_{status}"
+            if (oid != "ID_" or tid != "") and cache_key in _logged_cache:
+                return  # 중복 기록 차단
+                
+            _logged_cache.add(cache_key)
+            
+            # 한국 시간 변환 (Timestamp 객체인 경우 처리)
+            ts = data.get("timestamp")
+            if hasattr(ts, "strftime"):
+                ts_str = ts.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                ts_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
+    
+            with open(LOG_FILE, "a", encoding="utf-8-sig", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    ts_str,
+                    data.get("symbol", ""),
+                    data.get("type", ""),
+                    data.get("side", ""),
+                    data.get("price", 0),
+                    data.get("amount", 0),
+                    data.get("pnl_usdt", 0),
+                    data.get("pnl_pct", 0),
+                    data.get("leverage", ""),
+                    f"ID_{data.get('order_id', '')}",
+                    data.get("trade_id", "")
+                ])
+        except Exception as e:
+            # 매매에 영향을 주지 않기 위해 에러는 출력만 하고 무시
+            print(f"[LOGGER ERROR] {e}")
 
 AUTOTUNE_LOG_FILE = os.path.join(os.path.dirname(__file__), "..", "data", "autotune_history.csv")
 
@@ -112,20 +117,21 @@ def _ensure_autotune_file():
 
 def log_autotune(data: dict):
     """자동 튜닝 이력 영구 기록"""
-    try:
-        _ensure_autotune_file()
-        ts_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
-        with open(AUTOTUNE_LOG_FILE, "a", encoding="utf-8-sig", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                ts_str,
-                data.get("old_tp", 0),
-                data.get("old_sl", 0),
-                data.get("new_tp", 0),
-                data.get("new_sl", 0),
-                data.get("winrate", 0),
-                data.get("pnl", 0),
-                data.get("count", 0)
-            ])
-    except Exception as e:
-        print(f"[AUTOTUNE LOGGER ERROR] {e}")
+    with _csv_lock:
+        try:
+            _ensure_autotune_file()
+            ts_str = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
+            with open(AUTOTUNE_LOG_FILE, "a", encoding="utf-8-sig", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow([
+                    ts_str,
+                    data.get("old_tp", 0),
+                    data.get("old_sl", 0),
+                    data.get("new_tp", 0),
+                    data.get("new_sl", 0),
+                    data.get("winrate", 0),
+                    data.get("pnl", 0),
+                    data.get("count", 0)
+                ])
+        except Exception as e:
+            print(f"[AUTOTUNE LOGGER ERROR] {e}")

@@ -60,6 +60,7 @@ def _create_engine(scenario="default"):
     eng.client = mock
     eng.scanner = Scanner(mock)
     eng.trader = AutoTrader(mock)
+    eng.trader.enabled = False
     eng.scanner.on_signal = eng.trader.on_signal
     eng.scanner.on_scan_complete = eng._check_closed_positions_async
     eng._initialized = True

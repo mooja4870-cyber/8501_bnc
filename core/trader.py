@@ -27,7 +27,7 @@ class AutoTrader:
         self.cfg = CFG
         self._lock = asyncio.Lock()
 
-        self.enabled: bool = False
+        self.enabled: bool = True
         self.allow_long: bool = True
         self.allow_short: bool = True
 
@@ -117,10 +117,21 @@ class AutoTrader:
                 logger.warning(f"[SKIP] 증거금 설정 오류 (최소 $1): {margin_usdt:.2f} USDT")
                 return
 
+            if self.cfg.USE_DYNAMIC_SLTP and sig.atr > 0 and sig.close > 0:
+                atr_pct = sig.atr / sig.close
+                dynamic_sl_pct = atr_pct * self.cfg.ATR_SL_MULT
+                dynamic_tp_pct = atr_pct * self.cfg.ATR_TP_MULT
+                logger.info(f"[DYNAMIC SL/TP] {sig.symbol} ATR={sig.atr:.4f} ({atr_pct*100:.2f}%) -> SL={dynamic_sl_pct*100:.2f}%, TP={dynamic_tp_pct*100:.2f}%")
+            else:
+                dynamic_sl_pct = self.cfg.STOP_LOSS_PCT
+                dynamic_tp_pct = self.cfg.TAKE_PROFIT_PCT
+
             result = await self.client.place_order(
                 symbol=sig.symbol,
                 side=side,
                 margin_usdt=margin_usdt,
+                stop_loss_pct=dynamic_sl_pct,
+                take_profit_pct=dynamic_tp_pct
             )
 
             if result:

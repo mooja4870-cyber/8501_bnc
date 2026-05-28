@@ -456,6 +456,7 @@ class QuantumEngine:
                         except Exception as e:
                             logger.error(f"서킷 브레이커 발동 후 미체결 주문 일괄 취소 실패: {e}")
                         await self._stop_scanner_async()
+                        self._prev_position_symbols = set()
                         return
                     
                     # 2. 최대 낙폭 (MDD) 체크
@@ -480,6 +481,7 @@ class QuantumEngine:
                             except Exception as e:
                                 logger.error(f"서킷 브레이커 발동 후 미체결 주문 일괄 취소 실패: {e}")
                             await self._stop_scanner_async()
+                            self._prev_position_symbols = set()
                             return
                 except Exception as cbe:
                     logger.error(f"서킷 브레이커 감시 루프 오류: {cbe}")

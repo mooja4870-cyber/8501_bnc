@@ -1,6 +1,18 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v2.8.0] OKX 봇 매매기법 이식 및 안정성 검증 완료:**
+  - [Core/Strategy/Test] OKX 자동매매봇의 핵심 로직 3가지를 바이낸스 봇에 이식하고 기존 기능과의 무충돌 검증을 완료했습니다.
+  - 1. 스퀴즈 돌파(Breakout) 시 RSI 필터 우회(면제) 적용으로 추세 진입 최적화.
+  - 2. 스퀴즈 진입 Lookback 윈도우(5봉) 탐색 및 dot_color 전환 시점 확장 탐색(방안 B) 적용.
+  - 3. ATR 및 멀티플라이어 기반 동적 손절(SL)/익절(TP) 비율 계산 연동(USE_DYNAMIC_SLTP = True).
+  - 4. pytest async 러너의 anyio backend를 asyncio로 고정 피팅하여 147개 유닛 테스트 100% 통과 완료.
+- **[v2.7.0] 대시보드 비동기 캐시화 및 설정값 스냅샷 바인딩 적용:**
+  - [Architecture/Performance] Streamlit UI의 REST API 동기 블로킹 방지를 위한 백그라운드 텔레메트리 10초 주기 캐시 업데이트 구현, 포지션 종료/주문 체결 등 이벤트 발생 시 즉각 캐시를 강제 갱신하여 UI 실시간 반응성 보장, 런타임 경쟁 상태 및 스레드 안전성 확보를 위한 Scanner/AutoTrader 실행 주기별 config 스냅샷 바인딩 구현, UI와 엔진 설정 가변 갱신 코드의 Decoupling 및 단위 테스트 검증 통과.
+- **[v2.6.1] 포지션 청산 로직 강인성 보완:**
+  - [Core/Test] 실수 표현 오차로 인한 절사 오류 방지차 8자리 반올림 적용, 폴링 루프 내 get_positions 오류 발생 시 예외 처리 추가로 붕괴 방지, bulk 청산 병렬 실행(asyncio.gather)으로 UI 프리징/타임아웃 해소, UI/인자 side와 상관없이 실제 포지션 방향(target["side"]) 기반 close_side 판정.
+- **[v2.6.0] 5개 필수 수정 통합 릴리즈:**
+  - [Core/UI/Test] 완성 캔들(iloc[-2]) 기준 신호 판단 전환으로 리페인팅 완전 제거, Binance 네이티브 TRAILING_STOP_MARKET 주문 진입 시 전송, 부분 체결 대응 실시간 수량 조회 기반 SL/TP 생성 (fetch_order 폴링 + 잔여 취소), 일방적 UI 은폐 캐시(Fast Hide) 제거 및 st.spinner 추가, 서킷 브레이커(일일 손실 한도 + MDD 초과 시 일괄 청산 및 봇 정지) 연동.
 - **[v2.5.2] 파이썬 인터프리터 경로 설정 및 경고 해결:**
   - [Config] `.vscode/settings.json` 내의 `python.defaultInterpreterPath` 파이썬 가상환경(venv) 경로 지정을 변수 치환 오류가 발생하는 `${workspaceFolder}` 형태에서 상대 경로(`venv/Scripts/python.exe`)로 변경하여 IDE 경고창을 완전히 해결했습니다.
 - **[v2.5.1] 대시보드 로그인 패스워드 검증 제거:**

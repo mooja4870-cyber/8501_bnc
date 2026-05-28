@@ -129,13 +129,12 @@ class TestStrategySignals:
             assert sig_long_ok.rsi_ok is True
             assert sig_long_ok.strength == 100
 
-            # Case 2: 롱 진입조건 충족 + RSI 과열 (65.0) -> none 진입차단
+            # Case 2: 롱 진입조건 충족 + RSI 과열 (65.0) -> 스퀴즈 돌파 시에는 RSI 필터 면제되어 진입 허용 -> long 진입
             monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long_rsi_blocked)
             sig_long_blocked = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
-            assert sig_long_blocked.direction == "none"
-            assert sig_long_blocked.rsi_ok is False
-            assert "RSI 과열" in sig_long_blocked.reason
-            assert sig_long_blocked.strength == 80
+            assert sig_long_blocked.direction == "long"
+            assert sig_long_blocked.rsi_ok is True
+            assert sig_long_blocked.strength == 100
 
             # Case 3: 숏 진입조건 충족 + RSI 정상 (50.0) -> short 진입
             monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short)
@@ -144,13 +143,12 @@ class TestStrategySignals:
             assert sig_short_ok.rsi_ok is True
             assert sig_short_ok.strength == 100
 
-            # Case 4: 숏 진입조건 충족 + RSI 과매도 (35.0) -> none 진입차단
+            # Case 4: 숏 진입조건 충족 + RSI 과매도 (35.0) -> 스퀴즈 돌파 시에는 RSI 필터 면제되어 진입 허용 -> short 진입
             monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short_rsi_blocked)
             sig_short_blocked = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
-            assert sig_short_blocked.direction == "none"
-            assert sig_short_blocked.rsi_ok is False
-            assert "RSI 과매도" in sig_short_blocked.reason
-            assert sig_short_blocked.strength == 80
+            assert sig_short_blocked.direction == "short"
+            assert sig_short_blocked.rsi_ok is True
+            assert sig_short_blocked.strength == 100
 
             # Case 5: USE_RSI_FILTER = False 일 때, 롱 진입조건 충족 + RSI 과열(65.0) 임에도 진입 허용 -> long 진입
             self.engine.cfg.USE_RSI_FILTER = False
@@ -164,6 +162,27 @@ class TestStrategySignals:
             sig_short_bypass = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
             assert sig_short_bypass.direction == "short"
             assert sig_short_bypass.rsi_ok is True
+
+            # Case 7: 스퀴즈 돌파 상태가 아닐 때 롱 RSI 과열(65.0) -> rsi_ok = False 및 진입 차단
+            self.engine.cfg.USE_RSI_FILTER = True
+            def mock_calc_long_no_squeeze(df_input):
+                res = mock_calc_long_rsi_blocked(df_input)
+                res['dot_color'] = ['red'] * len(res)  # 스퀴즈 전환 제거 (squeeze_fired = False)
+                return res
+            monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_long_no_squeeze)
+            sig_long_no_sq = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+            assert sig_long_no_sq.direction == "none"
+            assert sig_long_no_sq.rsi_ok is False
+
+            # Case 8: 스퀴즈 돌파 상태가 아닐 때 숏 RSI 과매도(35.0) -> rsi_ok = False 및 진입 차단
+            def mock_calc_short_no_squeeze(df_input):
+                res = mock_calc_short_rsi_blocked(df_input)
+                res['dot_color'] = ['green'] * len(res)  # 스퀴즈 전환 제거 (squeeze_fired = False)
+                return res
+            monkeypatch.setattr(self.engine, "calculate_indicators", mock_calc_short_no_squeeze)
+            sig_short_no_sq = self.engine.generate_signal(df_base, "BTC/USDT:USDT")
+            assert sig_short_no_sq.direction == "none"
+            assert sig_short_no_sq.rsi_ok is False
         finally:
             # 원복
             self.engine.cfg.USE_RSI_FILTER = True

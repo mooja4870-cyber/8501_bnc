@@ -13,3 +13,8 @@ def mock_log_file(monkeypatch, tmp_path):
     monkeypatch.setattr(core.logger, "AUTOTUNE_LOG_FILE", test_autotune_file)
     monkeypatch.setattr(core.stats, "STATS_FILE", test_stats_file)
 
+
+@pytest.fixture
+def anyio_backend():
+    return 'asyncio'
+

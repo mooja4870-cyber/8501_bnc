@@ -88,6 +88,9 @@ class TradingConfig:
     DAILY_LOSS_LIMIT_USDT: float = get_env_float("DAILY_LOSS_LIMIT_USDT", 7.0) # 일일 손실 한도 (기본 7.0 USDT)
     TRAILING_ACTIVATE_PCT: float = get_env_float("TRAILING_ACTIVATE_PCT", 0.015) # 트레일링 스탑 발동 1.5% (기본값)
     TRAILING_CALLBACK_PCT: float = get_env_float("TRAILING_CALLBACK_PCT", 0.0043) # 트레일링 스탑 콜백 0.43% (기본값)
+    USE_DYNAMIC_SLTP: bool = get_env_bool("USE_DYNAMIC_SLTP", True)           # ATR 기반 동적 SL/TP 사용 여부 (기본 True)
+    ATR_SL_MULT: float = get_env_float("ATR_SL_MULT", 1.5)                    # ATR 손절 승수 (기본 1.5)
+    ATR_TP_MULT: float = get_env_float("ATR_TP_MULT", 2.0)                    # ATR 익절 승수 (기본 2.0)
 
     # ── 지표 파라미터 ──────────────────────────────────
     BB_PERIOD: int = get_env_int("BB_PERIOD", 20)                    # AKMCD 볼린저밴드 기간 (기본값 20)
@@ -95,6 +98,7 @@ class TradingConfig:
     BB_STD: float = get_env_float("BB_STD", 2.0)                     # AKMCD 볼린저밴드 배수 (기본값 2.0)
     TTM_KC_MULT: float = get_env_float("TTM_KC_MULT", 1.5)            # TTM Squeeze 켈트너채널 배수 (기본값 1.5)
     TTM_MOM_PERIOD: int = get_env_int("TTM_MOM_PERIOD", 20)          # TTM Squeeze 모멘텀 선형회귀 기간 (기본값 20)
+    SQUEEZE_LOOKBACK: int = get_env_int("SQUEEZE_LOOKBACK", 5)                # 스퀴즈 돌파 감지 lookback 봉수 (기본 5)
 
     # ── RSI 필터 ──────────────────────────────────────
     RSI_PERIOD: int = get_env_int("RSI_PERIOD", 14)                  # RSI 기간 (기본값 14)

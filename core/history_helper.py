@@ -5,6 +5,7 @@ import os
 import pandas as pd
 from typing import List, Dict, Optional
 import core.logger as logger_store
+from core.logger import _csv_lock
 from core.config import CFG
 
 CSV_COLUMNS = {
@@ -111,25 +112,26 @@ def load_local_trade_history() -> List[Dict]:
     """local trade_history.csv 로드하여 원본 데이터 리스트 반환 (모의 거래 필터링 포함)"""
     if not os.path.exists(logger_store.LOG_FILE):
         return []
-    try:
-        df = pd.read_csv(logger_store.LOG_FILE, encoding="utf-8-sig")
-        df.columns = [c.strip() for c in df.columns]
-        
-        trades = []
-        seen = set()
-        for _, row in df.iterrows():
-            trade = _row_to_trade(row)
-            if trade is None:
-                continue
-            key = _trade_dedupe_key(trade)
-            if key in seen:
-                continue
-            seen.add(key)
-            trades.append(trade)
-        return trades
-    except Exception as e:
-        print(f"[HISTORY_HELPER] 로컬 CSV 로드 실패: {e}")
-        return []
+    with _csv_lock:
+        try:
+            df = pd.read_csv(logger_store.LOG_FILE, encoding="utf-8-sig")
+            df.columns = [c.strip() for c in df.columns]
+            
+            trades = []
+            seen = set()
+            for _, row in df.iterrows():
+                trade = _row_to_trade(row)
+                if trade is None:
+                    continue
+                key = _trade_dedupe_key(trade)
+                if key in seen:
+                    continue
+                seen.add(key)
+                trades.append(trade)
+            return trades
+        except Exception as e:
+            print(f"[HISTORY_HELPER] 로컬 CSV 로드 실패: {e}")
+            return []
 
 
 def compact_local_trade_history() -> int:
@@ -137,31 +139,31 @@ def compact_local_trade_history() -> int:
     path = logger_store.LOG_FILE
     if not os.path.exists(path):
         return 0
+    with _csv_lock:
+        df = pd.read_csv(path, encoding="utf-8-sig")
+        df.columns = [c.strip() for c in df.columns]
+        seen = set()
+        keep_indices = []
 
-    df = pd.read_csv(path, encoding="utf-8-sig")
-    df.columns = [c.strip() for c in df.columns]
-    seen = set()
-    keep_indices = []
-
-    for idx, row in df.iterrows():
-        trade = _row_to_trade(row)
-        if trade is None:
+        for idx, row in df.iterrows():
+            trade = _row_to_trade(row)
+            if trade is None:
+                keep_indices.append(idx)
+                continue
+            key = _trade_dedupe_key(trade)
+            if key in seen:
+                continue
+            seen.add(key)
             keep_indices.append(idx)
-            continue
-        key = _trade_dedupe_key(trade)
-        if key in seen:
-            continue
-        seen.add(key)
-        keep_indices.append(idx)
 
-    removed = len(df) - len(keep_indices)
-    if removed <= 0:
-        return 0
+        removed = len(df) - len(keep_indices)
+        if removed <= 0:
+            return 0
 
-    backup_path = f"{path}.bak"
-    df.to_csv(backup_path, index=False, encoding="utf-8-sig")
-    df.loc[keep_indices].to_csv(path, index=False, encoding="utf-8-sig")
-    return removed
+        backup_path = f"{path}.bak"
+        df.to_csv(backup_path, index=False, encoding="utf-8-sig")
+        df.loc[keep_indices].to_csv(path, index=False, encoding="utf-8-sig")
+        return removed
 
 def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional[set] = None) -> List[Dict]:
     """

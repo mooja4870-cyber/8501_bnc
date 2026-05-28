@@ -247,8 +247,11 @@ class TestRSIFilter:
 
     def test_long_rsi_overbought_blocks(self, engine, base_df, monkeypatch):
         """롱: RSI=80 >= 75 → 차단"""
-        monkeypatch.setattr(engine, "calculate_indicators",
-                            lambda df: _make_long_indicators(df, rsi=80.0))
+        def mock_no_squeeze(df):
+            res = _make_long_indicators(df, rsi=80.0)
+            res['dot_color'] = ['red'] * len(res)  # 스퀴즈 전환 제거 (squeeze_fired = False)
+            return res
+        monkeypatch.setattr(engine, "calculate_indicators", mock_no_squeeze)
         sig = engine.generate_signal(base_df, "T")
         assert sig.direction == "none"
         assert sig.rsi_ok is False
@@ -263,8 +266,11 @@ class TestRSIFilter:
 
     def test_short_rsi_oversold_blocks(self, engine, base_df, monkeypatch):
         """숏: RSI=20 <= 25 → 차단"""
-        monkeypatch.setattr(engine, "calculate_indicators",
-                            lambda df: _make_short_indicators(df, rsi=20.0))
+        def mock_no_squeeze(df):
+            res = _make_short_indicators(df, rsi=20.0)
+            res['dot_color'] = ['green'] * len(res)  # 스퀴즈 전환 제거 (squeeze_fired = False)
+            return res
+        monkeypatch.setattr(engine, "calculate_indicators", mock_no_squeeze)
         sig = engine.generate_signal(base_df, "T")
         assert sig.direction == "none"
         assert sig.rsi_ok is False
