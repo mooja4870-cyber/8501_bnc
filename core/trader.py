@@ -43,6 +43,8 @@ class AutoTrader:
         self.symbol_cooldown_until: Dict[str, datetime] = {}
         self._daily_loss_alert_sent = False
         self._prev_symbols_held: set[str] = set()
+        self.last_entered_candle_ts: Dict[str, datetime] = {}
+
 
     def enable(self):
         self.enabled = True
@@ -65,6 +67,14 @@ class AutoTrader:
             return
         if sig.direction == "none":
             return
+
+        # 0. 동일 캔들 내 중복 진입 방지 가드 (휩소 차단)
+        if sig.timestamp is not None:
+            last_ts = self.last_entered_candle_ts.get(sig.symbol)
+            if last_ts == sig.timestamp:
+                logger.info(f"[SKIP] {sig.symbol} — 이미 동일한 완성 캔들({sig.timestamp})에서 진입을 완료했습니다.")
+                return
+
 
         async with self._lock:
             self._reset_daily_if_needed()
@@ -163,6 +173,8 @@ class AutoTrader:
 
             if result:
                 self.recently_entered[sig.symbol] = datetime.now()
+                if sig.timestamp is not None:
+                    self.last_entered_candle_ts[sig.symbol] = sig.timestamp
                 self.orders_today += 1
                 stats_store.record_order()
                 self._log_trade(sig, status="EXECUTED", result=result)

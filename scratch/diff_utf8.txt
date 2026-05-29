@@ -1,0 +1,248 @@
+diff --git a/app.py b/app.py
+index b2f93dd..2e77325 100644
+--- a/app.py
++++ b/app.py
+@@ -991,58 +991,76 @@ with st.sidebar:
+ 
+     with st.expander("📊 지표 및 스캐너 설정", expanded=False):
+         st.number_input("📏 KC ATR 배수", 0.5, 5.0, float(CFG.TTM_KC_MULT), step=0.1, key="sb_kc_mult",
+-                        on_change=sync_p, args=("sb_kc_mult", "main_kc_mult", "TTM_KC_MULT"))
++                        on_change=sync_p, args=("sb_kc_mult", "main_kc_mult", "TTM_KC_MULT"),
++                        help="켈트너 채널(KC) 폭을 결정하는 ATR 승수입니다.\n\n• 값이 클수록 채널이 넓어져 Squeeze 진입 신호가 줄고 정확도가 높아집니다.\n• 값이 작을수록 채널이 좁아져 신호가 늘지만 노이즈에 민감해집니다.\n• 권장값: 1.5 (변동성이 높은 코인은 2.0 이상 사용 권장)")
+         # [v1.3.02] 타임프레임 원격 제어 추가
+         tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
+         st.selectbox("⏱️ 타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="sb_timeframe",
+-                     on_change=sync_p, args=("sb_timeframe", "main_timeframe", "TIMEFRAME"))
++                     on_change=sync_p, args=("sb_timeframe", "main_timeframe", "TIMEFRAME"),
++                     help="전략 신호 판단에 사용할 캔들봉 단위입니다.\n\n• 짧은 봉(1m~15m): 단기 스캘핑·빠른 진입에 유리하지만 노이즈 많음\n• 긴 봉(1h~4h): 추세 추종·안정성에 유리하지만 신호 빈도 낮음\n• 현재 기본값 30m: 단기 데이트레이딩 최적 균형점")
+         col_bb1, col_bb2 = st.columns(2)
+         with col_bb1:
+             st.number_input("📈 BB 기간", 5, 100, CFG.BB_PERIOD, key="sb_bb_period",
+-                            on_change=sync_p, args=("sb_bb_period", "main_bb_period", "BB_PERIOD"))
++                            on_change=sync_p, args=("sb_bb_period", "main_bb_period", "BB_PERIOD"),
++                            help="볼린저 밴드(BB) 산출에 사용하는 이동평균 기간(캔들 수)입니다.\n\n• 기간이 짧을수록 밴드가 민감하게 반응해 신호 빈도 증가\n• 기간이 길수록 추세 기반의 안정적인 신호 생성\n• 표준값: 20 (TTM Squeeze 원본 기준)")
+         with col_bb2:
+             st.number_input("📏 BB 편차 배수", 1.0, 5.0, CFG.BB_STD, step=0.1, key="sb_bb_std",
+-                            on_change=sync_p, args=("sb_bb_std", "main_bb_std", "BB_STD"))
++                            on_change=sync_p, args=("sb_bb_std", "main_bb_std", "BB_STD"),
++                            help="볼린저 밴드 상·하단 폭을 결정하는 표준편차 배수입니다.\n\n• 값이 클수록 밴드가 넓어져 Squeeze(수축) 상태가 줄어듦\n• 값이 작을수록 밴드가 좁아져 Squeeze 빈도 증가\n• 표준값: 2.0")
+         
+         st.number_input("⏱️ TTM 모멘텀 기간", 5, 100, CFG.TTM_MOM_PERIOD, step=1, key="sb_ttm_mom_period",
+-                        on_change=sync_p, args=("sb_ttm_mom_period", "main_ttm_mom_period", "TTM_MOM_PERIOD"))
++                        on_change=sync_p, args=("sb_ttm_mom_period", "main_ttm_mom_period", "TTM_MOM_PERIOD"),
++                        help="TTM Squeeze 모멘텀 히스토그램 산출 기간(캔들 수)입니다.\n\n• 모멘텀은 현재 가격이 과거 N봉 고/저/종가 범위 중 어디에 위치하는지로 측정\n• 기간이 짧을수록 반응이 빠르고 기간이 길수록 추세 필터 강도가 강해짐\n• 표준값: 20")
+ 
+     with st.expander("⚡ RSI 필터 설정", expanded=False):
+         st.number_input("⚡ RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="sb_rsi_period",
+-                        on_change=sync_p, args=("sb_rsi_period", "main_rsi_period,settings_rsi_period", "RSI_PERIOD"))
++                        on_change=sync_p, args=("sb_rsi_period", "main_rsi_period,settings_rsi_period", "RSI_PERIOD"),
++                        help="RSI(Relative Strength Index) 산출에 사용하는 기간(캔들 수)입니다.\n\n• 기간이 짧을수록(ex: 7) RSI가 빠르게 반응해 과열·과매도 신호 빈도 증가\n• 기간이 길수록(ex: 21) 더 넓은 추세 흐름을 반영한 안정적인 신호\n• 표준값: 14")
+         col_rsi1, col_rsi2 = st.columns(2)
+         with col_rsi1:
+             st.number_input("🟢 RSI 롱 진입 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="sb_rsi_overbought",
+-                            on_change=sync_p, args=("sb_rsi_overbought", "main_rsi_overbought,settings_rsi_overbought", "RSI_OVERBOUGHT"))
++                            on_change=sync_p, args=("sb_rsi_overbought", "main_rsi_overbought,settings_rsi_overbought", "RSI_OVERBOUGHT"),
++                            help="롱(매수) 포지션 진입 시 RSI가 이 값 이하일 때만 허용합니다.\n\n• 과열권(RSI 높음)에서의 추격 매수를 차단해 고점 매수 리스크 감소\n• 값을 높이면(ex: 80) 더 많은 롱 신호를 허용\n• 값을 낮추면(ex: 60) 과열권 진입을 엄격히 차단\n• 권장값: 75")
+         with col_rsi2:
+             st.number_input("🔴 RSI 숏 진입 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="sb_rsi_oversold",
+-                            on_change=sync_p, args=("sb_rsi_oversold", "main_rsi_oversold,settings_rsi_oversold", "RSI_OVERSOLD"))
++                            on_change=sync_p, args=("sb_rsi_oversold", "main_rsi_oversold,settings_rsi_oversold", "RSI_OVERSOLD"),
++                            help="숏(매도) 포지션 진입 시 RSI가 이 값 이상일 때만 허용합니다.\n\n• 과매도권(RSI 낮음)에서의 추격 매도를 차단해 저점 공매도 리스크 감소\n• 값을 낮추면(ex: 20) 더 많은 숏 신호를 허용\n• 값을 높이면(ex: 35) 과매도권 진입을 엄격히 차단\n• 권장값: 25")
+ 
+     with st.expander("🔊 거래량 서지 필터 설정", expanded=False):
+         st.toggle("🔊 거래량 서지 필터 활성화", value=st.session_state.sb_use_vol_surge, key="sb_use_vol_surge",
+-                  on_change=sync_p, args=("sb_use_vol_surge", "main_use_vol_surge", "USE_VOLUME_SURGE_FILTER"))
++                  on_change=sync_p, args=("sb_use_vol_surge", "main_use_vol_surge", "USE_VOLUME_SURGE_FILTER"),
++                  help="ON: 현재 캔들 거래량이 평균 대비 설정 배수 이상일 때만 신호를 허용합니다.\n\n• 거래량 폭발 없이 발생하는 가짜 Squeeze 돌파 신호를 필터링\n• OFF: 거래량 조건 없이 모든 TTM Squeeze 신호를 허용\n• 변동성이 큰 장세에서 노이즈 감소에 효과적")
+         st.number_input("⏱️ 거래량 서지 평균 기간", 5, 100, int(st.session_state.sb_vol_surge_period), step=1, key="sb_vol_surge_period",
+-                        on_change=sync_p, args=("sb_vol_surge_period", "main_vol_surge_period,settings_vol_surge_period", "VOLUME_SURGE_PERIOD"))
++                        on_change=sync_p, args=("sb_vol_surge_period", "main_vol_surge_period,settings_vol_surge_period", "VOLUME_SURGE_PERIOD"),
++                        help="거래량 평균을 계산할 기간(캔들 수)입니다.\n\n• 이 기간 동안의 평균 거래량을 기준으로 서지(폭발) 여부를 판단\n• 기간이 짧을수록 최근 거래량에 민감하게 반응\n• 기간이 길수록 장기 평균 대비 서지 여부를 엄격히 판단\n• 권장값: 20")
+         st.number_input("📏 거래량 서지 배수", 1.0, 10.0, float(st.session_state.sb_vol_surge_mult), step=0.1, key="sb_vol_surge_mult",
+-                        on_change=sync_p, args=("sb_vol_surge_mult", "main_vol_surge_mult,settings_vol_surge_mult", "VOLUME_SURGE_MULTIPLIER"))
++                        on_change=sync_p, args=("sb_vol_surge_mult", "main_vol_surge_mult,settings_vol_surge_mult", "VOLUME_SURGE_MULTIPLIER"),
++                        help="현재 거래량이 평균의 몇 배 이상일 때 서지로 인정할지 결정하는 배수입니다.\n\n• 1.25배: 평균보다 25% 이상 많은 거래량일 때 신호 허용 (기본값)\n• 배수가 낮을수록 더 많은 신호 허용 / 높을수록 강한 폭발만 허용\n• 권장값: 1.25~2.0 (시장 변동성에 따라 조정)")
+ 
+     with st.expander("⚙️ 운용 및 포지션 설정", expanded=False):
+         st.number_input("🚀 레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="sb_leverage",
+-                        on_change=sync_p, args=("sb_leverage", "main_leverage", "LEVERAGE"))
++                        on_change=sync_p, args=("sb_leverage", "main_leverage", "LEVERAGE"),
++                        help="포지션 진입 시 적용할 레버리지 배율입니다.\n\n• 레버리지가 높을수록 적은 증거금으로 큰 포지션 진입 가능\n• 단, 레버리지가 높을수록 청산 위험도 비례하여 증가\n• 예: 10배 레버리지 + 5 USDT 증거금 → 50 USDT 규모 포지션 진입\n• ⚠️ 고레버리지는 변동성이 큰 코인에서 강제청산 위험 급증")
+         st.number_input("💵 1회 진입 증거금 (USDT)", 1.0, 100.0, CFG.MARGIN_USDT, step=0.5, key="sb_margin",
+-                        on_change=sync_p, args=("sb_margin", "main_margin", "MARGIN_USDT"))
++                        on_change=sync_p, args=("sb_margin", "main_margin", "MARGIN_USDT"),
++                        help="포지션 1건 진입 시 투입할 담보금(증거금) 금액입니다.\n\n• 실제 포지션 규모 = 증거금 × 레버리지\n• 예: 5 USDT × 10배 = 50 USDT 포지션\n• 최대 동시 포지션 수만큼 중복 소모되므로 가용 잔고 대비 안전 비율 설정 권장\n• ⚠️ 잔고 대비 너무 큰 증거금 설정 시 신규 진입이 차단될 수 있음")
+         st.number_input("👥 최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="sb_max_pos",
+-                        on_change=sync_p, args=("sb_max_pos", "main_max_pos", "MAX_POSITIONS"))
++                        on_change=sync_p, args=("sb_max_pos", "main_max_pos", "MAX_POSITIONS"),
++                        help="동시에 열어둘 수 있는 최대 포지션 개수입니다.\n\n• 이 수를 초과하면 새로운 신호가 발생해도 신규 진입을 차단\n• 분산 진입으로 리스크를 나눌수록 개별 포지션 손실 영향이 줄어듦\n• 너무 많은 포지션은 증거금 분산으로 각 포지션 규모 축소\n• 권장값: 자본 대비 3~5개")
+ 
+     with st.expander("🛡️ 리스크 및 한도 설정", expanded=False):
+         st.number_input("🎯 익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="sb_tp",
+-                        on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True))
++                        on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True),
++                        help="목표 수익률에 도달하면 포지션을 자동으로 청산하는 익절 기준입니다.\n\n• 진입가 대비 이 비율만큼 수익이 발생하면 TP(Take Profit) 주문 체결\n• 트레일링 스탑 발동 조건 달성 전 도달 시 먼저 청산\n• 레버리지 반영 전 기초자산 기준 비율\n• 권장값: 손절 대비 1.5배 이상 (Risk-Reward Ratio 준수)")
+         st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
+-                        on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True))
++                        on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True),
++                        help="최대 허용 손실률에 도달하면 포지션을 자동으로 청산하는 손절 기준입니다.\n\n• 진입가 대비 이 비율만큼 손실이 발생하면 SL(Stop Loss) 주문 체결\n• 손절은 자본 보존을 위한 필수 안전장치\n• 레버리지 반영 전 기초자산 기준 비율\n• ⚠️ 손절이 너무 좁으면 정상 변동성에도 청산됨 / 너무 넓으면 손실 과다")
+         st.number_input("⏱️ 트레일링 발동 (%)", 0.1, 20.0, float(CFG.TRAILING_ACTIVATE_PCT * 100), step=0.1, key="sb_trailing_activate",
+-                        on_change=sync_p, args=("sb_trailing_activate", "main_trailing_activate", "TRAILING_ACTIVATE_PCT", True))
++                        on_change=sync_p, args=("sb_trailing_activate", "main_trailing_activate", "TRAILING_ACTIVATE_PCT", True),
++                        help="트레일링 스탑(Trailing Stop)이 활성화되는 수익률 임계값입니다.\n\n• 포지션이 이 수익률에 도달하는 순간 고정 손절이 해제되고 추적형 손절로 전환\n• 이후 가격이 역행하면 콜백(%) 범위에서 자동 청산\n• 이익을 최대한 추적하면서 수익을 보호하는 전략\n• 권장값: 익절(TP)과 같거나 조금 낮게 설정")
+         st.number_input("↩️ 트레일링 콜백 (%)", 0.05, 5.0, float(CFG.TRAILING_CALLBACK_PCT * 100), step=0.05, key="sb_trailing_callback",
+-                        on_change=sync_p, args=("sb_trailing_callback", "main_trailing_callback", "TRAILING_CALLBACK_PCT", True))
++                        on_change=sync_p, args=("sb_trailing_callback", "main_trailing_callback", "TRAILING_CALLBACK_PCT", True),
++                        help="트레일링 스탑 활성화 후 고점 대비 이 비율만큼 역행하면 청산합니다.\n\n• 값이 작을수록(ex: 0.2%) 조금만 빠져도 청산 → 수익 확보에 유리하나 조기 청산 위험\n• 값이 클수록(ex: 1.0%) 더 많은 역행을 허용 → 추가 상승 기회를 주지만 수익 반납 위험\n• 권장값: 0.3~0.5% (변동성에 따라 조정)")
+ 
+ # ══════════════════════════════════════════════════════
+ # 메인 헤더 (한 줄 배치)
+@@ -1190,11 +1208,11 @@ with tabs[0]:
+             seed_money_tmp = _st_tmp.get("seed_money", 30.0)
+             total_pnl_pct_tmp = ((dash['total_balance'] / seed_money_tmp) - 1) * 100 if seed_money_tmp > 0 else 0.0
+             
+-            perf_start_str_tmp = _st_tmp.get("perf_start_time", "2026-05-15 00:00:00")
++            perf_start_str_tmp = _st_tmp.get("perf_start_time", "2026-05-28 01:34:00")
+             try:
+                 perf_start_dt_tmp = datetime.strptime(perf_start_str_tmp, "%Y-%m-%d %H:%M:%S")
+             except Exception:
+-                perf_start_dt_tmp = datetime(2026, 5, 15, 0, 0, 0)
++                perf_start_dt_tmp = datetime(2026, 5, 28, 1, 34, 0)
+                 
+             now_kst_tmp = datetime.utcnow() + timedelta(hours=9)
+             elapsed_seconds_tmp = (now_kst_tmp - perf_start_dt_tmp).total_seconds()
+@@ -1348,11 +1366,11 @@ with tabs[0]:
+         daily_pnl_pct = (daily_pnl / seed_money) * 100 if seed_money > 0 else 0.0
+         
+         # [v1.2.40] 일 평균 수익률 계산 보정 (최소 1일 기준 - 뻥튀기 방지)
+-        perf_start_str = _st.get("perf_start_time", "2026-05-15 00:00:00")
++        perf_start_str = _st.get("perf_start_time", "2026-05-28 01:34:00")
+         try:
+             perf_start_dt = datetime.strptime(perf_start_str, "%Y-%m-%d %H:%M:%S")
+         except Exception:
+-            perf_start_dt = datetime(2026, 5, 15, 0, 0, 0)
++            perf_start_dt = datetime(2026, 5, 28, 1, 34, 0)
+             
+         now_kst = datetime.utcnow() + timedelta(hours=9)
+         elapsed_seconds = (now_kst - perf_start_dt).total_seconds()
+@@ -1445,7 +1463,7 @@ with tabs[0]:
+                     </div>
+                     <div class="terminal-metric-value" style="color:{avg_color};">{daily_avg_roi:+.2f}%</div>
+                     <div class="terminal-metric-sub" style="color:#cccccc;">
+-                        {avg_arrow} {perf_start_dt.strftime("%Y.%m.%d %H:%M")} ~
++                        SINCE {perf_start_dt.strftime("%Y.%m.%d %H:%M")}
+                     </div>
+                 </div>
+                 <!-- 누적 승률 -->
+@@ -1958,11 +1976,14 @@ with tabs[4]:
+         st.number_input("👥 최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="main_max_pos",
+                         on_change=sync_p, args=("main_max_pos", "sb_max_pos", "MAX_POSITIONS"))
+         st.number_input("⏱️ 스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10, key="main_scan_interval",
+-                        on_change=sync_p, args=("main_scan_interval", "sb_scan_interval", "SCAN_INTERVAL_SEC"))
++                        on_change=sync_p, args=("main_scan_interval", "sb_scan_interval", "SCAN_INTERVAL_SEC"),
++                        help="마켓 스캔너가 신호를 탐색하는 주기(초)입니다.\n\n• 짧을수록 신호를 빠르게 포착하지만 API 호출 횟수 증가\n• 길수록 API 요청 부하가 줄어듦\n• 권장값: 30초 (잠짜 스캔에 적합, API 한도 안전하게 유지)")
+         st.number_input("💵 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
+-                        on_change=sync_p, args=("main_min_vol", "sb_min_vol", "MIN_VOLUME_USDT"))
++                        on_change=sync_p, args=("main_min_vol", "sb_min_vol", "MIN_VOLUME_USDT"),
++                        help="스캔 대상 코인을 필터링할 최소 24시간 거래대금 기준입니다.\n\n• 이 값 미만인 저유동성 코인은 스캔 문에서 지동 제외\n• 유동성이 높은 코인일수록 슬리피지 및 체결 실패 위험 감소\n• 권장값: 100만~200만 USDT (안정적 체결 확보)")
+         st.toggle("⚡ 지정가 주문 활성화 (Limit Order)", value=st.session_state.main_order_mode, key="main_order_mode",
+-                  on_change=sync_p, args=("main_order_mode", "sb_order_mode", "USE_LIMIT_ORDER"))
++                  on_change=sync_p, args=("main_order_mode", "sb_order_mode", "USE_LIMIT_ORDER"),
++                  help="ON: 지정가(Limit) 주문을 제출하여 수수료와 슬리피지를 절감합니다. / OFF: 시장가(Market) 주문을 제출하여 즉시 체결을 보장합니다.")
+         if st.session_state.main_order_mode:
+             st.number_input("⚡ 진입 지정가 틱 오프셋", 0, 5, int(st.session_state.main_tick_offset), step=1, key="main_tick_offset",
+                             on_change=sync_p, args=("main_tick_offset", "sb_tick_offset", "LIMIT_TICK_OFFSET"),
+@@ -1973,33 +1994,43 @@ with tabs[4]:
+ 
+     with s2:
+         st.number_input("🎯 익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",
+-                        on_change=sync_p, args=("main_tp", "sb_tp", "TAKE_PROFIT_PCT", True))
++                        on_change=sync_p, args=("main_tp", "sb_tp", "TAKE_PROFIT_PCT", True),
++                        help="목표 수익률에 도달하면 포지션을 자동으로 청산하는 익절 기준입니다.\n\n• 진입가 대비 이 비율만큼 수익이 발생하면 TP(Take Profit) 주문 체결\n• 트레일링 스탑 발동 조건 달성 전 도달 시 먼저 청산\n• 레버리지 반영 전 기초자산 기준 비율\n• 권장값: 손절 대비 1.5배 이상 (Risk-Reward Ratio 준수)")
+         st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
+-                        on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True))
++                        on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True),
++                        help="최대 허용 손실률에 도달하면 포지션을 자동으로 청산하는 손절 기준입니다.\n\n• 진입가 대비 이 비율만큼 손실이 발생하면 SL(Stop Loss) 주문 체결\n• 손절은 자본 보존을 위한 필수 안전장치\n• 레버리지 반영 전 기초자산 기준 비율\n• ⚠️ 손절이 너무 쌁으면 정상 변동성에도 청산됨 / 너무 넓으면 손실 과다")
+         st.number_input("⏱️ 트레일링 발동 (%)", 0.1, 20.0, float(CFG.TRAILING_ACTIVATE_PCT * 100), step=0.1, key="main_trailing_activate",
+-                        on_change=sync_p, args=("main_trailing_activate", "sb_trailing_activate", "TRAILING_ACTIVATE_PCT", True))
++                        on_change=sync_p, args=("main_trailing_activate", "sb_trailing_activate", "TRAILING_ACTIVATE_PCT", True),
++                        help="트레일링 스탑(Trailing Stop)이 활성화되는 수익률 임계값입니다.\n\n• 포지션이 이 수익률에 도달하는 순간 고정 손절이 해제되고 추적형 손절로 전환\n• 이후 가격이 역행하면 콜백(%) 범위에서 자동 청산\n• 이익을 최대한 추적하면서 수익을 보호하는 전략\n• 권장값: 익절(TP)과 같거나 조금 낮게 설정")
+         st.number_input("↩️ 트레일링 콜백 (%)", 0.05, 5.0, float(CFG.TRAILING_CALLBACK_PCT * 100), step=0.05, key="main_trailing_callback",
+-                        on_change=sync_p, args=("main_trailing_callback", "sb_trailing_callback", "TRAILING_CALLBACK_PCT", True))
++                        on_change=sync_p, args=("main_trailing_callback", "sb_trailing_callback", "TRAILING_CALLBACK_PCT", True),
++                        help="트레일링 스탑 활성화 후 고점 대비 이 비율만큼 역행하면 청산합니다.\n\n• 값이 작을수록(ex: 0.2%) 조금만 빠져도 청산 → 수익 확보에 유리하나 조기 청산 위험\n• 값이 클수록(ex: 1.0%) 더 많은 역행을 허용 → 추가 상승 기회를 주지만 수익 반납 위험\n• 권장값: 0.3~0.5% (변동성에 따라 조정)")
+         st.number_input("🛡️ 일일 손실 한도 (USDT)", 1.0, 100.0, float(CFG.DAILY_LOSS_LIMIT_USDT), step=1.0, key="main_daily_loss_limit",
+-                        on_change=sync_p, args=("main_daily_loss_limit", "main_daily_loss_limit", "DAILY_LOSS_LIMIT_USDT"))
++                        on_change=sync_p, args=("main_daily_loss_limit", "main_daily_loss_limit", "DAILY_LOSS_LIMIT_USDT"),
++                        help="하루 동안 누적 실현 손실가 이 금액을 초과하면 자동매매를 전면 중지하는 일일 손실 한도입니다.\n\n• 서킷브레이커 발동 조건: 일일 누적 실현 손실 ≥ 이 한도\n• 발동 시 모든 포지션을 즉시 강제청산하고 신규 진입을 차단\n• 연속 손실로 인한 계좌 소진을 방지하는 필수 리스크 관리 안전장치\n• 권장값: 일일 전체 증거금의 15~20% 이하")
+ 
+     st.markdown("---")
+     st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#ff9900;letter-spacing:0.1em;margin-top:10px;">TTM SQUEEZE INDICATORS</p>', unsafe_allow_html=True)
+     t1, t2, t3 = st.columns(3)
+     with t1:
+         st.number_input("📈 BB 기간", 5, 100, CFG.BB_PERIOD, step=1, key="main_bb_period",
+-                        on_change=sync_p, args=("main_bb_period", "sb_bb_period", "BB_PERIOD"))
++                        on_change=sync_p, args=("main_bb_period", "sb_bb_period", "BB_PERIOD"),
++                        help="볼린저 밴드(BB) 산출에 사용하는 이동평균 기간(캔들 수)입니다.\n\n• 기간이 짧을수록 밴드가 민감하게 반응해 신호 빈도 증가\n• 기간이 길수록 추세 기반의 안정적인 신호 생성\n• 표준값: 20")
+         tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
+         st.selectbox("⏱️ 타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="main_timeframe",
+-                     on_change=sync_p, args=("main_timeframe", "sb_timeframe", "TIMEFRAME"))
++                     on_change=sync_p, args=("main_timeframe", "sb_timeframe", "TIMEFRAME"),
++                     help="전략 신호 판단에 사용할 캔들봉 단위입니다.\n\n• 짧은 봉(1m~15m): 단기 스캘핑·빠른 진입에 유리하지만 노이즈 많음\n• 긴 봉(1h~4h): 추세 추종·안정성에 유리하지만 신호 빈도 낮음\n• 현재 기본값 30m: 단기 데이트레이딩 최적 균형점")
+     with t2:
+         st.number_input("📏 BB 편차 배수", 1.0, 5.0, float(CFG.BB_STD), step=0.1, key="main_bb_std",
+-                        on_change=sync_p, args=("main_bb_std", "sb_bb_std", "BB_STD"))
++                        on_change=sync_p, args=("main_bb_std", "sb_bb_std", "BB_STD"),
++                        help="볼린저 밴드 상·하단 폭을 결정하는 표준편차 배수입니다.\n\n• 값이 클수록 밴드가 넓어져 Squeeze(수축) 상태가 줄어듦\n• 값이 작을수록 밴드가 쐁아져 Squeeze 빈도 증가\n• 표준값: 2.0")
+         st.number_input("📏 KC ATR 배수", 0.5, 5.0, float(CFG.TTM_KC_MULT), step=0.1, key="main_kc_mult",
+-                        on_change=sync_p, args=("main_kc_mult", "sb_kc_mult", "TTM_KC_MULT"))
++                        on_change=sync_p, args=("main_kc_mult", "sb_kc_mult", "TTM_KC_MULT"),
++                        help="켈트너 채널(KC) 폭을 결정하는 ATR 승수입니다.\n\n• 값이 클수록 채널이 넓어져 Squeeze 진입 신호가 줄고 정확도가 높아집니다.\n• 값이 작을수록 신호가 늘지만 노이즈에 민감해집니다.\n• 권장값: 1.5")
+     with t3:
+         st.number_input("⏱️ TTM 모멘텀 기간", 5, 100, CFG.TTM_MOM_PERIOD, step=1, key="main_ttm_mom_period",
+-                        on_change=sync_p, args=("main_ttm_mom_period", "sb_ttm_mom_period", "TTM_MOM_PERIOD"))
++                        on_change=sync_p, args=("main_ttm_mom_period", "sb_ttm_mom_period", "TTM_MOM_PERIOD"),
++                        help="TTM Squeeze 모멘텀 히스토그램 산출 기간(캔들 수)입니다.\n\n• 모멘텀은 현재 가격이 과거 N봉 고/저/종가 범위 중 어디에 위치하는지로 측정\n• 기간이 짧을수록 반응이 빠르고 길수록 필터 강도가 강해집\n• 표준값: 20")
+ 
+     st.markdown("---")
+     st.markdown(
+@@ -2009,13 +2040,16 @@ with tabs[4]:
+     r1, r2, r3 = st.columns(3)
+     with r1:
+         st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="settings_rsi_period",
+-                        on_change=sync_p, args=("settings_rsi_period", "sb_rsi_period,main_rsi_period", "RSI_PERIOD"))
++                        on_change=sync_p, args=("settings_rsi_period", "sb_rsi_period,main_rsi_period", "RSI_PERIOD"),
++                        help="RSI(Relative Strength Index) 산출에 사용하는 기간(캔들 수)입니다.\n\n• 기간이 짧을수록 빠른 과열·과매도 신호\n• 짧을수록 노이즈 증가, 길수록 안정적 신호\n• 표준값: 14")
+     with r2:
+         st.number_input("RSI 롱 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="settings_rsi_overbought",
+-                        on_change=sync_p, args=("settings_rsi_overbought", "sb_rsi_overbought,main_rsi_overbought", "RSI_OVERBOUGHT"))
++                        on_change=sync_p, args=("settings_rsi_overbought", "sb_rsi_overbought,main_rsi_overbought", "RSI_OVERBOUGHT"),
++                        help="롱 포지션 진입 시 RSI가 이 값 이하일 때만 허용합니다.\n\n• 과열권 추격 매수를 차단해 고점 매수 리스크 감소\n• 권장값: 75")
+     with r3:
+         st.number_input("RSI 숏 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="settings_rsi_oversold",
+-                        on_change=sync_p, args=("settings_rsi_oversold", "sb_rsi_oversold,main_rsi_oversold", "RSI_OVERSOLD"))
++                        on_change=sync_p, args=("settings_rsi_oversold", "sb_rsi_oversold,main_rsi_oversold", "RSI_OVERSOLD"),
++                        help="숏 포지션 진입 시 RSI가 이 값 이상일 때만 허용합니다.\n\n• 과매도권 추격 매도를 차단해 저점 공매도 리스크 감소\n• 권장값: 25")
+ 
+     st.markdown("---")
+     st.markdown(
+@@ -2025,13 +2059,16 @@ with tabs[4]:
+     v1, v2, v3 = st.columns(3)
+     with v1:
+         st.toggle("거래량 서지 필터 활성화", value=st.session_state.main_use_vol_surge, key="main_use_vol_surge",
+-                  on_change=sync_p, args=("main_use_vol_surge", "sb_use_vol_surge", "USE_VOLUME_SURGE_FILTER"))
++                  on_change=sync_p, args=("main_use_vol_surge", "sb_use_vol_surge", "USE_VOLUME_SURGE_FILTER"),
++                  help="ON: 현재 캔들 거래량이 평균 대비 설정 배수 이상일 때만 신호를 허용합니다.\n\n• OFF: 거래량 조건 없이 모든 TTM Squeeze 신호를 허용\n• 변동성이 큰 장세에서 노이즈 감소에 효과적")
+     with v2:
+         st.number_input("거래량 서지 평균 기간", 5, 100, int(st.session_state.settings_vol_surge_period), step=1, key="settings_vol_surge_period",
+-                        on_change=sync_p, args=("settings_vol_surge_period", "sb_vol_surge_period,main_vol_surge_period", "VOLUME_SURGE_PERIOD"))
++                        on_change=sync_p, args=("settings_vol_surge_period", "sb_vol_surge_period,main_vol_surge_period", "VOLUME_SURGE_PERIOD"),
++                        help="거래량 평균을 계산할 기간(캔들 수)입니다.\n\n• 이 기간 동안의 평균 거래량을 기준으로 서지(폭발) 여부를 판단\n• 권장값: 20")
+     with v3:
+         st.number_input("거래량 서지 배수", 1.0, 10.0, float(st.session_state.settings_vol_surge_mult), step=0.1, key="settings_vol_surge_mult",
+-                        on_change=sync_p, args=("settings_vol_surge_mult", "sb_vol_surge_mult,main_vol_surge_mult", "VOLUME_SURGE_MULTIPLIER"))
++                        on_change=sync_p, args=("settings_vol_surge_mult", "sb_vol_surge_mult,main_vol_surge_mult", "VOLUME_SURGE_MULTIPLIER"),
++                        help="현재 거래량이 평균의 몇 배 이상일 때 서지로 인정할지 결정하는 배수입니다.\n\n• 1.25배: 평균보다 25% 이상 시 서지 인정 (기본값)\n• 배수가 높을수록 강한 폭발만 허용 / 낙을수록 더 많은 신호 허용\n• 권장값: 1.25~2.0")
+ 
+     st.markdown("---")
+     st.markdown(

@@ -1,6 +1,13 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v3.2.0] 실전 감사 6대 핵심 취약점 일괄 개선 및 패치 (2026-05-29):**
+  - [Core/Exchange] 바이낸스 선물 거래소 연동 시 `setPositionMode(hedged=False)` API를 호출하여 Hedge Mode로 인한 주문 Reject 현상을 원천 방지하는 원웨이 모드 강제 설정 완료.
+  - [Core/Trader] 동일 캔들 내 휩소 재진입 방지 가드(`Signal.timestamp` 및 `AutoTrader.last_entered_candle_ts`)를 탑재하여 15분 완성 캔들 주기 내 중복 진입 손실 위험 제거.
+  - [Core/Engine] 서킷 브레이커 가동 및 `ERROR` 상태 전이 시 Stale 포지션 추적 찌꺼기 방지를 위해 `_prev_position_symbols`를 세트로 초기화하는 복구 로직 보강.
+  - [Core/Exchange] `cancel_algo_orders` 호환 레이어에 실제 CCXT API 연동 및 3회 재시도 루프를 적용하여 미체결 Stop/TakeProfit 주문 정리 강건화.
+  - [Core/Engine] 포지션 청산 완료 감지(`closed`) 즉시 거래소의 잔류 SL/TP 주문을 지연 없이 소멸시키는 OCO 클린업 처리 보강.
+  - [Core/Exchange] `get_trade_history` 기본 조회 한도(`limit`)를 100건으로 늘려 고빈도/분할 체결 매칭 누락을 방지.
 - **[v3.1.5] 청산 후 쿨다운 즉시 동기화 및 초단기 무한 재진입 차단 (2026-05-29):**
   - [Core/Trader] `trader.py`의 `on_signal` 초입에서 실시간으로 포지션을 확인하여, 스캐너 루프 진행 중 청산이 완료된 종목이 있을 경우 즉각 60초 쿨다운을 가동하는 자립형 감지 루프 구현.
   - 이를 통해 스캐너 종료 시점의 지연으로 쿨다운 가드가 무력화되어 수십 초 간격으로 진입과 시장가 청산이 무한 반복(채터링 현상)되던 치명적인 리스크 차단 완료.

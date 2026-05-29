@@ -264,6 +264,11 @@ class QuantumEngine:
             self._state = new_state
             logger.info(f"[FSM] {old.name} → {new_state.name} | {reason}")
             
+            # 에러 또는 복구 상태로 전이 시 Stale 포지션 추적 찌꺼기 즉시 초기화
+            if new_state == EngineState.ERROR or new_state == EngineState.RECOVERING:
+                self._prev_position_symbols = set()
+                logger.info("[FSM] ERROR 또는 RECOVERING 상태 전이로 인해 _prev_position_symbols 세트 초기화 완료")
+            
             # 텔레그램 메시지 알림 (핵심 상태 전이 대상)
             if new_state == EngineState.ERROR:
                 send_telegram_alert(f"🚨 *[AI QUANTUM] 엔진 에러 상태 전이*\n이전 상태: {old.name}\n사유: {reason or self._error_msg}")
@@ -434,6 +439,14 @@ class QuantumEngine:
             if closed:
                 for sym in closed:
                     self._timeout_cooldowns.pop(sym, None)
+                    
+                    # [패치 5] 포지션 청산 즉시 잔류 SL/TP 주문 강제 일괄 취소 (Real-time OCO 클린업)
+                    try:
+                        await self.client.cancel_all_orders(sym)
+                        logger.info(f"[OCO CLEANUP] {sym} 포지션 종료 감지에 따른 잔류 주문 청소 완료")
+                    except Exception as ce_err:
+                        logger.warning(f"[OCO CLEANUP ERROR] {sym} 잔류 주문 청소 실패: {ce_err}")
+                        
                     pnl = 0.0
                     try:
                         recent_trades = await self._maybe_await(self.client.get_trade_history(symbol=sym, limit=5))

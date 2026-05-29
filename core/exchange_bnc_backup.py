@@ -29,11 +29,6 @@ class BinanceClient:
         self._markets: Dict = {}
         self._symbol_map: Dict[str, str] = {}
         self._close_locks: Dict[str, asyncio.Lock] = {}
-        # 서킷 브레이커 변수 초기화
-        self._consecutive_failures = 0
-        self._circuit_open_until = 0.0
-        self._circuit_cooldown = 10.0
-        self._failure_threshold = 5
 
     async def close(self):
         """비동기 세션 종료"""
@@ -41,27 +36,15 @@ class BinanceClient:
             await self.exchange.close()
 
     async def _execute_with_retry(self, func, *args, max_retries=3, initial_delay=1.0, **kwargs):
-        """지수 백오프 기반 비동기 재시도 및 서킷 브레이커 기능"""
-        import time
-        now = time.time()
-        circuit_open_until = getattr(self, "_circuit_open_until", 0.0)
-        if circuit_open_until > now:
-            logger.error(f"[CIRCUIT BREAKER] 서킷 브레이커 작동 중. API 호출 차단 (남은 시간: {circuit_open_until - now:.1f}초)")
-            raise Exception("Circuit breaker is open. API call blocked.")
-
+        """지수 백오프 기반 비동기 재시도 (서킷 브레이커 대체용 기본 뼈대)"""
         delay = initial_delay
         for attempt in range(max_retries):
             try:
                 import inspect
                 result = func(*args, **kwargs)
                 if inspect.iscoroutine(result):
-                    res = await result
-                else:
-                    res = result
-                
-                # 성공 시 연속 실패 횟수 리셋
-                self._consecutive_failures = 0
-                return res
+                    return await result
+                return result
             except (ccxt.RateLimitExceeded, ccxt.DDoSProtection) as e:
                 logger.warning(f"[API RateLimit] {func.__name__} API 제한 감지. {attempt + 1}/{max_retries}. {delay}초 대기... 오류: {e}")
                 await asyncio.sleep(delay)
@@ -80,40 +63,12 @@ class BinanceClient:
                         logger.error(f"시간 차이 재계산 실패: {te}")
                     await asyncio.sleep(1.0)
                     continue
-                
-                # 거래소 예외 발생 시 실패 횟수 누적 및 서킷 오픈 판단
-                consecutive_failures = getattr(self, "_consecutive_failures", 0) + 1
-                self._consecutive_failures = consecutive_failures
-                failure_threshold = getattr(self, "_failure_threshold", 5)
-                if consecutive_failures >= failure_threshold:
-                    circuit_cooldown = getattr(self, "_circuit_cooldown", 10.0)
-                    self._circuit_open_until = time.time() + circuit_cooldown
-                    logger.error(f"[CIRCUIT BREAKER] 연속 API 실패 {consecutive_failures}회 도달. 서킷 브레이커 작동 (10초 차단).")
                 raise e
-            except Exception as e:
-                logger.warning(f"[API Error] {func.__name__} 예상치 못한 예외 (attempt {attempt + 1}/{max_retries}): {e}")
-                if attempt == max_retries - 1:
-                    # 최종 실패 시 실패 횟수 누적 및 서킷 오픈 판단
-                    consecutive_failures = getattr(self, "_consecutive_failures", 0) + 1
-                    self._consecutive_failures = consecutive_failures
-                    failure_threshold = getattr(self, "_failure_threshold", 5)
-                    if consecutive_failures >= failure_threshold:
-                        circuit_cooldown = getattr(self, "_circuit_cooldown", 10.0)
-                        self._circuit_open_until = time.time() + circuit_cooldown
-                        logger.error(f"[CIRCUIT BREAKER] 연속 API 실패 {consecutive_failures}회 도달. 서킷 브레이커 작동 (10초 차단).")
-                    raise
-                await asyncio.sleep(delay)
-                delay *= 1.5
-
-        # 안전 폴백
         result = func(*args, **kwargs)
         import inspect
         if inspect.iscoroutine(result):
-            res = await result
-        else:
-            res = result
-        self._consecutive_failures = 0
-        return res
+            return await result
+        return result
 
     async def load_markets(self) -> bool:
         try:
@@ -129,17 +84,6 @@ class BinanceClient:
                     self._symbol_map[no_slash_no_colon.upper()] = official_sym
                 else:
                     self._symbol_map[no_slash.upper()] = official_sym
-            # [패치 1] Binance 선물 One-way 모드 강제 설정
-            try:
-                await self._execute_with_retry(self.exchange.set_position_mode, hedged=False)
-                logger.info("바이낸스 선물 포지션 모드: One-Way Mode 강제 설정 완료")
-            except Exception as pe:
-                err_msg = str(pe)
-                if "-4059" in err_msg or "No need to change" in err_msg:
-                    logger.info("바이낸스 선물 포지션 모드: 이미 One-Way Mode 상태입니다.")
-                else:
-                    logger.warning(f"바이낸스 선물 포지션 모드 설정 시도 중 예외 발생: {pe}")
-
             logger.info(f"마켓 로드 완료: {len(self._markets)}개 종목")
             return True
         except Exception as e:
@@ -224,7 +168,7 @@ class BinanceClient:
             logger.error(f"미체결 주문 조회 실패: {e}")
             return []
 
-    async def get_trade_history(self, symbol: Optional[str] = None, limit: int = 100) -> List[Dict]:
+    async def get_trade_history(self, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
         if symbol is None:
             return []
         try:
@@ -457,7 +401,8 @@ class BinanceClient:
                     order_price = base_price - offset_value
 
                 order_price = float(self.exchange.price_to_precision(symbol, order_price))
-                order = await self.exchange.create_order(
+                order = await self._execute_with_retry(
+                    self.exchange.create_order,
                     symbol=symbol,
                     type="limit",
                     side=side,
@@ -465,7 +410,8 @@ class BinanceClient:
                     price=order_price
                 )
             else:
-                order = await self.exchange.create_order(
+                order = await self._execute_with_retry(
+                    self.exchange.create_order,
                     symbol=symbol,
                     type="market",
                     side=side,
@@ -474,11 +420,7 @@ class BinanceClient:
             # [필수 수정 3] 부분 체결 대응 주문 상태 동기화 및 잔여 주문 즉시 취소
             # 1초간 대기하며 거래소 체결 상태 갱신 시도 (최대 2회)
             for _ in range(2):
-                status = order.get("status")
-                filled = order.get("filled")
-                if status is None and filled is None and order.get("id"):
-                    break
-                if status in ("closed", "canceled") or (filled is not None and float(filled) > 0):
+                if order.get("status") in ("closed", "canceled") or (order.get("filled") is not None and float(order.get("filled", 0)) > 0):
                     break
                 await asyncio.sleep(0.5)
                 try:
@@ -498,14 +440,8 @@ class BinanceClient:
                     except Exception as ce:
                         logger.warning(f"부분 체결 후 잔여 주문 취소 실패: {ce}")
                 else:
-                    # [v3.1.1] 완전 미체결 상태 → 즉시 주문 취소 후 None 반환 (유령 SL/TP 생성 방지)
-                    logger.warning(f"[UNFILLED] {symbol} 주문 {order.get('id')} 완전 미체결 감지. 주문 취소 후 진입 포기.")
-                    try:
-                        await self._execute_with_retry(self.exchange.cancel_order, id=order.get("id"), symbol=symbol)
-                        logger.info(f"[UNFILLED] {symbol} 미체결 주문 취소 완료.")
-                    except Exception as uce:
-                        logger.warning(f"[UNFILLED] {symbol} 미체결 주문 취소 실패: {uce}")
-                    return None
+                    # 완전히 미체결 상태라면 보호 주문의 안전을 위해 원래 요청 수량(amount)을 사용 (이후 3분 대기 후 취소됨)
+                    filled_amount = float(amount)
             elif filled_amount <= 0:
                 # 주문 완료 혹은 취소 상태이나 filled 수량이 0인 경우 폴백
                 filled_amount = float(amount)
@@ -598,45 +534,6 @@ class BinanceClient:
         except Exception as e:
             logger.error(f"주문 실패 ({symbol} {side}): {e}")
             return None
-
-    async def cancel_algo_orders(self, symbol: str) -> bool:
-        """Binance Futures의 미체결 익손절(Stop/TakeProfit) 알고리즘 주문을 실제 조회하여 일괄 취소"""
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                raw_orders = await self._execute_with_retry(self.exchange.fetch_open_orders)
-                open_orders = [
-                    {
-                        "id": o["id"],
-                        "symbol": o["symbol"],
-                        "side": o["side"],
-                        "type": o["type"],
-                    }
-                    for o in raw_orders
-                ]
-                
-                target_orders = []
-                for o in open_orders:
-                    if o["symbol"] == symbol:
-                        o_type = str(o.get("type", "")).upper()
-                        if "STOP" in o_type or "TAKE_PROFIT" in o_type or "TRAILING" in o_type:
-                            target_orders.append(o["id"])
-        
-                if not target_orders:
-                    logger.info(f"[ALGO CLOSE] {symbol} 취소할 미체결 알고리즘 주문이 없습니다.")
-                    return True
-        
-                logger.info(f"[ALGO CLOSE] {symbol} 미체결 알고리즘 주문 {len(target_orders)}건 취소 시작 (IDs: {target_orders})")
-                tasks = [self.cancel_order(order_id, symbol) for order_id in target_orders]
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-                
-                success = all(r is True for r in results if not isinstance(r, Exception))
-                return success
-            except Exception as e:
-                logger.warning(f"[ALGO CLOSE] 알고 주문 취소 실패 (시도 {attempt + 1}/{max_retries}): {e}")
-                if attempt == max_retries - 1:
-                    return False
-                await asyncio.sleep(0.5)
 
     async def close_position(self, symbol: str, side: str) -> bool:
         if symbol not in self._close_locks:
@@ -736,8 +633,4 @@ class BinanceClient:
                 success_count += 1
                 
         return success_count
-
-# Backward compatibility alias for OKX codebase
-OKXClient = BinanceClient
-
 

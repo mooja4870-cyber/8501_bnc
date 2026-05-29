@@ -29,6 +29,8 @@ class Signal:
     rsi_ok: bool = True     # RSI 필터 충족 여부 (기본값 True)
     ema200_ok: bool = True  # EMA 200 필터 충족 여부 (기본값 True)
     atr: float = 0.0        # 매매 신호 시점의 ATR 값 (기본값 0.0)
+    timestamp: Optional[Tuple] = None  # 신호가 발생한 캔들의 고유 타임스탬프 (동일 캔들 재진입 방지용)
+
 
 
 
@@ -145,10 +147,20 @@ class StrategyEngine:
         return df.dropna()
 
     def generate_signal(self, df: pd.DataFrame, symbol: str) -> Signal:
-        """최신 캔들 기준 TTM Squeeze + 200 EMA 매매 신호 생성"""
+        """최신 캔들 기준 TTM Squeeze + 200 EMA 매매 신호 생성 (래퍼)"""
+        sig = self._generate_signal_impl(df, symbol)
+        if not df.empty and sig.reason != "데이터 부족":
+            sliced_df = df.iloc[:-1]
+            if not sliced_df.empty:
+                sig.timestamp = sliced_df.index[-1]
+        return sig
+
+    def _generate_signal_impl(self, df: pd.DataFrame, symbol: str) -> Signal:
+        """최신 캔들 기준 TTM Squeeze + 200 EMA 매매 신호 생성 실구현"""
         # [즉시 조치 1] 완성 캔들 데이터 기반 신호 체계로 고정하기 위해 미완성 실시간 캔들 제거
         if not df.empty:
             df = df.iloc[:-1]
+
         df = self.calculate_indicators(df)
 
         empty_signal = Signal(
