@@ -1,6 +1,6 @@
 """
 전종목 실시간 스캐너 (비동기 엔터프라이즈 버전)
-Binance USDT 선물 전종목 순환 스캔 → 신호 감지
+OKX USDT 선물 전종목 순환 스캔 → 신호 감지
 """
 import asyncio
 import logging
@@ -8,7 +8,7 @@ import pandas as pd
 from typing import List, Dict, Callable, Optional, Awaitable, Union
 from datetime import datetime
 
-from core.exchange import BinanceClient
+from core.exchange import OKXClient
 from core.strategy import StrategyEngine, Signal
 from core.config import CFG
 
@@ -21,7 +21,7 @@ class Scanner:
     - 전종목을 순환 스캔하며 신호 포착
     """
 
-    def __init__(self, client: BinanceClient):
+    def __init__(self, client: OKXClient):
         self.client = client
         self.strategy = StrategyEngine()
         self.cfg = CFG
@@ -226,7 +226,6 @@ class Scanner:
                     "rsi_ok": sig.rsi_ok,
                     "ema200": round(sig.ema200, 2) if sig.ema200 is not None else 0.0,
                     "ema200_ok": sig.ema200_ok,
-                    "atr": round(sig.atr, 6),
                     "reason": sig.reason,
                     "timestamp": datetime.now(),
                 })

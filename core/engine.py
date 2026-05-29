@@ -12,7 +12,7 @@ from enum import Enum, auto
 from typing import Optional, List, Dict
 from datetime import datetime, timezone, timedelta
 
-from core.exchange import BinanceClient, OKXClient
+from core.exchange import OKXClient
 from core.scanner import Scanner
 from core.trader import AutoTrader
 from core.config import CFG
@@ -165,8 +165,6 @@ class QuantumEngine:
         except concurrent.futures.TimeoutError:
             logger.error(f"[CLOSE TIMEOUT] {symbol} 청산 API 응답 없음 (15초 초과) — 청산 실패 처리")
             self._closing_in_progress.pop(symbol, None)  # [v2.8.0] 락 해제
-            self._cached_positions = None   # [v3.1.1] 청산 timeout 시 캐시 즉시 무효화
-            self._cached_balance = None     # [v3.1.1] 다음 대시보드 실시간 재조회 강제
             return False
         except Exception as e:
             logger.error(f"[CLOSE ERROR] {symbol} 청산 중 예외: {e}")
@@ -264,11 +262,6 @@ class QuantumEngine:
             self._state = new_state
             logger.info(f"[FSM] {old.name} → {new_state.name} | {reason}")
             
-            # 에러 또는 복구 상태로 전이 시 Stale 포지션 추적 찌꺼기 즉시 초기화
-            if new_state == EngineState.ERROR or new_state == EngineState.RECOVERING:
-                self._prev_position_symbols = set()
-                logger.info("[FSM] ERROR 또는 RECOVERING 상태 전이로 인해 _prev_position_symbols 세트 초기화 완료")
-            
             # 텔레그램 메시지 알림 (핵심 상태 전이 대상)
             if new_state == EngineState.ERROR:
                 send_telegram_alert(f"🚨 *[AI QUANTUM] 엔진 에러 상태 전이*\n이전 상태: {old.name}\n사유: {reason or self._error_msg}")
@@ -319,7 +312,7 @@ class QuantumEngine:
                     except Exception as re:
                         logger.error(f"초기 PnL Reconcile 실패: {re}")
                     
-                    send_telegram_alert("🤖 *[AI QUANTUM]* Binance 자동매매 엔진 초기화 및 가동 성공")
+                    send_telegram_alert("🤖 *[AI QUANTUM]* OKX 자동매매 엔진 초기화 및 가동 성공")
                     asyncio.create_task(self._health_check_loop())
                     return True, "✅ 엔진 초기화 및 마켓 로드 성공"
 
@@ -439,14 +432,6 @@ class QuantumEngine:
             if closed:
                 for sym in closed:
                     self._timeout_cooldowns.pop(sym, None)
-                    
-                    # [패치 5] 포지션 청산 즉시 잔류 SL/TP 주문 강제 일괄 취소 (Real-time OCO 클린업)
-                    try:
-                        await self.client.cancel_all_orders(sym)
-                        logger.info(f"[OCO CLEANUP] {sym} 포지션 종료 감지에 따른 잔류 주문 청소 완료")
-                    except Exception as ce_err:
-                        logger.warning(f"[OCO CLEANUP ERROR] {sym} 잔류 주문 청소 실패: {ce_err}")
-                        
                     pnl = 0.0
                     try:
                         recent_trades = await self._maybe_await(self.client.get_trade_history(symbol=sym, limit=5))
@@ -517,7 +502,6 @@ class QuantumEngine:
             self._prev_position_symbols = current
             await self._run_position_rotation_check_async(raw_positions)
             await self._run_trailing_stop_check_async(raw_positions)
-            await self._run_chandelier_exit_check_async(raw_positions)
         except Exception as e:
             logger.error(f"청산 감지 오류: {e}")
 
@@ -583,66 +567,6 @@ class QuantumEngine:
                             self._trailing_lows.pop(sym, None)
                             if self.trader:
                                 self.trader.trigger_symbol_cooldown(sym, 60)
-
-    async def _run_chandelier_exit_check_async(self, raw_positions: List[Dict]):
-        if not getattr(self.cfg, "USE_CHANDELIER_EXIT", False):
-            return
-
-        chandelier_mult = getattr(self.cfg, "CHANDELIER_MULT", 3.0)
-        scan_results = await self._maybe_await(self.scanner.get_results()) if self.scanner else []
-        atr_map = {r["symbol"]: r["atr"] for r in scan_results if "atr" in r}
-
-        current_symbols = {p["symbol"] for p in raw_positions}
-        for sym in list(self._trailing_highs.keys()):
-            if sym not in current_symbols:
-                self._trailing_highs.pop(sym, None)
-        for sym in list(self._trailing_lows.keys()):
-            if sym not in current_symbols:
-                self._trailing_lows.pop(sym, None)
-
-        for p in raw_positions:
-            sym = p["symbol"]
-            side = p["side"]
-            entry_price = float(p.get("entry_price", 0.0))
-            mark_price = float(p.get("mark_price", 0.0))
-            if entry_price <= 0 or mark_price <= 0:
-                continue
-
-            atr_val = atr_map.get(sym, 0.0)
-            if atr_val <= 0:
-                atr_val = mark_price * 0.01
-
-            if side == "long":
-                if sym not in self._trailing_highs:
-                    self._trailing_highs[sym] = mark_price
-                else:
-                    self._trailing_highs[sym] = max(self._trailing_highs[sym], mark_price)
-
-                highest = self._trailing_highs[sym]
-                trigger_price = highest - (chandelier_mult * atr_val)
-                if mark_price <= trigger_price:
-                    logger.warning(f"[CHANDELIER EXIT] {sym} 롱 청산 발동! (최고가 {highest:.6f}, 현재 {mark_price:.6f} <= 트리거 {trigger_price:.6f}, ATR {atr_val:.6f})")
-                    success = await self._maybe_await(self.client.close_position(sym, side))
-                    if success:
-                        self._trailing_highs.pop(sym, None)
-                        if self.trader:
-                            self.trader.trigger_symbol_cooldown(sym, 60)
-
-            elif side == "short":
-                if sym not in self._trailing_lows:
-                    self._trailing_lows[sym] = mark_price
-                else:
-                    self._trailing_lows[sym] = min(self._trailing_lows[sym], mark_price)
-
-                lowest = self._trailing_lows[sym]
-                trigger_price = lowest + (chandelier_mult * atr_val)
-                if mark_price >= trigger_price:
-                    logger.warning(f"[CHANDELIER EXIT] {sym} 숏 청산 발동! (최저가 {lowest:.6f}, 현재 {mark_price:.6f} >= 트리거 {trigger_price:.6f}, ATR {atr_val:.6f})")
-                    success = await self._maybe_await(self.client.close_position(sym, side))
-                    if success:
-                        self._trailing_lows.pop(sym, None)
-                        if self.trader:
-                            self.trader.trigger_symbol_cooldown(sym, 60)
 
     async def _run_position_rotation_check_async(self, raw_positions: List[Dict]):
         if not self.cfg.ROTATION_ENABLED:

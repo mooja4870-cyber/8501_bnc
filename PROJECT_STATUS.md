@@ -1,6 +1,12 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v4.0.0] OKX 봇 최신 소스코드 복제 및 바이낸스 결합 완료 (2026-05-29):**
+  - [Core/Migration] `8501_bnc` 내의 바이낸스 어댑터(`core/exchange.py`) 및 `.env` 등 필수 인증/설정 파일을 제외한 소스 코드를 전면 클리닝했습니다.
+  - [Core/Migration] `8401_okx` 로부터 최신 전략, 엔진 구조, 대시보드 UI 및 테스트 스위트 폴더를 그대로 복제하여 이식했습니다.
+  - [Core/Migration] 이식 후 바이낸스 연결 환경에서 필요로 하는 `TradingConfig.USE_LIMIT_ORDER` 및 `__getattr__` 헬퍼 메서드를 `core/config.py`에 복원하였습니다.
+  - [Test] `tests/test_liquidation.py` 내 모의 주문 객체 누락 필드(`status`, `filled`)를 채워 넣는 테스트 코드를 보정 완료하였습니다.
+  - [Test] 전체 123개 단위 및 통합 테스트가 100% 정상적으로 통과함을 최종 확인하였습니다.
 - **[v3.2.0] 실전 감사 6대 핵심 취약점 일괄 개선 및 패치 (2026-05-29):**
   - [Core/Exchange] 바이낸스 선물 거래소 연동 시 `setPositionMode(hedged=False)` API를 호출하여 Hedge Mode로 인한 주문 Reject 현상을 원천 방지하는 원웨이 모드 강제 설정 완료.
   - [Core/Trader] 동일 캔들 내 휩소 재진입 방지 가드(`Signal.timestamp` 및 `AutoTrader.last_entered_candle_ts`)를 탑재하여 15분 완성 캔들 주기 내 중복 진입 손실 위험 제거.

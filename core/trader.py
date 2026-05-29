@@ -7,7 +7,7 @@ import logging
 from typing import Optional, List, Dict
 from datetime import datetime, date, timedelta, timezone
 
-from core.exchange import BinanceClient
+from core.exchange import OKXClient
 from core.strategy import Signal
 from core.config import CFG
 import core.stats as stats_store
@@ -23,7 +23,7 @@ class AutoTrader:
     Scanner.on_signal 콜백으로 신호를 받아 리스크 체크 후 실거래 실행
     """
 
-    def __init__(self, client: BinanceClient):
+    def __init__(self, client: OKXClient):
         self.client = client
         self.cfg = CFG
         self._lock = asyncio.Lock()
@@ -42,9 +42,6 @@ class AutoTrader:
         self.global_cooldown_until: Optional[datetime] = None
         self.symbol_cooldown_until: Dict[str, datetime] = {}
         self._daily_loss_alert_sent = False
-        self._prev_symbols_held: set[str] = set()
-        self.last_entered_candle_ts: Dict[str, datetime] = {}
-
 
     def enable(self):
         self.enabled = True
@@ -68,34 +65,9 @@ class AutoTrader:
         if sig.direction == "none":
             return
 
-        # 0. 동일 캔들 내 중복 진입 방지 가드 (휩소 차단)
-        if sig.timestamp is not None:
-            last_ts = self.last_entered_candle_ts.get(sig.symbol)
-            if last_ts == sig.timestamp:
-                logger.info(f"[SKIP] {sig.symbol} — 이미 동일한 완성 캔들({sig.timestamp})에서 진입을 완료했습니다.")
-                return
-
-
         async with self._lock:
             self._reset_daily_if_needed()
 
-            # 1. 포지션 조회 및 즉시 청산 쿨다운 격발
-            try:
-                positions = await self.client.get_positions()
-                symbols_held = {p["symbol"] for p in positions}
-                
-                # 이전 루프 대비 청산 완료된 종목 감지하여 즉각 쿨다운 격발
-                closed_syms = self._prev_symbols_held - symbols_held
-                for sym in closed_syms:
-                    self.trigger_symbol_cooldown(sym, 60)
-                
-                self._prev_symbols_held = symbols_held
-            except Exception as e:
-                logger.error(f"[TRADER ERROR] 포지션 및 쿨다운 체크 중 예외 발생: {e}")
-                self._log_trade(sig, status="FAILED", reason=f"포지션 조회 오류 ({e})")
-                return
-
-            # 2. 리스크 및 쿨다운 가드 체크
             try:
                 passed, reason = await self._risk_check(sig)
                 if not passed:
@@ -115,21 +87,28 @@ class AutoTrader:
             now_time = datetime.now()
             self.recently_entered = {
                 sym: ts for sym, ts in self.recently_entered.items()
-                if (now_time - ts).total_seconds() < 180  # [v3.1.1] LIMIT_ORDER_TIMEOUT(180초)와 일치 (120초 → 180초)
+                if (now_time - ts).total_seconds() < 120
             }
 
-            # 3. 중복 진입 차단 (앞서 구한 symbols_held 재사용)
-            for sym in list(self.recently_entered.keys()):
-                if sym in symbols_held:
-                    self.recently_entered.pop(sym, None)
+            try:
+                positions = await self.client.get_positions()
+                symbols_held = {p["symbol"] for p in positions}
+                
+                for sym in list(self.recently_entered.keys()):
+                    if sym in symbols_held:
+                        self.recently_entered.pop(sym, None)
 
-            if sig.symbol in symbols_held or sig.symbol in self.recently_entered:
-                logger.info(f"[SKIP] {sig.symbol} — 이미 포지션 보유 중이거나 진입 주문이 전송되었습니다.")
-                return
+                if sig.symbol in symbols_held or sig.symbol in self.recently_entered:
+                    logger.info(f"[SKIP] {sig.symbol} — 이미 포지션 보유 중이거나 진입 주문이 전송되었습니다.")
+                    return
 
-            effective_count = len(symbols_held) + len(self.recently_entered)
-            if effective_count >= self.cfg.MAX_POSITIONS:
-                logger.info(f"[SKIP] 최대 포지션 수 도달: {effective_count}/{self.cfg.MAX_POSITIONS}")
+                effective_count = len(symbols_held) + len(self.recently_entered)
+                if effective_count >= self.cfg.MAX_POSITIONS:
+                    logger.info(f"[SKIP] 최대 포지션 수 도달: {effective_count}/{self.cfg.MAX_POSITIONS}")
+                    return
+            except Exception as e:
+                logger.error(f"[TRADER ERROR] 포지션 체크 중 예외 발생: {e}")
+                self._log_trade(sig, status="FAILED", reason=f"포지션 조회 오류 ({e})")
                 return
 
             side = "buy" if sig.direction == "long" else "sell"
@@ -154,7 +133,7 @@ class AutoTrader:
                 logger.warning(f"[SKIP] 증거금 설정 오류 (최소 $1): {margin_usdt:.2f} USDT")
                 return
 
-            if (getattr(self.cfg, "USE_ATR_SL_TP", False) or getattr(self.cfg, "USE_DYNAMIC_SLTP", False)) and sig.atr > 0 and sig.close > 0:
+            if self.cfg.USE_DYNAMIC_SLTP and sig.atr > 0 and sig.close > 0:
                 atr_pct = sig.atr / sig.close
                 dynamic_sl_pct = atr_pct * self.cfg.ATR_SL_MULT
                 dynamic_tp_pct = atr_pct * self.cfg.ATR_TP_MULT
@@ -173,8 +152,6 @@ class AutoTrader:
 
             if result:
                 self.recently_entered[sig.symbol] = datetime.now()
-                if sig.timestamp is not None:
-                    self.last_entered_candle_ts[sig.symbol] = sig.timestamp
                 self.orders_today += 1
                 stats_store.record_order()
                 self._log_trade(sig, status="EXECUTED", result=result)

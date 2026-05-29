@@ -29,8 +29,6 @@ class Signal:
     rsi_ok: bool = True     # RSI 필터 충족 여부 (기본값 True)
     ema200_ok: bool = True  # EMA 200 필터 충족 여부 (기본값 True)
     atr: float = 0.0        # 매매 신호 시점의 ATR 값 (기본값 0.0)
-    timestamp: Optional[Tuple] = None  # 신호가 발생한 캔들의 고유 타임스탬프 (동일 캔들 재진입 방지용)
-
 
 
 
@@ -147,20 +145,10 @@ class StrategyEngine:
         return df.dropna()
 
     def generate_signal(self, df: pd.DataFrame, symbol: str) -> Signal:
-        """최신 캔들 기준 TTM Squeeze + 200 EMA 매매 신호 생성 (래퍼)"""
-        sig = self._generate_signal_impl(df, symbol)
-        if not df.empty and sig.reason != "데이터 부족":
-            sliced_df = df.iloc[:-1]
-            if not sliced_df.empty:
-                sig.timestamp = sliced_df.index[-1]
-        return sig
-
-    def _generate_signal_impl(self, df: pd.DataFrame, symbol: str) -> Signal:
-        """최신 캔들 기준 TTM Squeeze + 200 EMA 매매 신호 생성 실구현"""
+        """최신 캔들 기준 TTM Squeeze + 200 EMA 매매 신호 생성"""
         # [즉시 조치 1] 완성 캔들 데이터 기반 신호 체계로 고정하기 위해 미완성 실시간 캔들 제거
         if not df.empty:
             df = df.iloc[:-1]
-
         df = self.calculate_indicators(df)
 
         empty_signal = Signal(
@@ -212,10 +200,10 @@ class StrategyEngine:
                         squeeze_fired = True
                         break
 
-            # [수정 B] 현재 squeeze_on=False(해제 상태) + 확장 윈도우(lookback+4) 내 ON 이력 존재 → fired 인정
-            # [v3.1.1] lookback*3(24봉)에서 lookback+4(12봉)으로 축소 → 과신호(가짜 티럭) 방지
+            # [방안 B] 현재 squeeze_on=False(해제 상태) + 확장 윈도우(lookback×3) 내 ON 이력 존재 → fired 인정
+            # 스퀴즈 전환점을 놓쳤어도 에너지 응축 후 해제 중이라면 진입 허용
             if not squeeze_fired and not bool(curr['squeeze_on']):
-                extended_window = min(lookback + 4, len(df) - 1)
+                extended_window = min(lookback * 3, len(df) - 1)
                 had_squeeze = df.iloc[-extended_window:]['squeeze_on'].any()
                 if had_squeeze:
                     squeeze_fired = True
@@ -232,16 +220,11 @@ class StrategyEngine:
                         squeeze_fired = True
                         break
 
-        # 2. 모멘텀 및 기울기 필터
+        # 2. 모멘텀 필터
         cond_long_mom = macd_hist > 0
         cond_short_mom = macd_hist < 0
-
-        # 모멘텀 기울기 계산
-        macd_prev = prev.get('macd_hist', 0.0)
-        macd_slope = macd_hist - macd_prev
-        slope_threshold = getattr(self.cfg, 'MOMENTUM_SLOPE_THRESHOLD', 0.0)
-        cond_long_slope = macd_slope >= slope_threshold
-        cond_short_slope = macd_slope <= -slope_threshold
+        # [수정 2] candle_color 조건 제거 — candle_color=='blue' ≡ macd_hist>0 으로 완전 중복
+        # 강도 재배분: 35(추세)+35(fired)+30(모멘텀) = 100
 
         # 3. RSI 필터
         # [수정 3] squeeze_fired 시 RSI 필터 면제: 돌파 직후 강한 양봉은 RSI 과열이 자연스러움
@@ -272,16 +255,6 @@ class StrategyEngine:
 
         # ── 롱 진입 판단 ──
         if cond_long_trend and squeeze_fired and cond_long_mom and self.cfg.ALLOW_LONG:
-            if not cond_long_slope:
-                return Signal(
-                    symbol=symbol, direction="none", strength=60,
-                    ema_ok=ema_ok, bb_ok=bb_ok, macd_ok=macd_ok,
-                    close=close, ema200=ema200_val,
-                    bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
-                    macd_hist=macd_hist, rsi=rsi_val, rsi_ok=cond_long_rsi,
-                    ema200_ok=bool(cond_long_trend), atr=atr_val,
-                    reason=f"롱 돌파 조건 충족했으나 모멘텀 기울기({macd_slope:.6f} <= {slope_threshold:.6f}) 미달로 차단"
-                )
             if not cond_long_rsi:
                 return Signal(
                     symbol=symbol, direction="none", strength=80,
@@ -315,16 +288,6 @@ class StrategyEngine:
 
         # ── 숏 진입 판단 ──
         if cond_short_trend and squeeze_fired and cond_short_mom and self.cfg.ALLOW_SHORT:
-            if not cond_short_slope:
-                return Signal(
-                    symbol=symbol, direction="none", strength=60,
-                    ema_ok=ema_ok, bb_ok=bb_ok, macd_ok=macd_ok,
-                    close=close, ema200=ema200_val,
-                    bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
-                    macd_hist=macd_hist, rsi=rsi_val, rsi_ok=cond_short_rsi,
-                    ema200_ok=bool(cond_short_trend), atr=atr_val,
-                    reason=f"숏 돌파 조건 충족했으나 모멘텀 기울기({macd_slope:.6f} >= {-slope_threshold:.6f}) 미달로 차단"
-                )
             if not cond_short_rsi:
                 return Signal(
                     symbol=symbol, direction="none", strength=80,

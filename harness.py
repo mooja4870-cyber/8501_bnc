@@ -18,8 +18,8 @@ def run_harness(use_mock: bool = False):
     time.sleep(0.5)
 
     if use_mock:
-        from core.mock_exchange import MockBinanceClient
-        mock = MockBinanceClient()
+        from core.mock_exchange import MockOKXClient
+        mock = MockOKXClient()
         # mock.load_markets()는 async 메서드이므로 엔진 루프에서 실행 후 대기
         asyncio.run_coroutine_threadsafe(mock.load_markets(), engine._loop).result()
         mock.set_scenario("default")
@@ -35,11 +35,11 @@ def run_harness(use_mock: bool = False):
         print("[INIT] Mock Engine Initialized (Async)")
     else:
         load_dotenv(override=True)
-        api_key = os.getenv("BINANCE_API_KEY")
-        secret_key = os.getenv("BINANCE_SECRET_KEY")
-        passphrase = os.getenv("BINANCE_PASSPHRASE") or ""
+        api_key = os.getenv("OKX_API_KEY")
+        secret_key = os.getenv("OKX_SECRET_KEY")
+        passphrase = os.getenv("OKX_PASSPHRASE") or ""
         if not api_key or not secret_key:
-            print("[ERR] BINANCE_API_KEY and BINANCE_SECRET_KEY not found in .env.")
+            print("[ERR] OKX_API_KEY and OKX_SECRET_KEY not found in .env.")
             return
         success, msg = engine.initialize(api_key, secret_key, passphrase)
         print(f"[INIT] {msg}")

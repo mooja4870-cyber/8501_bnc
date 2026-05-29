@@ -1,5 +1,5 @@
 """
-AI QUANTUM — Binance Auto-Trading System
+AI QUANTUM — OKX Auto-Trading System
 핵심 설정 파라미터 (하드코딩 제거 및 JSON 연동판)
 """
 import json
@@ -186,6 +186,9 @@ class TradingConfig:
             "USE_LIMIT_ORDER": True,
             "LIMIT_TICK_OFFSET": 1,
             "LIMIT_ORDER_TIMEOUT_MINUTES": 3,
+            "USE_CHANDELIER_EXIT": True,
+            "CHANDELIER_MULT": 3.0,
+            "MOMENTUM_SLOPE_THRESHOLD": 0.0
         }
         if name in defaults:
             return defaults[name]
