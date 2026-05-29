@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v4.0.4 | 2026-05-29 17:19:00 | [Docs/Config] PROJECT_STATUS.md 최신 릴리즈 히스토리 업데이트 및 settings.json 기본 마진/필터 옵션 바이낸스 실거래 최적화 세팅 반영 | Docs/Config |
 | v4.0.3 | 2026-05-29 16:11:31 | [Core/UI] 매매이력 완전 초기화 및 재동기화 차단: 1) trade_history.csv/.bak 전체 삭제(헤더만 보존), 2) stats.json 통계 전체 리셋(perf_start_time=2026-05-29 16:09:59 기준), 3) engine.py _sync_trades_to_csv_async에 perf_start_time 이전 거래소 이력 재동기화 차단 컷오프 필터 추가, 4) app.py 매매이력 탭 렌더링 시 perf_start_time 이전 raw_trades 표시 제외 필터 추가, 5) app.py SINCE 표시 및 기준 시각 기본값 2026-05-29 16:09로 업데이트 | Core/UI |
 | v4.0.2 | 2026-05-29 16:15:00 | [Core/QA] 코드 전수 검증 기반 7개 핵심 버그 수정: 1) trader.py — recently_entered TTL 120초→180초, 2) trader.py — on_signal 청산감지 쿨다운 복원, 3) trader.py — 동일캔들 중복진입 방지, 4) exchange.py — 시장가 FalseCancel 수정, 5) strategy.py — 스퀴즈윈도우 lookback+4, 6) harness.py — BINANCE env, 7) engine.py — 브랜드 수정. 전체 123테스트 100% 통과 | Core/QA |
 | v4.0.1 | 2026-05-29 15:48:00 | [UI/Config] 대시보드 및 설정 내 하드코딩된 OKX 브랜드 명칭 및 환경변수 맵핑 Binance 동기화 완료: 1) app.py 내 API Key/Secret/Passphrase 환경변수를 BINANCE_ 로 변경, 2) 사이드바 및 탭 내 OKX 연결 안내 및 버튼 레이블을 Binance로 수정, 3) settings.json의 EXCHANGE_ID 및 BASE_URL을 바이낸스로 강제 패치 | UI/Config |

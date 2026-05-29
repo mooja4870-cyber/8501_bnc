@@ -1,6 +1,13 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v4.0.4] 프로젝트 상태 기록 릴리즈 및 settings.json 바이낸스 설정 최적화 (2026-05-29):**
+  - [Docs] `PROJECT_STATUS.md`와 `ver.md`를 최신 릴리즈 v4.0.2 및 v4.0.3 변경 내역으로 최신화하였습니다.
+  - [Config] `settings.json` 내의 1회 진입 증거금을 2.0 USDT로 수정하고, 거래량 필터(`USE_VOL_FILTER`)를 활성화하였으며, 지정가 주문(`USE_LIMIT_ORDER`) 등 바이낸스 세팅을 유지 및 추가 보정하였습니다.
+- **[v4.0.3] 매매이력 완전 초기화 및 재동기화 차단 (2026-05-29):**
+  - [Core/UI] 매매이력 완전 초기화 및 재동기화 차단: 1) `trade_history.csv`/.bak 전체 삭제(헤더만 보존), 2) `stats.json` 통계 전체 리셋(`perf_start_time="2026-05-29 17:15:59"` 기준), 3) `engine.py` `_sync_trades_to_csv_async`에 `perf_start_time` 이전 거래소 이력 재동기화 차단 컷오프 필터 추가, 4) `app.py` 매매이력 탭 렌더링 시 `perf_start_time` 이전 `raw_trades` 표시 제외 필터 추가, 5) `app.py` SINCE 표시 및 기준 시각 기본값 `2026-05-29 17:15:59`로 업데이트.
+- **[v4.0.2] 코드 전수 검증 기반 7개 핵심 버그 수정 (2026-05-29):**
+  - [Core/QA] 코드 전수 검증 기반 7개 핵심 버그 수정: 1) `trader.py` — `recently_entered` TTL 120초→180초, 2) `trader.py` — `on_signal` 청산감지 쿨다운 복원, 3) `trader.py` — 동일캔들 중복진입 방지, 4) `exchange.py` — 시장가 FalseCancel 수정, 5) `strategy.py` — 스퀴즈윈도우 `lookback+4`, 6) `harness.py` — BINANCE env, 7) `engine.py` — 브랜드 수정. 전체 123테스트 100% 통과.
 - **[v4.0.1] 대시보드 및 설정 내 하드코딩된 OKX 브랜드 명칭 및 환경변수 맵핑 Binance 동기화 (2026-05-29):**
   - [Core/UI/Config] `app.py` 에서 수집 및 참조하는 API 키 환경변수를 `OKX_` -> `BINANCE_` 로 수정하여 `.env` 내의 바이낸스 키가 정상적으로 연동되도록 하였습니다.
   - [Core/UI] 사이드바 및 탭 전반에 걸친 OKX 연결 안내 및 버튼 텍스트 레이블을 "Binance"로 수정 적용하였습니다.
