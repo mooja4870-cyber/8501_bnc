@@ -25,6 +25,7 @@ class Scanner:
         self.client = client
         self.strategy = StrategyEngine()
         self.cfg = CFG
+        self.ws_client = None
 
         self._running = False
         self._task: Optional[asyncio.Task] = None
@@ -50,9 +51,38 @@ class Scanner:
         self._running = True
         self._task = asyncio.create_task(self._scan_loop())
         self._log_sync("[SCANNER] 스캔 엔진 시작 (Async)")
+        
+        # 실시간 웹소켓 구독 감시 태스크 가동
+        try:
+            symbols = self.client.get_all_usdt_swap_symbols()
+            asyncio.create_task(self._start_ws_client_async(symbols))
+        except Exception as e:
+            logger.error(f"[SCANNER] 웹소켓 시작 실패: {e}")
+
+    async def _start_ws_client_async(self, symbols: List[str]):
+        try:
+            tickers = await self.client.get_tickers()
+            if tickers and self.cfg.SCAN_TOP_N > 0:
+                symbols = sorted(
+                    symbols,
+                    key=lambda s: tickers.get(s, {}).get("volume", 0),
+                    reverse=True
+                )[:self.cfg.SCAN_TOP_N]
+            
+            from core.websocket_client import WebSocketClient
+            self.ws_client = WebSocketClient(self)
+            self.ws_client.start(symbols)
+        except Exception as e:
+            logger.error(f"[WS INIT] 웹소켓 초기 설정 및 기동 실패: {e}")
 
     async def stop(self):
         self._running = False
+        if self.ws_client:
+            try:
+                await self.ws_client.stop()
+            except Exception as wse:
+                logger.error(f"웹소켓 클라이언트 중지 실패: {wse}")
+            self.ws_client = None
         if self._task:
             self._task.cancel()
             try:
@@ -66,6 +96,13 @@ class Scanner:
         return self._running
 
     async def _get_ohlcv_cached(self, sym: str) -> pd.DataFrame:
+        # [Hybrid Fallback] 웹소켓 클라이언트가 정상 작동하여 캐시 데이터가 들어있다면 REST 조회 우회
+        if self.ws_client and self.ws_client._running:
+            async with self._lock:
+                cached = self._ohlcv_cache.get(sym)
+            if cached is not None and not cached.empty:
+                return cached
+
         cached = self._ohlcv_cache.get(sym)
 
         if cached is None or cached.empty:
@@ -103,9 +140,6 @@ class Scanner:
     async def _scan_loop(self):
         while self._running:
             try:
-                # 스레드 안전한 설정값 스냅샷 바인딩
-                self.cfg = CFG.snapshot()
-                self.strategy.cfg = self.cfg
                 await self._run_once()
             except asyncio.CancelledError:
                 break
@@ -115,6 +149,10 @@ class Scanner:
             await asyncio.sleep(self.cfg.SCAN_INTERVAL_SEC)
 
     async def _run_once(self):
+        # 스캔 회차 동안 고정된 설정을 바라보도록 스냅샷 생성 및 전략 모듈에 바인딩
+        cfg_snap = self.cfg.copy()
+        self.strategy.cfg = cfg_snap
+
         symbols = self.client.get_all_usdt_swap_symbols()
 
         try:
@@ -127,12 +165,12 @@ class Scanner:
             self._log_sync("[WARN] 일괄 조회된 Ticker가 없습니다. 스캔 건너뜀.")
             return
 
-        if self.cfg.SCAN_TOP_N > 0:
+        if cfg_snap.SCAN_TOP_N > 0:
             symbols = sorted(
                 symbols,
                 key=lambda s: tickers.get(s, {}).get("volume", 0),
                 reverse=True
-            )[:self.cfg.SCAN_TOP_N]
+            )[:cfg_snap.SCAN_TOP_N]
 
         self._log_sync(f"[SCAN] 스캔 시작: {len(symbols)}개 페어 (캐시 {len(self._ohlcv_cache)}개 보유)")
 
@@ -153,14 +191,14 @@ class Scanner:
                     continue
 
                 vol = ticker.get("volume", 0)
-                if vol < self.cfg.MIN_VOLUME_USDT:
+                if vol < cfg_snap.MIN_VOLUME_USDT:
                     continue
 
                 bid = ticker.get("bid", 0)
                 ask = ticker.get("ask", 0)
                 if bid and ask and ask > 0:
                     spread_pct = (ask - bid) / ask * 100
-                    if spread_pct > self.cfg.MAX_SPREAD_PCT:
+                    if spread_pct > cfg_snap.MAX_SPREAD_PCT:
                         continue
 
                 was_cached = sym in self._ohlcv_cache
@@ -173,10 +211,7 @@ class Scanner:
                 if df.empty:
                     continue
 
-                # [v2.5.1] 실시간 스캔 시 미완성 캔들(마지막 캔들)은 지표 연산에서 배제하여 Repaint/오작동 방지
-                df_closed = df.iloc[:-1] if len(df) > 1 else df
-
-                sig = self.strategy.generate_signal(df_closed, sym)
+                sig = self.strategy.generate_signal(df, sym)
                 results.append({
                     "symbol": sym,
                     "price": ticker.get("last", 0),
@@ -191,7 +226,6 @@ class Scanner:
                     "rsi_ok": sig.rsi_ok,
                     "ema200": round(sig.ema200, 2) if sig.ema200 is not None else 0.0,
                     "ema200_ok": sig.ema200_ok,
-                    "vol_surge_ok": sig.vol_surge_ok,
                     "reason": sig.reason,
                     "timestamp": datetime.now(),
                 })
@@ -208,6 +242,8 @@ class Scanner:
 
                 if not was_cached:
                     await asyncio.sleep(0.1)
+                else:
+                    await asyncio.sleep(0.05)
 
             except asyncio.CancelledError:
                 break

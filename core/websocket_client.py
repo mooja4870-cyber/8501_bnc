@@ -1,112 +1,86 @@
 import asyncio
-import json
 import logging
-import time
-from typing import Dict, Optional
-import websockets
+import pandas as pd
+import ccxt.pro as ccxtpro
+from typing import List, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-class BinanceWebsocketClient:
+class WebSocketClient:
     """
-    바이낸스 Futures 실시간 WebSocket 클라이언트
-    - 전종목 실시간 Ticker (!ticker@arr) 구독으로 API Rate Limit 절감 및 지연 시간 최소화
-    - 연결 유실 시 자동 재연결 및 상태 체크 지원
+    CCXT Pro 기반 실시간 웹소켓 클라이언트
+    실시간 캔들 데이터를 스트리밍 수신하여 Scanner의 캐시 메모리에 직접 주입합니다.
     """
-    _instance = None
-    _lock = asyncio.Lock()
-
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
-
-    def __init__(self):
-        self.tickers: Dict[str, Dict] = {}
-        self.is_connected = False
-        self.last_update_time = 0.0
+    def __init__(self, scanner):
+        self.scanner = scanner
+        self.client = scanner.client
+        self.cfg = scanner.cfg
+        
         self._running = False
-        self._task: Optional[asyncio.Task] = None
-
-    def start(self):
+        self._tasks: List[asyncio.Task] = []
+        self._ws_exchange: Optional[ccxtpro.Exchange] = None
+        
+    def start(self, symbols: List[str]):
         if self._running:
             return
+            
+        # MockClient 감지 시 웹소켓 구독 우회
+        if not hasattr(self.client, "exchange"):
+            logger.warning("[WS] MockClient 감지됨. 웹소켓 구독을 실행하지 않고 건너뜁니다.")
+            return
+            
         self._running = True
-        self._task = asyncio.create_task(self._connect_loop())
-        logger.info("[WS] 웹소켓 클라이언트 시작")
-
+        
+        # OKX 및 Binance 공용 CCXT Pro 거래소 생성
+        exchange_class = getattr(ccxtpro, self.client.exchange.id)
+        self._ws_exchange = exchange_class({
+            "apiKey": self.client.exchange.apiKey,
+            "secret": self.client.exchange.secret,
+            "password": getattr(self.client.exchange, "password", ""),
+            "options": self.client.exchange.options,
+        })
+        
+        # 각 심볼별로 비동기 감시 태스크 할당
+        for symbol in symbols:
+            task = asyncio.create_task(self._watch_symbol_loop(symbol))
+            self._tasks.append(task)
+        logger.info(f"[WS] {len(symbols)}개 종목에 대한 실시간 캔들 웹소켓 구독을 성공적으로 구동했습니다.")
+        
     async def stop(self):
         self._running = False
-        if self._task:
-            self._task.cancel()
-            try:
-                await self._task
-            except asyncio.CancelledError:
-                pass
-        self.is_connected = False
-        logger.info("[WS] 웹소켓 클라이언트 중지")
-
-    async def _connect_loop(self):
-        uri = "wss://fstream.binance.com/ws"
+        for task in self._tasks:
+            task.cancel()
+        if self._ws_exchange:
+            await self._ws_exchange.close()
+        self._tasks.clear()
+        logger.info("[WS] 실시간 웹소켓 클라이언트 감시 종료")
+        
+    async def _watch_symbol_loop(self, symbol: str):
+        timeframe = self.cfg.TIMEFRAME
         while self._running:
             try:
-                async with websockets.connect(
-                    uri, 
-                    ping_interval=20, 
-                    ping_timeout=10,
-                    max_size=2**22 # 대량 데이터 수신 대응 버퍼 확장
-                ) as ws:
-                    self.is_connected = True
-                    logger.info("[WS] 바이낸스 선물 웹소켓 연결 성공")
+                # CCXT Pro watch_ohlcv 비동기 대기
+                ohlcv = await self._ws_exchange.watch_ohlcv(symbol, timeframe)
+                if ohlcv:
+                    df = pd.DataFrame(ohlcv, columns=["timestamp", "open", "high", "low", "close", "volume"])
+                    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+                    df = df.set_index("timestamp").sort_index()
+                    df = df.astype(float)
                     
-                    # 전종목 티커 (!ticker@arr) 실시간 스트림 구독
-                    sub_msg = {
-                        "method": "SUBSCRIBE",
-                        "params": ["!ticker@arr"],
-                        "id": 1
-                    }
-                    await ws.send(json.dumps(sub_msg))
-                    
-                    while self._running:
-                        msg = await ws.recv()
-                        data = json.loads(msg)
-                        if isinstance(data, list):
-                            now_time = time.time()
-                            for item in data:
-                                symbol_raw = item.get("s", "")
-                                if not symbol_raw.endswith("USDT"):
-                                    continue
-                                
-                                # CCXT 심볼 표준 포맷으로 정규화 (예: BTCUSDT -> BTC/USDT:USDT)
-                                base = symbol_raw[:-4]
-                                symbol = f"{base}/USDT:USDT"
-                                
-                                last_price = float(item.get("c", 0))
-                                quote_volume = float(item.get("q", 0))
-                                change_pct = float(item.get("P", 0))
-                                bid = float(item.get("b", 0))
-                                ask = float(item.get("a", 0))
-                                
-                                self.tickers[symbol] = {
-                                    "symbol": symbol,
-                                    "last": last_price,
-                                    "bid": bid,
-                                    "ask": ask,
-                                    "volume": quote_volume,
-                                    "change_pct": change_pct,
-                                    "ws_timestamp": now_time
-                                }
-                            self.last_update_time = now_time
+                    async with self.scanner._lock:
+                        # 스캐너 내부 캐시 병합 업데이트
+                        cached = self.scanner._ohlcv_cache.get(symbol)
+                        if cached is not None and not cached.empty:
+                            merged = pd.concat([cached, df])
+                            merged = merged[~merged.index.duplicated(keep='last')]
+                            merged = merged.sort_index().tail(300)
+                            self.scanner._ohlcv_cache[symbol] = merged
+                            self.scanner._ohlcv_cache_ts[symbol] = int(merged.index[-1].timestamp() * 1000)
+                        else:
+                            self.scanner._ohlcv_cache[symbol] = df
+                            self.scanner._ohlcv_cache_ts[symbol] = int(df.index[-1].timestamp() * 1000)
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self.is_connected = False
-                logger.error(f"[WS] 웹소켓 에러 또는 연결 끊김: {e}, 5초 후 재연결 시도")
-                await asyncio.sleep(5.0)
-
-    def get_tickers(self) -> Optional[Dict[str, Dict]]:
-        """웹소켓이 정상 상태이고 캐시 데이터가 10초 미만으로 신선할 때만 티커 목록 반환"""
-        if self.is_connected and self.tickers and (time.time() - self.last_update_time < 10.0):
-            return self.tickers
-        return None
+                logger.warning(f"[WS ERROR] {symbol} 웹소켓 지연/단절 발생 ({e}), 5초 후 재시도...")
+                await asyncio.sleep(5)

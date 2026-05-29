@@ -12,6 +12,7 @@ from core.strategy import Signal
 from core.config import CFG
 import core.stats as stats_store
 from core.logger import log_trade as csv_log
+from core.alert import send_telegram_alert
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class AutoTrader:
         self.cfg = CFG
         self._lock = asyncio.Lock()
 
-        self.enabled: bool = True
+        self.enabled: bool = False
         self.allow_long: bool = True
         self.allow_short: bool = True
 
@@ -40,6 +41,7 @@ class AutoTrader:
         self.recently_entered: Dict[str, datetime] = {}
         self.global_cooldown_until: Optional[datetime] = None
         self.symbol_cooldown_until: Dict[str, datetime] = {}
+        self._daily_loss_alert_sent = False
 
     def enable(self):
         self.enabled = True
@@ -64,7 +66,6 @@ class AutoTrader:
             return
 
         async with self._lock:
-            self.cfg = CFG.snapshot()
             self._reset_daily_if_needed()
 
             try:
@@ -111,7 +112,22 @@ class AutoTrader:
                 return
 
             side = "buy" if sig.direction == "long" else "sell"
-            margin_usdt = self.cfg.MARGIN_USDT
+            
+            # [Dynamic Compounding Margin]
+            if getattr(self.cfg, "USE_AUTO_COMPOUND", False):
+                try:
+                    balance = await self.client.get_balance()
+                    total_bal = balance.get("total", 0.0)
+                    if total_bal > 0:
+                        margin_usdt = round((total_bal / self.cfg.MAX_POSITIONS) * 0.9, 2)
+                        logger.info(f"[COMPOUND] 자동 복리 마진 적용: 총 잔고 ${total_bal:.2f} -> 1회 진입 증거금 ${margin_usdt:.2f} USDT")
+                    else:
+                        margin_usdt = self.cfg.MARGIN_USDT
+                except Exception as e:
+                    logger.error(f"[COMPOUND ERROR] 잔고 조회 실패로 고정 마진 사용: {e}")
+                    margin_usdt = self.cfg.MARGIN_USDT
+            else:
+                margin_usdt = self.cfg.MARGIN_USDT
 
             if margin_usdt < 1.0:
                 logger.warning(f"[SKIP] 증거금 설정 오류 (최소 $1): {margin_usdt:.2f} USDT")
@@ -141,15 +157,6 @@ class AutoTrader:
                 self._log_trade(sig, status="EXECUTED", result=result)
                 logger.info(f"[ORDER] {sig.symbol} {sig.direction.upper()} 실행 완료")
                 
-                # 주문 체결 완료 즉시 백그라운드 텔레메트리 캐시 갱신 트리거 (Non-blocking)
-                try:
-                    from core.engine import QuantumEngine
-                    engine = QuantumEngine.get_instance()
-                    if engine:
-                        asyncio.create_task(engine._update_dashboard_cache_async())
-                except Exception as ce:
-                    logger.warning(f"[TRADER] 주문 체결 후 캐시 갱신 실패: {ce}")
-
                 csv_log({
                     "timestamp": datetime.now(timezone(timedelta(hours=9))),
                     "symbol": sig.symbol,
@@ -162,6 +169,19 @@ class AutoTrader:
                     "leverage": self.cfg.LEVERAGE,
                     "order_id": result.get("order_id", ""),
                 })
+
+                # 진입 성공 텔레그램 알림
+                send_telegram_alert(
+                    f"🟢 *[포지션 진입 완료]*\n"
+                    f"종목: {sig.symbol}\n"
+                    f"구분: {sig.direction.upper()} 진입\n"
+                    f"진입가: {result.get('entry_price', 0)} USDT\n"
+                    f"증거금: {margin_usdt:.2f} USDT\n"
+                    f"레버리지: {self.cfg.LEVERAGE}x\n"
+                    f"수량: {result.get('amount', 0)}\n"
+                    f"익절 목표: {result.get('tp_price', 0):.6f}\n"
+                    f"손절 설정: {result.get('sl_price', 0):.6f}"
+                )
             else:
                 self._log_trade(sig, status="FAILED", reason="주문 API 오류")
 
@@ -180,6 +200,12 @@ class AutoTrader:
                 self.symbol_cooldown_until.pop(sig.symbol, None)
 
         if self.daily_pnl_usdt <= -self.cfg.DAILY_LOSS_LIMIT_USDT:
+            if not getattr(self, "_daily_loss_alert_sent", False):
+                self._daily_loss_alert_sent = True
+                send_telegram_alert(
+                    f"🚨 *[RISK ALERT]* 일일 손실 한도 초과! 자동매매 신규 진입이 차단됩니다.\n"
+                    f"금일 누적 손익: {self.daily_pnl_usdt:.2f} USDT (한도: {self.cfg.DAILY_LOSS_LIMIT_USDT} USDT)"
+                )
             return False, f"일일 손실 한도 초과: {self.daily_pnl_usdt:.2f} USDT"
 
         balance = await self.client.get_balance()
@@ -212,6 +238,7 @@ class AutoTrader:
         if today != self._today:
             self.daily_pnl_usdt = 0.0
             self.orders_today = 0
+            self._daily_loss_alert_sent = False
             self._today = today
             _s = stats_store.load_stats()
             _s["orders_today"] = 0

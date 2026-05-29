@@ -7,11 +7,12 @@ import threading
 import asyncio
 import time
 import inspect
+import concurrent.futures
 from enum import Enum, auto
 from typing import Optional, List, Dict
 from datetime import datetime, timezone, timedelta
 
-from core.exchange import BinanceClient
+from core.exchange import BinanceClient, OKXClient
 from core.scanner import Scanner
 from core.trader import AutoTrader
 from core.config import CFG
@@ -24,6 +25,7 @@ from core.history_helper import (
     _normalize_id,
     _trade_dedupe_key,
 )
+from core.alert import send_telegram_alert
 
 logger = logging.getLogger(__name__)
 
@@ -59,13 +61,21 @@ class QuantumEngine:
         return cls._instance
 
     def __init__(self):
-        self.client: Optional[BinanceClient] = None
+        self.client: Optional[OKXClient] = None
         self.scanner: Optional[Scanner] = None
         self.trader: Optional[AutoTrader] = None
         self.cfg = CFG
 
         self._initialized = False
         self._prev_position_symbols: set = set()
+        self._trailing_highs: Dict[str, float] = {}
+        self._trailing_lows: Dict[str, float] = {}
+        self._timeout_cooldowns: Dict[str, float] = {}
+        # [v2.8.0] per-symbol 청산 중 락: 이중 클릭 및 스캔 루프와 충돌 방지
+        self._closing_in_progress: Dict[str, float] = {}  # symbol -> 청산 시작 timestamp
+        # 대시보드 API 캐싱 변수
+        self._cached_balance = None
+        self._cached_positions = None
 
         self._state = EngineState.IDLE
         self._state_lock = threading.Lock()
@@ -82,12 +92,6 @@ class QuantumEngine:
         self._loop_thread.start()
         
         self._async_lock = None 
-
-        # ── Dashboard Cache Telemetry Storage ─────────────────
-        self._cached_balance: Dict = {}
-        self._cached_positions: List[Dict] = []
-        self._last_cache_update_time: float = 0.0
-        self._cache_task: Optional[asyncio.Task] = None
 
     def _start_loop(self):
         asyncio.set_event_loop(self._loop)
@@ -107,10 +111,12 @@ class QuantumEngine:
         future.result()
 
     def enable_trading(self):
-        asyncio.run_coroutine_threadsafe(self._enable_trading_async(), self._loop)
+        future = asyncio.run_coroutine_threadsafe(self._enable_trading_async(), self._loop)
+        future.result()
 
     def disable_trading(self):
-        asyncio.run_coroutine_threadsafe(self._disable_trading_async(), self._loop)
+        future = asyncio.run_coroutine_threadsafe(self._disable_trading_async(), self._loop)
+        future.result()
 
     def attempt_recovery(self) -> tuple[bool, str]:
         future = asyncio.run_coroutine_threadsafe(self._attempt_recovery_async(), self._loop)
@@ -131,33 +137,69 @@ class QuantumEngine:
             future = asyncio.run_coroutine_threadsafe(self.scanner.clear_cache(), self._loop)
             future.result()
 
-    async def _close_position_and_update_cache(self, symbol: str, side: str) -> bool:
-        result = await self.client.close_position(symbol, side)
-        try:
-            await self._update_dashboard_cache_async()
-        except Exception:
-            pass
-        return result
-
-    async def _close_all_positions_and_update_cache(self) -> int:
-        result = await self.client.close_all_positions()
-        try:
-            await self._update_dashboard_cache_async()
-        except Exception:
-            pass
-        return result
-
     def close_position(self, symbol: str, side: str) -> bool:
         if not self.is_ready:
             return False
-        future = asyncio.run_coroutine_threadsafe(self._close_position_and_update_cache(symbol, side), self._loop)
-        return future.result()
+
+        # [v2.8.0] per-symbol 청산 진행 락: 10초 이내 동일 심볼 이중 청산 차단
+        now_sec = time.time()
+        last_close = self._closing_in_progress.get(symbol, 0.0)
+        if (now_sec - last_close) < 10.0:
+            logger.warning(f"[CLOSE GUARD] {symbol} 청산 진행 중 (이중 요청 차단, 남은: {10.0 - (now_sec - last_close):.1f}초)")
+            return False
+        self._closing_in_progress[symbol] = now_sec
+
+        future = asyncio.run_coroutine_threadsafe(self.client.close_position(symbol, side), self._loop)
+        try:
+            res = future.result(timeout=15)  # [v2.5.6] 무한 블로킹 방지: 15초 타임아웃
+            if res:
+                self._trailing_highs.pop(symbol, None)
+                self._trailing_lows.pop(symbol, None)
+                self._timeout_cooldowns.pop(symbol, None)
+                # 캐시 즉시 무효화
+                self._cached_positions = None
+                self._cached_balance = None
+            # [v2.8.0] 성공/실패 모두 락 해제
+            self._closing_in_progress.pop(symbol, None)
+            return res
+        except concurrent.futures.TimeoutError:
+            logger.error(f"[CLOSE TIMEOUT] {symbol} 청산 API 응답 없음 (15초 초과) — 청산 실패 처리")
+            self._closing_in_progress.pop(symbol, None)  # [v2.8.0] 락 해제
+            return False
+        except Exception as e:
+            logger.error(f"[CLOSE ERROR] {symbol} 청산 중 예외: {e}")
+            self._closing_in_progress.pop(symbol, None)  # [v2.8.0] 락 해제
+            return False
 
     def close_all_positions(self) -> int:
+        """
+        [v2.8.0] 일괄청산 래퍼
+        - exchange.close_all_positions가 asyncio.gather 병렬화되어 실제 N개 포지션도 ~18초 내 완료
+        - timeout: 45초 (병렬 처리로 30초도 충분하지만 API 스파이크 대비 15초 여유)
+        - timeout 발생 시 -1 반환: 부분 청산 가능성 시그널 (UI에서 ⚠️ 쯔피션 비교 권고)
+        """
         if not self.is_ready:
             return 0
-        future = asyncio.run_coroutine_threadsafe(self._close_all_positions_and_update_cache(), self._loop)
-        return future.result()
+        future = asyncio.run_coroutine_threadsafe(self.client.close_all_positions(), self._loop)
+        try:
+            count = future.result(timeout=45)  # [v2.8.0] 30초 → 45초 (병렬화후 여유부 확장)
+            if count > 0 or count == -1:
+                self._trailing_highs.clear()
+                self._trailing_lows.clear()
+                self._timeout_cooldowns.clear()
+                self._closing_in_progress.clear()  # [v2.8.0] 모든 락 해제
+                # 캐시 즉시 무효화
+                self._cached_positions = None
+                self._cached_balance = None
+            return count
+        except concurrent.futures.TimeoutError:
+            logger.error("[CLOSE ALL TIMEOUT] 일괄청산 API 응답 없음 (45초 초과) — 부분 청산 가능성 있음")
+            self._closing_in_progress.clear()  # [v2.8.0] 타임아웃시도 락 해제
+            return -1  # [v2.8.0] 0 → -1: 부분 청산 시그널
+        except Exception as e:
+            logger.error(f"[CLOSE ALL ERROR] 일괄청산 중 예외: {e}")
+            self._closing_in_progress.clear()  # [v2.8.0] 예외시도 락 해제
+            return 0
 
     def get_scan_results(self) -> List[Dict]:
         if not self.scanner: return []
@@ -167,6 +209,11 @@ class QuantumEngine:
     def get_system_logs(self, limit: int = 50) -> List[str]:
         if not self.scanner: return []
         future = asyncio.run_coroutine_threadsafe(self.scanner.get_logs(limit), self._loop)
+        return future.result()
+
+    def get_trader_logs(self) -> List[Dict]:
+        if not self.trader: return []
+        future = asyncio.run_coroutine_threadsafe(self.trader.get_trade_log(), self._loop)
         return future.result()
 
     def get_trade_history(self, symbol: Optional[str] = None, limit: int = 50) -> List[Dict]:
@@ -214,6 +261,13 @@ class QuantumEngine:
             old = self._state
             self._state = new_state
             logger.info(f"[FSM] {old.name} → {new_state.name} | {reason}")
+            
+            # 텔레그램 메시지 알림 (핵심 상태 전이 대상)
+            if new_state == EngineState.ERROR:
+                send_telegram_alert(f"🚨 *[AI QUANTUM] 엔진 에러 상태 전이*\n이전 상태: {old.name}\n사유: {reason or self._error_msg}")
+            elif new_state == EngineState.CONNECTED and old == EngineState.RECOVERING:
+                send_telegram_alert(f"✅ *[AI QUANTUM] 엔진 자가 복구 성공*\n시도 횟수: {self._recovery_attempts}회")
+            
             return True
 
     # --- Async Implementations ---
@@ -231,12 +285,8 @@ class QuantumEngine:
             self._async_lock = asyncio.Lock()
 
         async with self._async_lock:
-            if self._cache_task:
-                self._cache_task.cancel()
-                self._cache_task = None
-
             try:
-                self.client = BinanceClient(api_key, secret_key, passphrase)
+                self.client = OKXClient(api_key, secret_key, passphrase)
                 if await self.client.load_markets():
                     self.scanner = Scanner(self.client)
                     self.trader = AutoTrader(self.client)
@@ -244,18 +294,26 @@ class QuantumEngine:
                     self.scanner.on_signal = self.trader.on_signal
                     self.scanner.on_scan_complete = self._check_closed_positions_async
 
-                    # 1회 동기식 캐시 업데이트 수행 (UI 초기 로딩 데이터 확보)
-                    try:
-                        await self._update_dashboard_cache_async()
-                    except Exception as ce:
-                        logger.warning(f"초기 대시보드 텔레메트리 캐싱 실패 (무시하고 진행): {ce}")
-
                     self._initialized = True
                     self._recovery_attempts = 0
                     self._transition(EngineState.CONNECTED, "마켓 로드 성공")
                     
+                    # 초기 캐시 로드
+                    try:
+                        self._cached_balance = await self.client.get_balance()
+                        self._cached_positions = await self.client.get_positions()
+                    except Exception as ce:
+                        logger.warning(f"초기 대시보드 데이터 캐싱 실패: {ce}")
+
+                    # 당일 누적 PnL 동기화 및 복구 실행 (PnL Reconciler)
+                    try:
+                        await self._sync_trades_to_csv_async()
+                        await self._reconcile_daily_pnl_async()
+                    except Exception as re:
+                        logger.error(f"초기 PnL Reconcile 실패: {re}")
+                    
+                    send_telegram_alert("🤖 *[AI QUANTUM]* Binance 자동매매 엔진 초기화 및 가동 성공")
                     asyncio.create_task(self._health_check_loop())
-                    self._cache_task = asyncio.create_task(self._dashboard_cache_loop())
                     return True, "✅ 엔진 초기화 및 마켓 로드 성공"
 
                 self._error_msg = "마켓 정보 로드 실패"
@@ -314,48 +372,28 @@ class QuantumEngine:
         self._transition(EngineState.ERROR, "복구 실패")
         return False, f"❌ 복구 실패 (시도 #{self._recovery_attempts})"
 
-    async def _update_dashboard_cache_async(self):
-        """거래소 API를 호출하여 잔고와 포지션 캐시를 실시간 갱신"""
-        if not self.is_ready:
-            return
-        try:
-            # 병렬 호출로 네트워크 대기시간 최적화
-            balance, positions = await asyncio.gather(
-                self.client.get_balance(),
-                self.client.get_positions()
-            )
-            self._cached_balance = balance
-            self._cached_positions = positions
-            self._last_cache_update_time = time.time()
-        except Exception as e:
-            logger.error(f"[CACHE] 대시보드 캐시 갱신 실패: {e}")
-            self._error_msg = str(e)
-            if self._state not in (EngineState.ERROR, EngineState.RECOVERING):
-                self._transition(EngineState.ERROR, f"데이터 조회 실패: {e}")
-            raise e
-
-    async def _dashboard_cache_loop(self):
-        """백그라운드에서 10초 주기로 대시보드 텔레메트리 캐시 자동 갱신"""
-        while True:
-            try:
-                if self.is_ready and self._state not in (EngineState.ERROR, EngineState.RECOVERING):
-                    await self._update_dashboard_cache_async()
-            except asyncio.CancelledError:
-                break
-            except Exception:
-                pass  # 에러는 _update_dashboard_cache_async 내부에서 로깅됨
-            await asyncio.sleep(10)
-
     async def _get_dashboard_data_async(self) -> Dict:
         if not self.is_ready:
             return {}
 
+        try:
+            if self._cached_balance is None:
+                self._cached_balance = await self.client.get_balance()
+            if self._cached_positions is None:
+                self._cached_positions = await self.client.get_positions()
+        except Exception as e:
+            logger.error(f"대시보드 데이터 조회 실패: {e}")
+            self._error_msg = str(e)
+            if self._state not in (EngineState.ERROR, EngineState.RECOVERING):
+                self._transition(EngineState.ERROR, f"데이터 조회 실패: {e}")
+            return {}
+
         return {
-            "total_balance": self._cached_balance.get("total", 0.0) if self._cached_balance else 0.0,
-            "free_margin": self._cached_balance.get("free", 0.0) if self._cached_balance else 0.0,
-            "used_margin": self._cached_balance.get("used", 0.0) if self._cached_balance else 0.0,
-            "realized_pnl": self._cached_balance.get("pnl", 0.0) if self._cached_balance else 0.0,
-            "positions": self._cached_positions,
+            "total_balance": self._cached_balance.get("total", 0) if self._cached_balance else 0.0,
+            "free_margin": self._cached_balance.get("free", 0) if self._cached_balance else 0.0,
+            "used_margin": self._cached_balance.get("used", 0) if self._cached_balance else 0.0,
+            "realized_pnl": self._cached_balance.get("pnl", 0) if self._cached_balance else 0.0,
+            "positions": self._cached_positions or [],
             "is_scanning": self.scanner.is_running if self.scanner else False,
             "is_trading": self.trader.enabled if self.trader else False,
             "engine_state": self._state.name,
@@ -379,18 +417,21 @@ class QuantumEngine:
             return
         try:
             raw_positions = await self._maybe_await(self.client.get_positions())
-            self._cached_positions = raw_positions  # 캐시 갱신
+            self._cached_positions = raw_positions # 백그라운드 캐시 업데이트
+            
+            # 잔고도 백그라운드에서 실시간 동기 업데이트
+            try:
+                raw_balance = await self._maybe_await(self.client.get_balance())
+                self._cached_balance = raw_balance
+            except Exception as be:
+                logger.error(f"백그라운드 잔고 동기화 실패: {be}")
+
             current = {p["symbol"] for p in raw_positions}
             closed = self._prev_position_symbols - current
 
             if closed:
                 for sym in closed:
-                    # [v2.5.1] 포지션 청산 완료 감지 시 해당 심볼의 잔여 OCO 미체결 주문 즉시 정리
-                    try:
-                        await self._maybe_await(self.client.cancel_all_orders(sym))
-                    except Exception as ce:
-                        logger.error(f"청산 감지 후 잔여 OCO 주문 취소 실패 ({sym}): {ce}")
-
+                    self._timeout_cooldowns.pop(sym, None)
                     pnl = 0.0
                     try:
                         recent_trades = await self._maybe_await(self.client.get_trade_history(symbol=sym, limit=5))
@@ -409,7 +450,7 @@ class QuantumEngine:
                                 "leverage": self.cfg.LEVERAGE,
                                 "order_id": exit_trade.get("order_id", ""),
                                 "trade_id": exit_trade.get("id", ""),
-                            })
+                             })
                         elif exit_trade:
                             pnl = exit_trade.get("pnl", 0.0)
                     except Exception as e:
@@ -419,6 +460,20 @@ class QuantumEngine:
                     if self.trader:
                         self.trader.daily_pnl_usdt = round(self.trader.daily_pnl_usdt + pnl, 4)
                         self.trader.trigger_symbol_cooldown(sym, 60)
+                    
+                    # 청산 알림 발송
+                    pnl_pct_val = exit_trade.get("pnl_pct", 0.0) if exit_trade else 0.0
+                    side_str = exit_trade.get("side", "") if exit_trade else ""
+                    price_str = exit_trade.get("price", 0.0) if exit_trade else 0.0
+                    emoji = "🔥" if pnl >= 0 else "❄️"
+                    send_telegram_alert(
+                        f"{emoji} *[포지션 청산 완료]*\n"
+                        f"종목: {sym}\n"
+                        f"구분: {side_str.upper()} 청산\n"
+                        f"청산가: {price_str}\n"
+                        f"실현 손익: {pnl:+.4f} USDT\n"
+                        f"수익률: {pnl_pct_val:+.2f}%"
+                    )
                     logger.info(f"[CLOSED] {sym} PnL={pnl:+.4f} -> {'WIN' if pnl >= 0 else 'LOSS'}")
 
             if self.cfg.MAX_HOLDING_HOURS > 0:
@@ -429,88 +484,93 @@ class QuantumEngine:
                     if entry_ts and (now_ms - entry_ts) > timeout_ms:
                         sym = p["symbol"]
                         side = p["side"]
-                        logger.warning(f"[TIMEOUT] {sym} {side} - {self.cfg.MAX_HOLDING_HOURS}시간 초과 강제청산 실행")
-                        await self._maybe_await(self.client.close_position(sym, side))
-                        if self.trader:
-                            self.trader.trigger_symbol_cooldown(sym, 60)
-            # [필수 수정 5] 서킷 브레이커 (일일 손실 및 최대 낙폭 MDD 감시 및 자동 차단)
-            # 자동매매가 활성화된 상태에서만 작동하도록 가드 처리
-            if self.trader and self.trader.enabled:
-                try:
-                    total_floating_pnl = sum(float(p.get("pnl_usdt", 0.0)) for p in raw_positions)
-                    realized_daily_pnl = (self.trader.daily_pnl_usdt if self.trader else 0.0) + total_floating_pnl
-                    
-                    # 1. 일일 손실 한도 체크
-                    if realized_daily_pnl <= -self.cfg.DAILY_LOSS_LIMIT_USDT:
-                        logger.critical(
-                            f"[CIRCUIT BREAKER] 일일 손실 한도 초과 감지! "
-                            f"실시간 일일 손익: {realized_daily_pnl:+.4f} USDT (실현 PnL: {self.trader.daily_pnl_usdt:+.4f}, 평가 PnL: {total_floating_pnl:+.4f}) <= 한도: -{self.cfg.DAILY_LOSS_LIMIT_USDT} USDT. "
-                            f"즉시 모든 포지션을 일괄 청산하고 봇을 정지합니다."
-                        )
-                        self.trader.disable()
-                        await self.client.close_all_positions()
-                        try:
-                            open_orders = await self._maybe_await(self.client.get_open_orders())
-                            for o in open_orders:
-                                await self._maybe_await(self.client.cancel_order(o["id"], o["symbol"]))
-                        except Exception as e:
-                            logger.error(f"서킷 브레이커 발동 후 미체결 주문 일괄 취소 실패: {e}")
-                        await self._stop_scanner_async()
-                        self._prev_position_symbols = set()
-                        return
-                    
-                    # 2. 최대 낙폭 (MDD) 체크
-                    balance = await self.client.get_balance()
-                    total_balance = balance.get("total", 0.0)
-                    _stats = stats_store.load_stats()
-                    seed_money = _stats.get("seed_money", 0.0)
-                    if seed_money > 0:
-                        drawdown_pct = (seed_money - total_balance) / seed_money
-                        if drawdown_pct >= self.cfg.MAX_DRAWDOWN_PCT:
-                            logger.critical(
-                                f"[CIRCUIT BREAKER] 최대 낙폭(MDD) 초과 감지! "
-                                f"현재 낙폭: {drawdown_pct*100:.2f}% (기준 자산: {seed_money:.2f} USDT, 현재 자산: {total_balance:.2f} USDT) >= 한도: {self.cfg.MAX_DRAWDOWN_PCT*100:.2f}%. "
-                                f"즉시 모든 포지션을 일괄 청산하고 봇을 정지합니다."
-                            )
-                            self.trader.disable()
-                            await self.client.close_all_positions()
-                            try:
-                                open_orders = await self._maybe_await(self.client.get_open_orders())
-                                for o in open_orders:
-                                    await self._maybe_await(self.client.cancel_order(o["id"], o["symbol"]))
-                            except Exception as e:
-                                logger.error(f"서킷 브레이커 발동 후 미체결 주문 일괄 취소 실패: {e}")
-                            await self._stop_scanner_async()
-                            self._prev_position_symbols = set()
-                            return
-                except Exception as cbe:
-                    logger.error(f"서킷 브레이커 감시 루프 오류: {cbe}")
+                        now_sec = time.time()
+                        if sym in self._timeout_cooldowns and (now_sec - self._timeout_cooldowns[sym]) < 30.0:
+                            logger.info(f"[TIMEOUT COOLDOWN] {sym} 강제청산 실패 쿨다운 대기 중... 남은 시간: {30.0 - (now_sec - self._timeout_cooldowns[sym]):.1f}초")
+                            continue
 
-            # [v3.6.0] 미체결 진입용 지정가 주문(limit) 중 타임아웃 초과 건 자동 취소
-            if self.cfg.USE_LIMIT_ORDER:
-                try:
-                    open_orders = await self._maybe_await(self.client.get_open_orders())
-                    now_ms = time.time() * 1000
-                    timeout_ms = self.cfg.LIMIT_ORDER_TIMEOUT_MINUTES * 60 * 1000
-                    for o in open_orders:
-                        # OCO 역지정/익절 트리거 주문은 제외하고, 일반 limit 주문만 대상
-                        if o.get("type") == "limit":
-                            order_ts = o.get("timestamp")
-                            if order_ts and (now_ms - order_ts) > timeout_ms:
-                                logger.warning(f"[LIMIT TIMEOUT] 주문 {o['id']} ({o['symbol']}) {o['side']} - {self.cfg.LIMIT_ORDER_TIMEOUT_MINUTES}분 미체결로 자동 취소")
-                                await self._maybe_await(self.client.cancel_order(o["id"], o["symbol"]))
-                except Exception as oe:
-                    logger.error(f"미체결 지정가 주문 타임아웃 감지 중 오류: {oe}")
+                        logger.warning(f"[TIMEOUT] {sym} {side} - {self.cfg.MAX_HOLDING_HOURS}시간 초과 강제청산 실행")
+                        success = await self._maybe_await(self.client.close_position(sym, side))
+                        if success:
+                            self._timeout_cooldowns.pop(sym, None)
+                            if self.trader:
+                                self.trader.trigger_symbol_cooldown(sym, 60)
+                        else:
+                            self._timeout_cooldowns[sym] = now_sec
+                            logger.error(f"[TIMEOUT ERROR] {sym} 강제청산 실패 - 30초 쿨다운 적용")
 
             self._prev_position_symbols = current
             await self._run_position_rotation_check_async(raw_positions)
+            await self._run_trailing_stop_check_async(raw_positions)
         except Exception as e:
             logger.error(f"청산 감지 오류: {e}")
+
+    async def _run_trailing_stop_check_async(self, raw_positions: List[Dict]):
+        if not getattr(self.cfg, "USE_TRAILING_STOP", False):
+            return
+
+        activate_pct = getattr(self.cfg, "TRAILING_ACTIVATE_PCT", 0.015)
+        callback_pct = getattr(self.cfg, "TRAILING_CALLBACK_PCT", 0.003)
+
+        current_symbols = {p["symbol"] for p in raw_positions}
+        for sym in list(self._trailing_highs.keys()):
+            if sym not in current_symbols:
+                self._trailing_highs.pop(sym, None)
+        for sym in list(self._trailing_lows.keys()):
+            if sym not in current_symbols:
+                self._trailing_lows.pop(sym, None)
+
+        for p in raw_positions:
+            sym = p["symbol"]
+            side = p["side"]
+            entry_price = float(p.get("entry_price", 0.0))
+            mark_price = float(p.get("mark_price", 0.0))
+            if entry_price <= 0 or mark_price <= 0:
+                continue
+
+            raw_move = (mark_price - entry_price) / entry_price
+            if side == "short":
+                raw_move = -raw_move
+
+            if side == "long":
+                if sym not in self._trailing_highs:
+                    self._trailing_highs[sym] = mark_price
+                else:
+                    self._trailing_highs[sym] = max(self._trailing_highs[sym], mark_price)
+
+                highest = self._trailing_highs[sym]
+                highest_move = (highest - entry_price) / entry_price
+                if highest_move >= activate_pct:
+                    trigger_price = highest * (1 - callback_pct)
+                    if mark_price <= trigger_price:
+                        logger.warning(f"[TRAILING STOP] {sym} 롱 청산 발동! (최고수익률 {highest_move*100:.2f}%, 고점 {highest}, 현재 {mark_price} <= 트리거 {trigger_price})")
+                        success = await self._maybe_await(self.client.close_position(sym, side))
+                        if success:
+                            self._trailing_highs.pop(sym, None)
+                            if self.trader:
+                                self.trader.trigger_symbol_cooldown(sym, 60)
+
+            elif side == "short":
+                if sym not in self._trailing_lows:
+                    self._trailing_lows[sym] = mark_price
+                else:
+                    self._trailing_lows[sym] = min(self._trailing_lows[sym], mark_price)
+
+                lowest = self._trailing_lows[sym]
+                lowest_move = (entry_price - lowest) / entry_price
+                if lowest_move >= activate_pct:
+                    trigger_price = lowest * (1 + callback_pct)
+                    if mark_price >= trigger_price:
+                        logger.warning(f"[TRAILING STOP] {sym} 숏 청산 발동! (최저수익률 {lowest_move*100:.2f}%, 저점 {lowest}, 현재 {mark_price} >= 트리거 {trigger_price})")
+                        success = await self._maybe_await(self.client.close_position(sym, side))
+                        if success:
+                            self._trailing_lows.pop(sym, None)
+                            if self.trader:
+                                self.trader.trigger_symbol_cooldown(sym, 60)
 
     async def _run_position_rotation_check_async(self, raw_positions: List[Dict]):
         if not self.cfg.ROTATION_ENABLED:
             return
-
 
         scan_results = await self._maybe_await(self.scanner.get_results())
         scan_signals = [s for s in scan_results if s.get("signal") in ("long", "short") and s.get("strength", 0) >= 60]
@@ -712,6 +772,22 @@ class QuantumEngine:
             self._apply_trade_to_lots(local_record, category, lots)
             new_count += 1
 
+            # [즉시 조치 3] 신규 발견된 청산 거래 PnL을 메모리 daily_pnl 및 로컬 통계에 즉시 반영
+            if category == "청산":
+                stats_store.record_result(pnl)
+                trade_ts = trade.get("timestamp")
+                if trade_ts:
+                    if isinstance(trade_ts, datetime):
+                        trade_date = trade_ts.date()
+                    else:
+                        trade_sec = trade_ts / 1000.0 if trade_ts > 10000000000 else trade_ts
+                        trade_dt = datetime.fromtimestamp(trade_sec, timezone.utc) + timedelta(hours=9)
+                        trade_date = trade_dt.date()
+                    
+                    today_kst = (datetime.utcnow() + timedelta(hours=9)).date()
+                    if trade_date == today_kst and self.trader:
+                        self.trader.daily_pnl_usdt = round(self.trader.daily_pnl_usdt + pnl, 4)
+
         if new_count:
             logger.info(f"로컬 CSV에 {new_count}개의 새로운 거래 내역을 추가 동기화했습니다.")
         return removed + new_count
@@ -757,3 +833,38 @@ class QuantumEngine:
             return -2.0 <= pnl_pct <= 1.0
 
         return False
+
+    async def _reconcile_daily_pnl_async(self):
+        """
+        [PnL Reconciler]
+        봇 재기동 시 오늘(KST 기준) 발생한 모든 청산 거래 PnL을 합산하여
+        trader.daily_pnl_usdt 상태를 복구합니다.
+        """
+        if not self.client or not self.trader:
+            return
+        try:
+            logger.info("[RECONCILER] 당일 청산 PnL 복구 시작...")
+            today_kst = (datetime.utcnow() + timedelta(hours=9)).date()
+            local_trades = load_local_trade_history()
+            daily_pnl = 0.0
+            
+            for t in local_trades:
+                ts = t.get("timestamp")
+                if isinstance(ts, str):
+                    try:
+                        dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+                        trade_date = dt.date()
+                    except ValueError:
+                        continue
+                elif isinstance(ts, datetime):
+                    trade_date = ts.date()
+                else:
+                    continue
+                    
+                if trade_date == today_kst and t.get("category") in ("청산", "청산(로테이션)"):
+                    daily_pnl += float(t.get("pnl") or t.get("pnl_usdt") or 0.0)
+            
+            self.trader.daily_pnl_usdt = round(daily_pnl, 4)
+            logger.info(f"[RECONCILER] 당일 청산 PnL 복구 완료: {self.trader.daily_pnl_usdt:.4f} USDT")
+        except Exception as e:
+            logger.error(f"[RECONCILER] PnL 복구 실패: {e}")

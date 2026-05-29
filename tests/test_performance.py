@@ -7,6 +7,7 @@ import sys
 import os
 import time
 import tracemalloc
+import asyncio
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -23,7 +24,6 @@ def test_performance_and_memory_profiling():
     tracemalloc.start()
     
     # 2. Mock 인스턴스 준비
-    import asyncio
     mock = MockBinanceClient()
     asyncio.run(mock.load_markets())
     scanner = Scanner(mock)

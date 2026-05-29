@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v3.0.0 | 2026-05-29 11:10:00 | [Architecture/Migration] OKX 봇 최신 엔터프라이즈 코드베이스 이식 및 바이낸스 API 결합: 1) D:\AI\project\8501_bnc 내 바이낸스 API 어댑터(core/exchange.py) 및 핵심 관리용 파일 제외 전원 클리닝, 2) OKX 봇(8401_okx)의 검증된 고성능 Orchestration Engine v2(FSM 상태머신, 쿨다운 가드 등), 최신 전략 및 UI 소스코드 복제 이식, 3) 바이낸스 API 어댑터에 OKXClient 에일리어스 및 cancel_algo_orders 호환 메소드 추가로 OKX 코드베이스 호환 레이어 결합, 4) 123개 단위/통합 테스트 100% 정상 통과 검증 완료 | Core/Migration |
 | v2.8.2 | 2026-05-29 01:52:00 | [Core/Test] 서킷 브레이커 조기 종료 시 상태 정리 버그 수정 및 테스트 환경 격리: 1) 일일 손실 한도/MDD 초과로 조기 리턴 시 _prev_position_symbols 클린업(set())이 누락되는 런타임 버그 해결, 2) 테스트 환경용 헬퍼 _create_engine에서 mock trader의 enabled를 False로 고정하여 불필요한 서킷 브레이커 격발 차단 | Core/Test |
 | v2.8.1 | 2026-05-29 01:50:00 | [Core/UI] 자동매매 가동 토글 기본값 ON 설정 및 새로고침 대응: 1) AutoTrader 초기 enabled 값을 True로 변경, 2) 브라우저 F5 새로고침 및 최초 실행 시 st.session_state 및 백엔드 엔진 가동을 항상 ON으로 자동 기동하는 refresh_initialized 세션 가드 구현 | Core/UI |
 | v2.8.0 | 2026-05-28 16:45:00 | [Core/UI] 일 평균 수익률 기준 시각 보정 및 도움말 툴팁 전면 적용: 1) core/stats.py, app.py, data/stats.json의 수익률 시작 시점을 '2026-05-28 01:34:00'으로 일괄 수정, 2) UI 레이블 서브텍스트를 'SINCE 2026.05.28 01:34'로 변경, 3) 사이드바 및 설정 탭의 모든 파라미터 제어 위젯에 상세 한국어 도움말(help=) 탑재 및 1:1 동기화 | Core/UI |

@@ -22,7 +22,7 @@ def engine():
 
 def test_engine_initialization_success(engine):
     """정상적인 상황에서의 초기화 성공 여부 검증 (Mock 주입)"""
-    with patch('core.engine.BinanceClient') as MockClientClass:
+    with patch('core.engine.OKXClient') as MockClientClass:
         mock_instance = MockBinanceClient()
         asyncio.run_coroutine_threadsafe(mock_instance.load_markets(), engine._loop).result()
         mock_instance.set_scenario("default")
@@ -59,11 +59,8 @@ def test_chaos_api_outage():
             # 카오스 주입: API 에러 발생 시나리오
             mock.set_scenario("api_error")
             
-            # Dashboard 캐시를 갱신할 때 에러가 발생하여 ERROR 상태로 전이되어야 함
-            try:
-                await eng._update_dashboard_cache_async()
-            except Exception:
-                pass
+            # Dashboard 데이터를 가져올 때 에러가 발생하여 ERROR 상태로 전이되어야 함
+            await eng._get_dashboard_data_async()
             
             assert eng.state == EngineState.ERROR
             assert "Mock API Error" in eng._error_msg

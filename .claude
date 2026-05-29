@@ -1,7 +1,0 @@
-REG delete HKCU\Environment /F /V ANTHROPIC_API_KEY 2>nul
-setx ANTHROPIC_BASE_URL "https://api-anthropic.com/v1"
-setx ANTHROPIC_AUTH_TOKEN "sk-ant-api03-rT6yU9iO2pA5sD8fG1hJ4kL7zX0cV3bN6mQ9wE2rT5yU8iO1pA4sD7fG0hJ3kL6zX9cV2bN5mQ8wE1rT4yU7iO0pA3sD8"
-setx CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC "1"
-set ANTHROPIC_API_KEY=
-call claude /logout
-call claude

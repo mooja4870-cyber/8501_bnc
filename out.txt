@@ -1,6 +1,0 @@
-865: CFG.MAX_POSITIONS = preset["MAX_POSITIONS"]
-886: st.session_state.sb_max_pos = preset["MAX_POSITIONS"]
-960: st.number_input("👥 최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="sb_max_pos",
-961: on_change=sync_p, args=("sb_max_pos", "main_max_pos", "MAX_POSITIONS"))
-1780: st.number_input("👥 최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="main_max_pos",
-1781: on_change=sync_p, args=("main_max_pos", "sb_max_pos", "MAX_POSITIONS"))

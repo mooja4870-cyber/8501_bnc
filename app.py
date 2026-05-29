@@ -11,7 +11,10 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import time
 import os
+import logging
 from dotenv import load_dotenv
+
+logger = logging.getLogger(__name__)
 
 from core.exchange import BinanceClient
 from core.scanner import Scanner
@@ -31,10 +34,16 @@ from core.history_helper import load_local_trade_history, aggregate_and_pair_tra
 load_dotenv(override=True)
 
 # ── 앱 버전 (git tag와 동기화) ─────────────────────────
-def get_git_tag():
-    return "v2.7.0"
+@st.cache_data(ttl=5)
+def get_app_version():
+    try:
+        import subprocess
+        tag = subprocess.check_output(["git", "describe", "--tags", "--abbrev=0"]).strip().decode("utf-8")
+        return f"Binance {tag}"
+    except Exception:
+        return "Binance v2.5.1"
 
-APP_VERSION = get_git_tag()
+APP_VERSION = get_app_version()
 
 # ── 페이지 설정 ───────────────────────────────────────
 st.set_page_config(
@@ -44,15 +53,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
-# ── 대시보드 보안 (로그인) ───────────────────────────────────────────
+# ── 보안 로그인 기능 ───────────────────────────────────
 def check_password():
-    """Returns True if the user had the correct password."""
+    """Returns True if the user entered the correct password."""
     return True
 
 if not check_password():
     st.stop()
-
 
 # ── Wall Street Professional Terminal CSS ─────────────────────────────
 st.markdown(
@@ -84,8 +91,8 @@ st.markdown(
             /* 중앙에 밝고 외곽으로 갈수록 어두워지는 딥블루 방사형 그래디언트 */
             radial-gradient(circle at 50% 50%, rgba(35, 60, 105, 0.8) 0%, rgba(10, 15, 30, 0.95) 55%, rgba(3, 4, 8, 1) 100%),
             /* 흐릿한 격자무늬 (가로세로 약 1cm 크기: 38px) 유지 */
-            linear-gradient(to right, rgba(255, 255, 255, 0.15) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+            linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
         background-size: 100% 100%, 38px 38px, 38px 38px;
         background-attachment: fixed;
         color: var(--terminal-text) !important;
@@ -593,13 +600,11 @@ st.markdown(
 
 
 
-# ── 세션 상태 초기화 ──────────────────────────────────
-
 def init_session():
     engine = QuantumEngine.get_instance()
     
-    # 자동매매가동 기본 ON 설정
-    is_trading = True
+    # settings.json에 저장된 설정 또는 디폴트 값 사용
+    is_trading = getattr(CFG, "AUTO_TRADING", True)
 
     defaults = {
         "engine": engine,
@@ -607,31 +612,28 @@ def init_session():
         "auto_trading": is_trading,
         "rsi_auto_switch": CFG.USE_RSI_FILTER,
         "active_preset": "기본 (Stable)",
-        "closing_symbols": set(), # [v1.2.52] 잔상 방지용 청산 대기 목록
-        "sb_order_mode": CFG.USE_LIMIT_ORDER,
-        "main_order_mode": CFG.USE_LIMIT_ORDER,
-        "sb_tick_offset": CFG.LIMIT_TICK_OFFSET,
-        "main_tick_offset": CFG.LIMIT_TICK_OFFSET,
-        "sb_order_timeout": CFG.LIMIT_ORDER_TIMEOUT_MINUTES,
-        "main_order_timeout": CFG.LIMIT_ORDER_TIMEOUT_MINUTES,
-        "sb_use_vol_surge": CFG.USE_VOLUME_SURGE_FILTER,
-        "sb_vol_surge_period": CFG.VOLUME_SURGE_PERIOD,
-        "sb_vol_surge_mult": CFG.VOLUME_SURGE_MULTIPLIER,
-        "main_use_vol_surge": CFG.USE_VOLUME_SURGE_FILTER,
-        "main_vol_surge_period": CFG.VOLUME_SURGE_PERIOD,
-        "main_vol_surge_mult": CFG.VOLUME_SURGE_MULTIPLIER,
-        "settings_vol_surge_period": CFG.VOLUME_SURGE_PERIOD,
-        "settings_vol_surge_mult": CFG.VOLUME_SURGE_MULTIPLIER,
+        "closing_symbols": {}, # [v1.2.52] 잔상 방지용 청산 대기 목록 (symbol: timestamp)
+        "sb_use_auto_compound": getattr(CFG, "USE_AUTO_COMPOUND", False),
+        "main_use_auto_compound": getattr(CFG, "USE_AUTO_COMPOUND", False),
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
+    # [v2.8.1] 기존 세션에서 set으로 남아있는 closing_symbols 마이그레이션 및 타입 안전장치
+    if "closing_symbols" in st.session_state and not isinstance(st.session_state.closing_symbols, dict):
+        st.session_state.closing_symbols = {}
 
     # .env 값이 있으면 UI 입력창 세션 상태 강제 초기화
-    for state_key, env_key in [("api_key_input", "BINANCE_API_KEY"), 
-                               ("secret_input", "BINANCE_SECRET_KEY"), 
-                               ("pass_input", "BINANCE_PASSPHRASE")]:
-        env_val = os.getenv(env_key, "")
+    for state_key, env_keys in [("api_key_input", ["BINANCE_API_KEY"]), 
+                                ("secret_input", ["BINANCE_SECRET_KEY"]), 
+                                ("pass_input", ["BINANCE_PASSPHRASE"]),
+                                ("settings_telegram_token", ["TELEGRAM_BOT_TOKEN"]),
+                                ("settings_telegram_chat_id", ["TELEGRAM_CHAT_ID"])]:
+        env_val = ""
+        for k in env_keys:
+            env_val = os.getenv(k, "")
+            if env_val:
+                break
         if env_val and (state_key not in st.session_state or not st.session_state[state_key]):
             st.session_state[state_key] = env_val
 
@@ -670,14 +672,19 @@ def sync_p(src_key: str, dst_key: str, cfg_attr: str, is_pct: bool = False):
     real_val = val / 100.0 if is_pct else val
     setattr(CFG, cfg_attr, real_val)
 
-    # 설정 변경사항을 .env 파일에 실시간 영구 기록
-    from core.config import update_env_value
-    try:
-        update_env_value(cfg_attr, real_val)
-    except Exception as e:
-        st.warning(f"설정 저장 오류: {e}")
+    # [v2.1.3] 백그라운드 엔진 및 서브모듈(trader, scanner, strategy)의 실시간 설정 동기화
+    _engine = st.session_state.get("engine")
+    if _engine:
+        setattr(_engine.cfg, cfg_attr, real_val)
+        if _engine.trader:
+            setattr(_engine.trader.cfg, cfg_attr, real_val)
+        if _engine.scanner:
+            setattr(_engine.scanner.cfg, cfg_attr, real_val)
+            if _engine.scanner.strategy:
+                setattr(_engine.scanner.strategy.cfg, cfg_attr, real_val)
 
-    # [v2.7.0] 백그라운드 엔진 및 서브모듈은 스레드 안전하게 글로벌 CFG의 스냅샷을 주기적으로 가져와 사용합니다.
+    # [NEW] 파일로 영구 저장 (하드코딩 제거 정책에 따른 필수 요건)
+    CFG.save_settings()
 
     # [v3.5.1] 설정 값 변경 알림 팝업 추가
     st.toast(f"⚙️ 설정 값이 변경되었습니다: {cfg_attr} ➔ {val}{'%' if is_pct else ''}")
@@ -702,6 +709,15 @@ PLOT_LAYOUT = dict(
 )
 
 
+# ── 데이터 통합 조회 (상단 통합) ──────────────────────────
+dash = None
+if st.session_state.api_connected:
+    try:
+        engine: QuantumEngine = st.session_state.engine
+        dash = engine.get_dashboard_data()
+    except Exception:
+        pass
+
 # ══════════════════════════════════════════════════════
 # 사이드바 — API 설정
 # ══════════════════════════════════════════════════════
@@ -714,7 +730,7 @@ with st.sidebar:
         '2. TTM Squeeze 돌파: 볼린저 밴드와 켈트너 채널의 변동성 돌파 감지 (Squeeze OFF 시 진입)&#10;'
         '3. 모멘텀 및 캔들 색상 필터: 선행 추세 확증 (Momentum 히스토그램 및 캔들 색상 일치)&#10;'
         '4. RSI 필터: 과열권 진입 제한 및 추격 매매 노이즈 필터링">'
-        f'<span class="rainbow-text" style="font-size: 95%;">TTM-Squeeze-EMA</span><br><span style="font-size:calc(0.75rem * 1.33 * 1.22);">{APP_VERSION}</span><br><span style="font-size:15px; color:#888; font-family:\'JetBrains Mono\', monospace;">SINCE 2026.05.28 01:34</span></div>',
+        f'<span class="rainbow-text" style="font-size: 95%;">TTM-Squeeze-EMA</span><br><span style="font-size:calc(0.75rem * 1.33 * 1.22);">{APP_VERSION}</span><br><span style="font-size:15px; color:#888; font-family:\'JetBrains Mono\', monospace;">SINCE 2026.05.27 22:06</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -727,7 +743,7 @@ with st.sidebar:
         "🔑 Secret Key", value=os.getenv("BINANCE_SECRET_KEY", ""), type="password", key="secret_input"
     )
     passphrase = st.text_input(
-        "🔑 Passphrase (Optional)", value=os.getenv("BINANCE_PASSPHRASE", ""), type="password", key="pass_input"
+        "🔑 Passphrase (Binance 미사용)", value=os.getenv("BINANCE_PASSPHRASE", ""), type="password", key="pass_input"
     )
 
     if st.button("🔗  Binance 연결", use_container_width=True):
@@ -744,26 +760,18 @@ with st.sidebar:
     st.markdown("---")
 
 
-    engine: QuantumEngine = st.session_state.engine
-    
-    # [v2.8.1] 앱 실행 및 리프레시 시 항상 자동매매가동은 ON이 디폴트가 되도록 보장
-    if "refresh_initialized" not in st.session_state:
-        st.session_state.refresh_initialized = True
-        st.session_state.auto_trading = True
-        if engine.is_ready:
-            engine.enable_trading()
-            engine.start_scanner()
-    elif engine.is_ready and engine.trader:
-        st.session_state.auto_trading = engine.trader.enabled
-
     auto = st.toggle(
         "🤖 자동매매 가동 (ON/OFF)",
         value=st.session_state.auto_trading,
         help="ON: 실시간 마켓 스캐너 및 자동 매매 엔진을 기동하여 TTM Squeeze + 200 EMA 전략 조건 충족 시 포지션을 자동으로 진입/청산합니다. / OFF: 실시간 스캔을 즉시 중단하고 신규 자동 진입을 차단합니다. (기존 보유 포지션은 유지됩니다)"
     )
 
+    engine: QuantumEngine = st.session_state.engine
+    
     if auto != st.session_state.auto_trading:
         st.session_state.auto_trading = auto
+        CFG.AUTO_TRADING = auto
+        CFG.save_settings()
         if auto:
             st.toast("🤖 자동매매가 가동(ON) 되었습니다.")
         else:
@@ -916,17 +924,12 @@ with st.sidebar:
         CFG.RSI_PERIOD = preset["RSI_PERIOD"]
         CFG.RSI_OVERSOLD = preset["RSI_OVERSOLD"]
         CFG.RSI_OVERBOUGHT = preset["RSI_OVERBOUGHT"]
-
-        # 프리셋 설정 전체를 .env 파일에 실시간 영구 기록
-        from core.config import save_config_dict_to_env
-        try:
-            save_config_dict_to_env(preset)
-        except Exception as e:
-            st.warning(f"프리셋 저장 오류: {e}")
+        CFG.USE_AUTO_COMPOUND = False
 
         # ── 2) 사이드바 위젯 세션 상태 동기화 ──
         st.session_state.sb_leverage = preset["LEVERAGE"]
         st.session_state.sb_margin = preset["MARGIN_USDT"]
+        st.session_state.sb_use_auto_compound = False
         st.session_state.sb_max_pos = preset["MAX_POSITIONS"]
         st.session_state.sb_sl = round(preset["STOP_LOSS_PCT"] * 100, 2)
         st.session_state.sb_tp = round(preset["TAKE_PROFIT_PCT"] * 100, 2)
@@ -936,14 +939,19 @@ with st.sidebar:
         st.session_state.sb_rsi_period = preset["RSI_PERIOD"]
         st.session_state.sb_rsi_overbought = float(preset["RSI_OVERBOUGHT"])
         st.session_state.sb_rsi_oversold = float(preset["RSI_OVERSOLD"])
-        st.session_state.sb_trailing_activate = round(preset["TRAILING_ACTIVATE_PCT"] * 100, 2)
-        st.session_state.sb_trailing_callback = round(preset["TRAILING_CALLBACK_PCT"] * 100, 2)
         st.session_state.sb_ssl_period = CFG.SSL_PERIOD  # SSL은 프리셋에 없으므로 현재값 유지
 
         # ── 3) 메인 탭 위젯 세션 상태 동기화 ──
         st.session_state.main_leverage = preset["LEVERAGE"]
         st.session_state.main_margin = preset["MARGIN_USDT"]
+        st.session_state.main_use_auto_compound = False
         st.session_state.main_max_pos = preset["MAX_POSITIONS"]
+        st.session_state.sb_use_dynamic_sltp = getattr(CFG, "USE_DYNAMIC_SLTP", True)
+        st.session_state.sb_atr_tp_mult = getattr(CFG, "ATR_TP_MULT", 2.0)
+        st.session_state.sb_atr_sl_mult = getattr(CFG, "ATR_SL_MULT", 1.5)
+        st.session_state.main_use_dynamic_sltp = getattr(CFG, "USE_DYNAMIC_SLTP", True)
+        st.session_state.main_atr_tp_mult = getattr(CFG, "ATR_TP_MULT", 2.0)
+        st.session_state.main_atr_sl_mult = getattr(CFG, "ATR_SL_MULT", 1.5)
         st.session_state.main_sl = round(preset["STOP_LOSS_PCT"] * 100, 2)
         st.session_state.main_tp = round(preset["TAKE_PROFIT_PCT"] * 100, 2)
         st.session_state.main_timeframe = preset["TIMEFRAME"]
@@ -953,16 +961,30 @@ with st.sidebar:
         st.session_state.main_rsi_period = preset["RSI_PERIOD"]
         st.session_state.main_rsi_overbought = float(preset["RSI_OVERBOUGHT"])
         st.session_state.main_rsi_oversold = float(preset["RSI_OVERSOLD"])
-        st.session_state.main_trailing_activate = round(preset["TRAILING_ACTIVATE_PCT"] * 100, 2)
-        st.session_state.main_trailing_callback = round(preset["TRAILING_CALLBACK_PCT"] * 100, 2)
         st.session_state.main_scan_interval = preset["SCAN_INTERVAL_SEC"]
         st.session_state.main_min_vol = float(preset["MIN_VOLUME_USDT"])
 
-        # ── 4) 설정 탭 RSI 위젯 동기화 ──
+        # ── 4) 설정 탭 RSI 및 볼륨 위젯 동기화 ──
         st.session_state.settings_rsi_period = preset["RSI_PERIOD"]
         st.session_state.settings_rsi_overbought = float(preset["RSI_OVERBOUGHT"])
         st.session_state.settings_rsi_oversold = float(preset["RSI_OVERSOLD"])
-
+        
+        # [NEW] 거래량 급증 필터 세션 상태 동기화
+        st.session_state.sb_use_vol_filter = getattr(CFG, "USE_VOL_FILTER", False)
+        st.session_state.sb_vol_ma_period = getattr(CFG, "VOL_MA_PERIOD", 20)
+        st.session_state.sb_vol_surge_mult = getattr(CFG, "VOL_SURGE_MULT", 1.5)
+        st.session_state.main_use_vol_filter = getattr(CFG, "USE_VOL_FILTER", False)
+        st.session_state.main_vol_ma_period = getattr(CFG, "VOL_MA_PERIOD", 20)
+        st.session_state.main_vol_surge_mult = getattr(CFG, "VOL_SURGE_MULT", 1.5)
+        
+        # [NEW] 트레일링 스톱 세션 상태 동기화
+        st.session_state.sb_use_trailing_stop = getattr(CFG, "USE_TRAILING_STOP", False)
+        st.session_state.sb_trailing_activate_pct = float(getattr(CFG, "TRAILING_ACTIVATE_PCT", 0.015)) * 100
+        st.session_state.sb_trailing_callback_pct = float(getattr(CFG, "TRAILING_CALLBACK_PCT", 0.003)) * 100
+        st.session_state.main_use_trailing_stop = getattr(CFG, "USE_TRAILING_STOP", False)
+        st.session_state.main_trailing_activate_pct = float(getattr(CFG, "TRAILING_ACTIVATE_PCT", 0.015)) * 100
+        st.session_state.main_trailing_callback_pct = float(getattr(CFG, "TRAILING_CALLBACK_PCT", 0.003)) * 100
+        
         # ── 5) Trader 및 스캐너/엔진 전역 설정 실시간 동기화 ──
         _engine = st.session_state.get("engine")
         if _engine:
@@ -979,96 +1001,96 @@ with st.sidebar:
                 if _engine.scanner.strategy:
                     for k, v in preset.items():
                         setattr(_engine.scanner.strategy.cfg, k, v)
+        
+        # [NEW] 파일로 영구 저장
+        CFG.save_settings()
 
     # [v1.2.90] 인터랙티브 프로 트레이딩 컨트롤러 (동기화 로직 적용)
     
-    st.toggle("⚡ 지정가 주문 (Limit Order)", value=st.session_state.sb_order_mode, key="sb_order_mode",
-              on_change=sync_p, args=("sb_order_mode", "main_order_mode", "USE_LIMIT_ORDER"),
-              help="ON: 지정가(Limit) 주문을 제출하여 수수료와 슬리피지를 절감합니다. / OFF: 시장가(Market) 주문을 제출하여 즉시 체결을 보장합니다.")
-
-    if st.session_state.sb_order_mode:
-        col_offset, col_timeout = st.columns(2)
-        with col_offset:
-            st.number_input("⚡ 진입 틱 오프셋", 0, 5, int(st.session_state.sb_tick_offset), step=1, key="sb_tick_offset",
-                            on_change=sync_p, args=("sb_tick_offset", "main_tick_offset", "LIMIT_TICK_OFFSET"),
-                            help="시장가 대비 몇 틱 유리/불리한 가격에 지정가 주문을 올릴지 설정합니다. (추세 진입 시 즉시 체결 유도를 위해 1틱 권장)")
-        with col_timeout:
-            st.number_input("⏱️ 미체결 취소 (분)", 1, 30, int(st.session_state.sb_order_timeout), step=1, key="sb_order_timeout",
-                            on_change=sync_p, args=("sb_order_timeout", "main_order_timeout", "LIMIT_ORDER_TIMEOUT_MINUTES"),
-                            help="지정가 주문 진입 후 체결되지 않고 대기할 최대 시간입니다. 설정한 시간이 경과하면 stale 신호 방지를 위해 미체결 주문을 자동 취소합니다.")
-
     with st.expander("📊 지표 및 스캐너 설정", expanded=False):
         st.number_input("📏 KC ATR 배수", 0.5, 5.0, float(CFG.TTM_KC_MULT), step=0.1, key="sb_kc_mult",
                         on_change=sync_p, args=("sb_kc_mult", "main_kc_mult", "TTM_KC_MULT"),
-                        help="켈트너 채널(KC) 폭을 결정하는 ATR 승수입니다.\n\n• 값이 클수록 채널이 넓어져 Squeeze 진입 신호가 줄고 정확도가 높아집니다.\n• 값이 작을수록 채널이 좁아져 신호가 늘지만 노이즈에 민감해집니다.\n• 권장값: 1.5 (변동성이 높은 코인은 2.0 이상 사용 권장)")
+                        help="켈트너 채널(Keltner Channel)의 폭을 결정하는 ATR 배수(기본값 1.5)입니다. 볼린저 밴드가 이 채널 안으로 수축하면 변동성 수축(Squeeze ON)으로 판단합니다.")
         # [v1.3.02] 타임프레임 원격 제어 추가
         tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
         st.selectbox("⏱️ 타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="sb_timeframe",
                      on_change=sync_p, args=("sb_timeframe", "main_timeframe", "TIMEFRAME"),
-                     help="전략 신호 판단에 사용할 캔들봉 단위입니다.\n\n• 짧은 봉(1m~15m): 단기 스캘핑·빠른 진입에 유리하지만 노이즈 많음\n• 긴 봉(1h~4h): 추세 추종·안정성에 유리하지만 신호 빈도 낮음\n• 현재 기본값 30m: 단기 데이트레이딩 최적 균형점")
+                     help="스퀴즈 지표 및 200 EMA 추세 필터를 탐지할 차트 봉의 타임프레임 단위입니다. (예: 15m, 1h, 4h 등)")
         col_bb1, col_bb2 = st.columns(2)
         with col_bb1:
             st.number_input("📈 BB 기간", 5, 100, CFG.BB_PERIOD, key="sb_bb_period",
                             on_change=sync_p, args=("sb_bb_period", "main_bb_period", "BB_PERIOD"),
-                            help="볼린저 밴드(BB) 산출에 사용하는 이동평균 기간(캔들 수)입니다.\n\n• 기간이 짧을수록 밴드가 민감하게 반응해 신호 빈도 증가\n• 기간이 길수록 추세 기반의 안정적인 신호 생성\n• 표준값: 20 (TTM Squeeze 원본 기준)")
+                            help="볼린저 밴드(Bollinger Bands)를 산출하기 위한 단순이동평균(SMA) 기준 캔들 개수(기본값 20)입니다.")
         with col_bb2:
             st.number_input("📏 BB 편차 배수", 1.0, 5.0, CFG.BB_STD, step=0.1, key="sb_bb_std",
                             on_change=sync_p, args=("sb_bb_std", "main_bb_std", "BB_STD"),
-                            help="볼린저 밴드 상·하단 폭을 결정하는 표준편차 배수입니다.\n\n• 값이 클수록 밴드가 넓어져 Squeeze(수축) 상태가 줄어듦\n• 값이 작을수록 밴드가 좁아져 Squeeze 빈도 증가\n• 표준값: 2.0")
+                            help="볼린저 밴드의 상/하한선을 그리기 위한 표준편차 승수(기본값 2.0)입니다. 이 값이 커질수록 밴드가 넓어져 스퀴즈 진입 조건이 엄격해집니다.")
         
         st.number_input("⏱️ TTM 모멘텀 기간", 5, 100, CFG.TTM_MOM_PERIOD, step=1, key="sb_ttm_mom_period",
                         on_change=sync_p, args=("sb_ttm_mom_period", "main_ttm_mom_period", "TTM_MOM_PERIOD"),
-                        help="TTM Squeeze 모멘텀 히스토그램 산출 기간(캔들 수)입니다.\n\n• 모멘텀은 현재 가격이 과거 N봉 고/저/종가 범위 중 어디에 위치하는지로 측정\n• 기간이 짧을수록 반응이 빠르고 기간이 길수록 추세 필터 강도가 강해짐\n• 표준값: 20")
+                        help="TTM Squeeze의 모멘텀(선형 회귀선)을 계산할 캔들 기준 기간(기본값 20)입니다. 이 기간 동안의 시세를 선형 회귀하여 오실레이터로 표기합니다.")
 
     with st.expander("⚡ RSI 필터 설정", expanded=False):
         st.number_input("⚡ RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="sb_rsi_period",
                         on_change=sync_p, args=("sb_rsi_period", "main_rsi_period,settings_rsi_period", "RSI_PERIOD"),
-                        help="RSI(Relative Strength Index) 산출에 사용하는 기간(캔들 수)입니다.\n\n• 기간이 짧을수록(ex: 7) RSI가 빠르게 반응해 과열·과매도 신호 빈도 증가\n• 기간이 길수록(ex: 21) 더 넓은 추세 흐름을 반영한 안정적인 신호\n• 표준값: 14")
+                        help="상대강도지수(RSI)를 산출하기 위한 캔들 기간(기본값 13 또는 14봉)입니다.")
         col_rsi1, col_rsi2 = st.columns(2)
         with col_rsi1:
             st.number_input("🟢 RSI 롱 진입 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="sb_rsi_overbought",
                             on_change=sync_p, args=("sb_rsi_overbought", "main_rsi_overbought,settings_rsi_overbought", "RSI_OVERBOUGHT"),
-                            help="롱(매수) 포지션 진입 시 RSI가 이 값 이하일 때만 허용합니다.\n\n• 과열권(RSI 높음)에서의 추격 매수를 차단해 고점 매수 리스크 감소\n• 값을 높이면(ex: 80) 더 많은 롱 신호를 허용\n• 값을 낮추면(ex: 60) 과열권 진입을 엄격히 차단\n• 권장값: 75")
+                            help="롱(매수) 포지션 진입 시 허용할 수 있는 최대 RSI 수치입니다. RSI가 이 상한값보다 높으면 과매수권으로 판단해 추격 롱 진입을 차단합니다.")
         with col_rsi2:
             st.number_input("🔴 RSI 숏 진입 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="sb_rsi_oversold",
                             on_change=sync_p, args=("sb_rsi_oversold", "main_rsi_oversold,settings_rsi_oversold", "RSI_OVERSOLD"),
-                            help="숏(매도) 포지션 진입 시 RSI가 이 값 이상일 때만 허용합니다.\n\n• 과매도권(RSI 낮음)에서의 추격 매도를 차단해 저점 공매도 리스크 감소\n• 값을 낮추면(ex: 20) 더 많은 숏 신호를 허용\n• 값을 높이면(ex: 35) 과매도권 진입을 엄격히 차단\n• 권장값: 25")
+                            help="숏(매도) 포지션 진입 시 허용할 수 있는 최소 RSI 수치입니다. RSI가 이 하한값보다 낮으면 과매도권으로 판단해 추격 숏 진입을 차단합니다.")
 
-    with st.expander("🔊 거래량 서지 필터 설정", expanded=False):
-        st.toggle("🔊 거래량 서지 필터 활성화", value=st.session_state.sb_use_vol_surge, key="sb_use_vol_surge",
-                  on_change=sync_p, args=("sb_use_vol_surge", "main_use_vol_surge", "USE_VOLUME_SURGE_FILTER"),
-                  help="ON: 현재 캔들 거래량이 평균 대비 설정 배수 이상일 때만 신호를 허용합니다.\n\n• 거래량 폭발 없이 발생하는 가짜 Squeeze 돌파 신호를 필터링\n• OFF: 거래량 조건 없이 모든 TTM Squeeze 신호를 허용\n• 변동성이 큰 장세에서 노이즈 감소에 효과적")
-        st.number_input("⏱️ 거래량 서지 평균 기간", 5, 100, int(st.session_state.sb_vol_surge_period), step=1, key="sb_vol_surge_period",
-                        on_change=sync_p, args=("sb_vol_surge_period", "main_vol_surge_period,settings_vol_surge_period", "VOLUME_SURGE_PERIOD"),
-                        help="거래량 평균을 계산할 기간(캔들 수)입니다.\n\n• 이 기간 동안의 평균 거래량을 기준으로 서지(폭발) 여부를 판단\n• 기간이 짧을수록 최근 거래량에 민감하게 반응\n• 기간이 길수록 장기 평균 대비 서지 여부를 엄격히 판단\n• 권장값: 20")
-        st.number_input("📏 거래량 서지 배수", 1.0, 10.0, float(st.session_state.sb_vol_surge_mult), step=0.1, key="sb_vol_surge_mult",
-                        on_change=sync_p, args=("sb_vol_surge_mult", "main_vol_surge_mult,settings_vol_surge_mult", "VOLUME_SURGE_MULTIPLIER"),
-                        help="현재 거래량이 평균의 몇 배 이상일 때 서지로 인정할지 결정하는 배수입니다.\n\n• 1.25배: 평균보다 25% 이상 많은 거래량일 때 신호 허용 (기본값)\n• 배수가 낮을수록 더 많은 신호 허용 / 높을수록 강한 폭발만 허용\n• 권장값: 1.25~2.0 (시장 변동성에 따라 조정)")
+    with st.expander("📊 거래량 급증 필터 설정", expanded=False):
+        st.checkbox("📊 거래량 필터 활성화", value=getattr(CFG, "USE_VOL_FILTER", False) or False, key="sb_use_vol_filter", on_change=sync_p, args=("sb_use_vol_filter", "main_use_vol_filter", "USE_VOL_FILTER"),
+            help="⚠️ 진입 차단 주의: ON이면 현재 거래량이 MA 평균의 '돌파 배수'배 이상일 때만 진입 허용.\n하락장·횡보장에서는 거래량이 급증하지 않아 신호강도=80, 방향=— 상태로 전종목 진입 차단됨.\n▶ 진입이 안 될 때는 OFF로 끄거나 배수를 1.0~1.2로 낮출 것.")
+        col_vol1, col_vol2 = st.columns(2)
+        with col_vol1:
+            st.number_input("⏱️ 기준 MA 기간", 5, 100, int(getattr(CFG, "VOL_MA_PERIOD", 20) or 20), step=1, key="sb_vol_ma_period", on_change=sync_p, args=("sb_vol_ma_period", "main_vol_ma_period", "VOL_MA_PERIOD"),
+                help="거래량 이동평균 계산 기간. 기본값 20봉. 이 평균의 '돌파 배수'배 이상일 때만 진입.")
+        with col_vol2:
+            st.number_input("📈 돌파 배수", 1.0, 5.0, float(getattr(CFG, "VOL_SURGE_MULT", 1.5) or 1.5), step=0.1, key="sb_vol_surge_mult", on_change=sync_p, args=("sb_vol_surge_mult", "main_vol_surge_mult", "VOL_SURGE_MULT"),
+                help="⚠️ 핵심 파라미터: 현재 거래량 > 평균 × 이 배수 일 때만 진입.\n기본 1.5 → 평균보다 50% 많아야 함. 하락장에서 차단 잦으면 1.0~1.2로 낮출 것.\n0으로 낮출 수 없음 (최소 1.0). 필터 자체를 끄려면 '거래량 필터 활성화' 체크 해제.")
 
     with st.expander("⚙️ 운용 및 포지션 설정", expanded=False):
         st.number_input("🚀 레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="sb_leverage",
                         on_change=sync_p, args=("sb_leverage", "main_leverage", "LEVERAGE"),
-                        help="포지션 진입 시 적용할 레버리지 배율입니다.\n\n• 레버리지가 높을수록 적은 증거금으로 큰 포지션 진입 가능\n• 단, 레버리지가 높을수록 청산 위험도 비례하여 증가\n• 예: 10배 레버리지 + 5 USDT 증거금 → 50 USDT 규모 포지션 진입\n• ⚠️ 고레버리지는 변동성이 큰 코인에서 강제청산 위험 급증")
+                        help="선물 거래 시 포지션에 적용할 레버리지 배수입니다. 레버리지가 높을수록 수익률과 위험성이 동시에 극대화되며 강제 청산 위험이 커집니다.")
         st.number_input("💵 1회 진입 증거금 (USDT)", 1.0, 100.0, CFG.MARGIN_USDT, step=0.5, key="sb_margin",
                         on_change=sync_p, args=("sb_margin", "main_margin", "MARGIN_USDT"),
-                        help="포지션 1건 진입 시 투입할 담보금(증거금) 금액입니다.\n\n• 실제 포지션 규모 = 증거금 × 레버리지\n• 예: 5 USDT × 10배 = 50 USDT 포지션\n• 최대 동시 포지션 수만큼 중복 소모되므로 가용 잔고 대비 안전 비율 설정 권장\n• ⚠️ 잔고 대비 너무 큰 증거금 설정 시 신규 진입이 차단될 수 있음")
+                        help="포지션 진입 시 1개 종목당 할당할 투자 증거금(USDT 단위)입니다. (진입 수량 = 증거금 × 레버리지 / 현재가)")
         st.number_input("👥 최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="sb_max_pos",
                         on_change=sync_p, args=("sb_max_pos", "main_max_pos", "MAX_POSITIONS"),
-                        help="동시에 열어둘 수 있는 최대 포지션 개수입니다.\n\n• 이 수를 초과하면 새로운 신호가 발생해도 신규 진입을 차단\n• 분산 진입으로 리스크를 나눌수록 개별 포지션 손실 영향이 줄어듦\n• 너무 많은 포지션은 증거금 분산으로 각 포지션 규모 축소\n• 권장값: 자본 대비 3~5개")
+                        help="동시에 보유할 수 있는 최대 포지션(종목) 개수입니다. 이 한도에 도달하면 신규 진입 신호가 감지되어도 추가 진입하지 않습니다.")
 
     with st.expander("🛡️ 리스크 및 한도 설정", expanded=False):
-        st.number_input("🎯 익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="sb_tp",
+        st.checkbox("✨ ATR 다이내믹 청산 사용", value=getattr(CFG, "USE_DYNAMIC_SLTP", True), key="sb_use_dynamic_sltp", on_change=sync_p, args=("sb_use_dynamic_sltp", "main_use_dynamic_sltp", "USE_DYNAMIC_SLTP"))
+        col_atr1, col_atr2 = st.columns(2)
+        with col_atr1:
+            st.number_input("🎯 익절 ATR 배수", 0.5, 10.0, float(getattr(CFG, "ATR_TP_MULT", 2.0)), step=0.1, key="sb_atr_tp_mult", on_change=sync_p, args=("sb_atr_tp_mult", "main_atr_tp_mult", "ATR_TP_MULT"),
+                            help="평균 실제 변동폭(ATR)을 활용한 다이내믹 익절 배수입니다. 진입 시점의 ATR 값에 이 배수를 곱한 금액만큼 상승(롱) 또는 하락(숏)하면 익절합니다.")
+        with col_atr2:
+            st.number_input("🛡️ 손절 ATR 배수", 0.5, 10.0, float(getattr(CFG, "ATR_SL_MULT", 1.5)), step=0.1, key="sb_atr_sl_mult", on_change=sync_p, args=("sb_atr_sl_mult", "main_atr_sl_mult", "ATR_SL_MULT"),
+                            help="평균 실제 변동폭(ATR)을 활용한 다이내믹 손절 배수입니다. 진입 시점의 ATR 값에 이 배수를 곱한 금액만큼 반대로 움직이면 손절을 감행하여 리스크를 제한합니다.")
+        st.markdown("---")
+        st.checkbox("✨ 하이브리드 트레일링 스톱 사용", value=getattr(CFG, "USE_TRAILING_STOP", False) or False, key="sb_use_trailing_stop", on_change=sync_p, args=("sb_use_trailing_stop", "main_use_trailing_stop", "USE_TRAILING_STOP"))
+        col_ts1, col_ts2 = st.columns(2)
+        with col_ts1:
+            st.number_input("🚀 트레일링 발동 (%)", 0.1, 10.0, float(getattr(CFG, "TRAILING_ACTIVATE_PCT", 0.015) or 0.015)*100, step=0.1, key="sb_trailing_activate_pct", on_change=sync_p, args=("sb_trailing_activate_pct", "main_trailing_activate_pct", "TRAILING_ACTIVATE_PCT", True),
+                            help="수익이 이 비율(%) 이상 도달했을 때 실시간 추적 청산(Trailing Stop)을 감시 작동하기 시작합니다.")
+        with col_ts2:
+            st.number_input("📉 수익 반납 청산 (%)", 0.1, 5.0, float(getattr(CFG, "TRAILING_CALLBACK_PCT", 0.003) or 0.003)*100, step=0.1, key="sb_trailing_callback_pct", on_change=sync_p, args=("sb_trailing_callback_pct", "main_trailing_callback_pct", "TRAILING_CALLBACK_PCT", True),
+                            help="트레일링 스톱이 발동된 후, 최고수익점 대비 가격이 이 비율(%)만큼 후퇴(수익 반납)하면 포지션을 정리하여 수익을 보존합니다.")
+        st.markdown("---")
+        st.number_input("🎯 고정 익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="sb_tp",
                         on_change=sync_p, args=("sb_tp", "main_tp", "TAKE_PROFIT_PCT", True),
-                        help="목표 수익률에 도달하면 포지션을 자동으로 청산하는 익절 기준입니다.\n\n• 진입가 대비 이 비율만큼 수익이 발생하면 TP(Take Profit) 주문 체결\n• 트레일링 스탑 발동 조건 달성 전 도달 시 먼저 청산\n• 레버리지 반영 전 기초자산 기준 비율\n• 권장값: 손절 대비 1.5배 이상 (Risk-Reward Ratio 준수)")
-        st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
+                        help="ATR 다이내믹 청산을 사용하지 않을 때 적용되는 전통적인 % 기준 고정 익절 비율입니다. (단위: %)")
+        st.number_input("🛡️ 고정 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="sb_sl",
                         on_change=sync_p, args=("sb_sl", "main_sl", "STOP_LOSS_PCT", True),
-                        help="최대 허용 손실률에 도달하면 포지션을 자동으로 청산하는 손절 기준입니다.\n\n• 진입가 대비 이 비율만큼 손실이 발생하면 SL(Stop Loss) 주문 체결\n• 손절은 자본 보존을 위한 필수 안전장치\n• 레버리지 반영 전 기초자산 기준 비율\n• ⚠️ 손절이 너무 좁으면 정상 변동성에도 청산됨 / 너무 넓으면 손실 과다")
-        st.number_input("⏱️ 트레일링 발동 (%)", 0.1, 20.0, float(CFG.TRAILING_ACTIVATE_PCT * 100), step=0.1, key="sb_trailing_activate",
-                        on_change=sync_p, args=("sb_trailing_activate", "main_trailing_activate", "TRAILING_ACTIVATE_PCT", True),
-                        help="트레일링 스탑(Trailing Stop)이 활성화되는 수익률 임계값입니다.\n\n• 포지션이 이 수익률에 도달하는 순간 고정 손절이 해제되고 추적형 손절로 전환\n• 이후 가격이 역행하면 콜백(%) 범위에서 자동 청산\n• 이익을 최대한 추적하면서 수익을 보호하는 전략\n• 권장값: 익절(TP)과 같거나 조금 낮게 설정")
-        st.number_input("↩️ 트레일링 콜백 (%)", 0.05, 5.0, float(CFG.TRAILING_CALLBACK_PCT * 100), step=0.05, key="sb_trailing_callback",
-                        on_change=sync_p, args=("sb_trailing_callback", "main_trailing_callback", "TRAILING_CALLBACK_PCT", True),
-                        help="트레일링 스탑 활성화 후 고점 대비 이 비율만큼 역행하면 청산합니다.\n\n• 값이 작을수록(ex: 0.2%) 조금만 빠져도 청산 → 수익 확보에 유리하나 조기 청산 위험\n• 값이 클수록(ex: 1.0%) 더 많은 역행을 허용 → 추가 상승 기회를 주지만 수익 반납 위험\n• 권장값: 0.3~0.5% (변동성에 따라 조정)")
+                        help="ATR 다이내믹 청산을 사용하지 않을 때 적용되는 전통적인 % 기준 고정 손절 비율입니다. (단위: %)")
 
 # ══════════════════════════════════════════════════════
 # 메인 헤더 (한 줄 배치)
@@ -1148,18 +1170,27 @@ with tabs[0]:
                 st.error(f"오류 상세: {engine._error_msg}")
         raw_positions = dash.get("positions", [])
         
-        # [v2.6.0] 포지션 데이터 취득 및 잔상 방지 필터링
-        # [필수 수정 4] 일방적 UI 은폐 캐시(Fast Hide) 제거:
-        # - 청산 버튼 클릭 즉시 화면에서 숨기는 방식을 제거
-        # - API close_position() 응답이 True로 확정된 후에만 st.rerun()으로 화면에서 제거
-        # - 수량 0 또는 먼지 잔고($0.1 미만)만 기본 필터로 적용
+        # [v1.2.52] 포지션 데이터 취득 및 잔상 방지 필터링
+        # 1. 수량이 0이거나 먼지 잔고($0.1 미만)인 경우 원천 차단
+        # 2. 방금 청산 버튼을 누른 종목(closing_symbols) 즉시 은폐 로직 (15초 초과 시 자동 제거/재노출)
+        now_time = time.time()
+        st.session_state.closing_symbols = {
+            s: ts for s, ts in st.session_state.closing_symbols.items()
+            if (now_time - ts) <= 15.0
+        }
+        
         positions = [
             p for p in raw_positions 
-            if p.get('amount_usdt', 0) > 0.1
+            if p.get('amount_usdt', 0) > 0.1 
+            and p.get('symbol') not in st.session_state.closing_symbols
         ]
         
-        # [v2.6.0] closing_symbols는 더 이상 UI 은폐에 사용되지 않음 (빈 set 유지)
-        st.session_state.closing_symbols = set()
+        # 3. 거래소 데이터와 동기화: 거래소에서 실제로 사라진 종목은 은폐 목록에서 제거
+        current_exchange_symbols = {p['symbol'] for p in raw_positions}
+        st.session_state.closing_symbols = {
+            s: ts for s, ts in st.session_state.closing_symbols.items()
+            if s in current_exchange_symbols
+        }
 
         # ── 상단 지표 (Custom Terminal Metrics) ──────────────────────────────
         m1, m2, m3, m4, m5 = st.columns(5)
@@ -1213,14 +1244,14 @@ with tabs[0]:
                                    tooltip="현재 열려있는 모든 포지션의 미실현 손익(Unrealized PnL) 총합입니다.<br><br>수수료 및 펀딩비가 실시간으로 반영된 예상 수익입니다.")
         with m3:
             _st_tmp = stats_store.load_stats()
-            seed_money_tmp = _st_tmp.get("seed_money", 30.0)
+            seed_money_tmp = _st_tmp.get("seed_money", 50.0)
             total_pnl_pct_tmp = ((dash['total_balance'] / seed_money_tmp) - 1) * 100 if seed_money_tmp > 0 else 0.0
             
-            perf_start_str_tmp = _st_tmp.get("perf_start_time", "2026-05-28 01:34:00")
+            perf_start_str_tmp = _st_tmp.get("perf_start_time", "2026-05-27 22:06:00")
             try:
                 perf_start_dt_tmp = datetime.strptime(perf_start_str_tmp, "%Y-%m-%d %H:%M:%S")
             except Exception:
-                perf_start_dt_tmp = datetime(2026, 5, 28, 1, 34, 0)
+                perf_start_dt_tmp = datetime(2026, 5, 27, 22, 6, 0)
                 
             now_kst_tmp = datetime.utcnow() + timedelta(hours=9)
             elapsed_seconds_tmp = (now_kst_tmp - perf_start_dt_tmp).total_seconds()
@@ -1231,11 +1262,13 @@ with tabs[0]:
             render_terminal_metric("금일 실현 손익", f"${dpnl:+.2f}", delta=f"{dpnl:+.2f}", is_pnl=True,
                                    tooltip="초기화 시점의 '총 잔고'에 현재 '일 평균 수익률'을 곱하여 산출한 금액입니다.")
         with m4:
-            render_terminal_metric("사용 중 증거금", f"${dash['used_margin']:,.2f}",
-                                   tooltip="현재 진입한 포지션들을 유지하기 위해 묶여있는 담보금(Margin)입니다.<br><br>레버리지가 곱해진 포지션 전체 규모가 아닌 순수 담보금입니다.")
+            bot_used_margin = len(positions) * CFG.MARGIN_USDT
+            render_terminal_metric("사용 중 증거금", f"${bot_used_margin:,.2f}",
+                                   tooltip="현재 봇이 보유 중인 포지션들에 할당된 증거금 총액입니다.<br><br>(현재 포지션 수 × 1회 진입 증거금)")
         with m5:
-            render_terminal_metric("가용 증거금", f"${dash['free_margin']:,.2f}",
-                                   tooltip="추가로 새로운 포지션에 진입할 때 사용할 수 있는 여유 현금입니다.<br><br>가용 증거금이 부족하면 스캐너가 신호를 띄워도 신규 진입이 차단됩니다.")
+            bot_free_margin = max(0.0, dash['total_balance'] - bot_used_margin)
+            render_terminal_metric("가용 증거금", f"${bot_free_margin:,.2f}",
+                                   tooltip="실제 총 잔고에서 현재 봇이 사용 중인 증거금을 뺀 순수 가용 현금입니다.<br><br>(총 잔고 - 사용 중 증거금)")
 
 
         st.markdown("---")
@@ -1253,17 +1286,34 @@ with tabs[0]:
             with col_bulk:
                 if positions:
                     st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
-                    if st.button("🔴 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
-                        with st.spinner("🔄 모든 활성 포지션을 일괄 청산하고 미체결 대기 주문을 정리하고 있습니다..."):
-                            count = engine.close_all_positions()
-                            if count > 0:
-                                if engine.trader:
-                                    engine.trader.trigger_global_cooldown(60)
-                                st.toast(f"✅ {count}개 포지션 일괄 청산 완료")
-                                time.sleep(1)
-                                st.rerun()
-                            else:
-                                st.error("❌ 일괄 청산에 실패했거나 활성 포지션이 없습니다. 거래소 연결 상태나 API 로그를 확인하세요.")
+                    if st.button("\U0001f534 모든 종목 일괄청산", use_container_width=True, key="bulk_close"):
+                        # [v2.8.0] 청산 실행 전 모든 포지션 closing_symbols에 즉시 등록 (UI 카드 즉시 숨김)
+                        for _p in positions:
+                            st.session_state.closing_symbols[_p['symbol']] = time.time()
+                        with st.spinner("\u23f3 모든 포지션 청산 중..."):
+                            try:
+                                count = engine.close_all_positions()
+                            except Exception as be:
+                                st.error(f"\u274c 일괄청산 오류: {be}")
+                                count = 0
+                        if count > 0:
+                            if engine.trader:
+                                engine.trader.trigger_global_cooldown(60)
+                            st.toast(f"\u2705 {count}개 포지션 일괄 청산 완료")
+                            time.sleep(1)
+                            st.rerun()
+                        elif count == -1:
+                            # [v2.8.0] 부분 청산 가능성 시그널 (-1)
+                            if engine.trader:
+                                engine.trader.trigger_global_cooldown(60)
+                            st.warning("\u26a0\ufe0f 일부 포지션만 청산됨 (API 지연) — 잔여 포지션은 화면에서 직접 확인 후 수동 청산")
+                            time.sleep(2)
+                            st.rerun()
+                        else:
+                            # [v2.8.0] 완전 실패 시 closing_symbols에서 전부 제거하여 카드 재노출
+                            for _p in positions:
+                                st.session_state.closing_symbols.pop(_p['symbol'], None)
+                            st.error("\u274c 일괄청산 실패 또는 청산된 포지션 없음 (시스템 로그 확인)")
 
             pos_placeholder = st.empty()
             with pos_placeholder.container():
@@ -1323,18 +1373,24 @@ with tabs[0]:
                             )
                             st.markdown('<div class="small-btn-marker"></div>', unsafe_allow_html=True)
                             if st.button("즉시청산", key=f"close_{p['symbol']}", use_container_width=True):
-                                # [v2.6.0] 필수 수정 4: 일방적 은폐 캐시 완전 제거
-                                # st.spinner로 중복 클릭 방지 + API 성공 확정 후에만 화면 제거
-                                with st.spinner(f"⏳ {p['symbol']} 포지션 청산 실행 중 (거래소 확인 대기)..."):
-                                    ok = engine.close_position(p["symbol"], p["side"])
+                                # [v1.2.52] 버튼 클릭 즉시 세션 캐시에 추가하여 화면에서 지움
+                                st.session_state.closing_symbols[p['symbol']] = time.time()
+                                with st.spinner(f"⏳ {p['symbol']} 청산 중..."):
+                                    try:
+                                        ok = engine.close_position(p["symbol"], p["side"])
+                                    except Exception as ce:
+                                        logger.error(f"[UI] {p['symbol']} 즉시청산 예외: {ce}")
+                                        ok = False
                                 if ok:
                                     if engine.trader:
                                         engine.trader.trigger_symbol_cooldown(p['symbol'], 60)
-                                    st.toast(f"✅ {p['symbol']} 청산 완료 — 거래소 수량 0 확인됨")
+                                    st.toast(f"✅ {p['symbol']} 청산 완료")
                                     time.sleep(0.5)
                                     st.rerun()
                                 else:
-                                    st.error(f"❌ {p['symbol']} 청산 실패 — 거래소 상태를 확인하세요")
+                                    # 실패 시에는 다시 목록에서 제거 (보여줘야 하므로)
+                                    st.session_state.closing_symbols.pop(p['symbol'], None)
+                                    st.error(f"❌ {p['symbol']} 청산 실패 (시스템 로그 확인)")
 
 
         with col_log:
@@ -1368,17 +1424,17 @@ with tabs[0]:
         daily_pnl = engine.trader.daily_pnl_usdt if (engine and getattr(engine, 'trader', None)) else _st.get("daily_pnl_usdt", 0.0)
         
         # [v1.2.37] 수익률 계산 기준 업데이트 (stats.json 로드)
-        seed_money = _st.get("seed_money", 30.0) # 기준 자산 (동적 로드)
+        seed_money = _st.get("seed_money", 50.0) # 기준 자산 (동적 로드)
         total_pnl_pct = ((dash['total_balance'] / seed_money) - 1) * 100 if seed_money > 0 else 0.0
         # 24시간 변동률도 시드 대비 비율로 표시
         daily_pnl_pct = (daily_pnl / seed_money) * 100 if seed_money > 0 else 0.0
         
         # [v1.2.40] 일 평균 수익률 계산 보정 (최소 1일 기준 - 뻥튀기 방지)
-        perf_start_str = _st.get("perf_start_time", "2026-05-28 01:34:00")
+        perf_start_str = _st.get("perf_start_time", "2026-05-27 22:06:00")
         try:
             perf_start_dt = datetime.strptime(perf_start_str, "%Y-%m-%d %H:%M:%S")
         except Exception:
-            perf_start_dt = datetime(2026, 5, 28, 1, 34, 0)
+            perf_start_dt = datetime(2026, 5, 27, 22, 6, 0)
             
         now_kst = datetime.utcnow() + timedelta(hours=9)
         elapsed_seconds = (now_kst - perf_start_dt).total_seconds()
@@ -1471,7 +1527,7 @@ with tabs[0]:
                     </div>
                     <div class="terminal-metric-value" style="color:{avg_color};">{daily_avg_roi:+.2f}%</div>
                     <div class="terminal-metric-sub" style="color:#cccccc;">
-                        SINCE {perf_start_dt.strftime("%Y.%m.%d %H:%M")}
+                        {avg_arrow} {perf_start_dt.strftime("%Y.%m.%d %H:%M")} ~
                     </div>
                 </div>
                 <!-- 누적 승률 -->
@@ -1489,23 +1545,6 @@ with tabs[0]:
                     <div class="terminal-metric-value" style="color:{win_color};">{win_rate:.1f}%</div>
                     <div class="terminal-metric-sub" style="color:#cccccc;">
                         <span style="font-size:0.7rem;">{win_arrow}</span> {wins}W / {losses}L
-                    </div>
-                </div>
-                <!-- MDD 한도 -->
-                <div class="terminal-metric-item">
-                    <div class="terminal-metric-label">
-                        MDD 한도
-                        <span class="terminal-tooltip">
-                            ℹ
-                            <span class="tooltip-text">
-                                포지션 최대 손실 허용폭(Max Drawdown)입니다.<br><br>
-                                이 수치를 초과하는 순간 서킷 브레이커가 발동하여 봇이 모든 열려있는 포지션을 즉시 강제 청산(시장가 손절)합니다.
-                            </span>
-                        </span>
-                    </div>
-                    <div class="terminal-metric-value" style="color:#cccccc;">-{CFG.MAX_DRAWDOWN_PCT*100:.0f}%</div>
-                    <div class="terminal-metric-sub" style="color:#cccccc;">
-                        <span style="font-size:0.7rem;">↓</span> Max Risk
                     </div>
                 </div>
                 <!-- 금일 주문 -->
@@ -1534,9 +1573,9 @@ with tabs[0]:
         if st.button("📊  수익률,승률 초기화", use_container_width=True, key="dashboard_stats_reset",
                      help="이 버튼을 누르면 지금까지 쌓인 누적 수익률, 승률(W/L), 주문 횟수 등 모든 성적표가 싹 다 0으로 리셋됩니다. 현재 총 잔고를 새로운 '시드 머니'로 잡고 현재 시각부터 기록을 시작합니다."):
             d_data = engine.get_dashboard_data()
-            current_bal = d_data.get("total_balance", 30.0)
+            current_bal = d_data.get("total_balance", 50.0)
             if current_bal <= 0:
-                current_bal = 30.0
+                current_bal = 50.0
             stats_store.reset_stats(current_bal)
             if engine and engine.trader:
                 engine.trader.daily_pnl_usdt = 0.0
@@ -1549,7 +1588,7 @@ with tabs[0]:
         st.markdown("---")
         st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.9rem;color:#cccccc;letter-spacing:0.1em;">📈 PERFORMANCE CHART (시간대별 일 평균 수익률)</p>', unsafe_allow_html=True)
         
-        chart_seed_money = _st.get("seed_money", 30.0)
+        chart_seed_money = _st.get("seed_money", 50.0)
 
         # 매매 이력 불러와서 청산 거래만 필터링
         raw_trades = load_local_trade_history()
@@ -1624,16 +1663,15 @@ with tabs[0]:
             
             df_plot["daily_avg_roi"] = df_plot.apply(calc_daily_avg, axis=1)
             
-            # ── 색상 결정 로직 (최종 수익률 및 개별 막대 기준) ──
+            # ── 색상 결정 로직 (각 막대별 수익/손실 기준) ──
             final_roi = df_plot["daily_avg_roi"].iloc[-1]
             bar_colors = ["#ef4444" if val >= 0 else "#3b82f6" for val in df_plot["daily_avg_roi"]]
             
-            # 막대그래프(Bar) 그리기
+            # 막대그래프 그리기
             fig = go.Figure(data=[go.Bar(
                 x=df_plot["time"],
                 y=df_plot["daily_avg_roi"],
                 marker_color=bar_colors,
-                name="일 평균 수익률",
                 hovertemplate="시간: %{x}<br>일 평균 수익률: %{y:.2f}%<extra></extra>"
             )])
             
@@ -1660,8 +1698,6 @@ with tabs[0]:
                 annotation_position="top",
                 annotation_font=dict(color="rgba(255, 235, 59, 0.9)", size=16)
             )
-            
-            fig.update_traces(marker_line_width=1, marker_line_color="rgba(0,0,0,0.3)")
             
             st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
@@ -1729,21 +1765,12 @@ with tabs[1]:
                 df_scan = df_scan[df_scan["signal"] == "none"]
 
             # 표시용 포맷
-            cols = ["symbol", "price", "change_pct", "volume_m", "signal", "strength", "ema_ok", "macd_ok", "bb_ok", "ema200_ok", "ema200"]
-            col_names = ["종목", "현재가", "등락(%)", "거래대금(M)", "신호", "강도(%)", "추세 방향 일치", "스퀴즈 돌파", "모멘텀 방향", "EMA 200 가드", "EMA 200 가격"]
-
             if CFG.USE_RSI_FILTER:
-                cols += ["rsi_ok", "rsi"]
-                col_names += ["RSI 필터", "RSI 수치"]
-
-            if CFG.USE_VOLUME_SURGE_FILTER:
-                cols += ["vol_surge_ok"]
-                col_names += ["거래량 서지"]
-
-            # DataFrame에 존재하는 열만 필터링하여 KeyError 방지
-            valid_pairs = [(c, n) for c, n in zip(cols, col_names) if c in df_scan.columns]
-            cols = [p[0] for p in valid_pairs]
-            col_names = [p[1] for p in valid_pairs]
+                cols = ["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","ema200_ok","ema200","rsi_ok","rsi"]
+                col_names = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","추세 방향 일치","스퀴즈 돌파","모멘텀 방향","EMA 200 가드","EMA 200 가격","RSI 필터","RSI 수치"]
+            else:
+                cols = ["symbol","price","change_pct","volume_m","signal","strength","ema_ok","macd_ok","bb_ok","ema200_ok","ema200"]
+                col_names = ["종목","현재가","등락(%)","거래대금(M)","신호","강도(%)","추세 방향 일치","스퀴즈 돌파","모멘텀 방향","EMA 200 가드","EMA 200 가격"]
 
             display = df_scan[cols].copy()
             display.columns = col_names
@@ -1754,8 +1781,6 @@ with tabs[1]:
             display["EMA 200 가드"] = display["EMA 200 가드"].map({True:"✅",False:"❌"})
             if "RSI 필터" in display.columns:
                 display["RSI 필터"] = display["RSI 필터"].map({True:"✅",False:"❌"})
-            if "거래량 서지" in display.columns:
-                display["거래량 서지"] = display["거래량 서지"].map({True:"✅",False:"❌"})
 
 
             def style_pnl(val):
@@ -1782,14 +1807,14 @@ with tabs[1]:
 with tabs[2]:
     engine: QuantumEngine = st.session_state.engine
 
-    # 실제 보유 중인 포지션 세트 추출 (중복 고스트 방지를 위해 보유 수량(coins) 매핑 딕셔너리로 적용)
+    # 실제 보유 중인 포지션 세트 추출
     active_positions_set = None
     if st.session_state.api_connected and engine.is_ready:
         try:
             dash = engine.get_dashboard_data()
             live_pos = dash.get("positions", [])
             active_positions_set = {
-                (p["symbol"], p["side"].upper()): float(p.get("coins", p.get("size", 0)))
+                (p["symbol"], p["side"].upper())
                 for p in live_pos if abs(p.get("size", 0)) > 0
             }
         except Exception:
@@ -1879,7 +1904,7 @@ with tabs[2]:
     else:
         # 자동매매 엔진 로그 표시
         if engine.trader:
-            logs = engine.trader.get_trade_log()
+            logs = engine.get_trader_logs()
             if logs:
                 df_engine = pd.DataFrame(logs)
                 df_engine["timestamp"] = df_engine["timestamp"].dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -1918,7 +1943,6 @@ with tabs[3]:
         st.markdown("- **캔들 색상:** 현재 봉의 종가가 이전 봉보다 높은 상승 상태 <span style='color:#ffcc00;'>☞ 양봉 모멘텀 동기화</span>", unsafe_allow_html=True)
         st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 위** <span style='color:#ffcc00;'>☞ 상승 대세 부합 (필수)</span>", unsafe_allow_html=True)
         st.markdown("- **RSI 진입 가드:** RSI가 60 미만인 안전 구간 <span style='color:#ffcc00;'>☞ 추격 매수 노이즈 필터링</span>", unsafe_allow_html=True)
-        st.markdown("- **거래량 서지 가드:** 현재 거래량이 이전 평균 대비 급증 상태 <span style='color:#ffcc00;'>☞ 변동성 및 자금 유입 수반 확인</span>", unsafe_allow_html=True)
 
     with c2:
         st.markdown("**🔴 SHORT 포지션 진입 조건**")
@@ -1937,7 +1961,6 @@ with tabs[3]:
         st.markdown("- **캔들 색상:** 현재 봉의 종가가 이전 봉보다 낮은 하락 상태 <span style='color:#ff3b30;'>☞ 음봉 모멘텀 동기화</span>", unsafe_allow_html=True)
         st.markdown("- **필터:** 현재 가격이 **EMA 200 장기이평선 아래** <span style='color:#ff3b30;'>☞ 하락 대세 부합 (필수)</span>", unsafe_allow_html=True)
         st.markdown("- **RSI 진입 가드:** RSI가 40 초과인 안전 구간 <span style='color:#ff3b30;'>☞ 추격 매도 노이즈 필터링</span>", unsafe_allow_html=True)
-        st.markdown("- **거래량 서지 가드:** 현재 거래량이 이전 평균 대비 급증 상태 <span style='color:#ff3b30;'>☞ 변동성 및 자금 유입 수반 확인</span>", unsafe_allow_html=True)
 
     st.markdown("---")
     
@@ -1979,46 +2002,48 @@ with tabs[4]:
     with s1:
         st.number_input("🚀 레버리지 (x)", 1, 20, CFG.LEVERAGE, step=1, key="main_leverage",
                         on_change=sync_p, args=("main_leverage", "sb_leverage", "LEVERAGE"),
-                        help="포지션 진입 시 적용할 레버리지 배율입니다.\n\n• 레버리지가 높을수록 적은 증거금으로 큰 포지션 진입 가능\n• 단, 레버리지가 높을수록 청산 위험도 비례하여 증가\n• 예: 10배 레버리지 + 5 USDT 증거금 → 50 USDT 규모 포지션 진입\n• ⚠️ 고레버리지는 변동성이 큰 코인에서 강제청산 위험 급증")
+                        help="선물 거래 시 포지션에 적용할 레버리지 배수입니다. 레버리지가 높을수록 수익률과 위험성이 동시에 극대화되며 강제 청산 위험이 커집니다.")
         st.number_input("💵 1회 진입 증거금 (USDT)", 1.0, 10000.0, float(CFG.MARGIN_USDT), step=1.0, key="main_margin",
                         on_change=sync_p, args=("main_margin", "sb_margin", "MARGIN_USDT"),
-                        help="포지션 1건 진입 시 투입할 담보금(증거금) 금액입니다.\n\n• 실제 포지션 규모 = 증거금 × 레버리지\n• 예: 5 USDT × 10배 = 50 USDT 포지션\n• 최대 동시 포지션 수만큼 중복 소모되므로 가용 잔고 대비 안전 비율 설정 권장\n• ⚠️ 잔고 대비 너무 큰 증거금 설정 시 신규 진입이 차단될 수 있음")
+                        help="포지션 진입 시 1개 종목당 할당할 투자 증거금(USDT 단위)입니다. (진입 수량 = 증거금 × 레버리지 / 현재가)")
         st.number_input("👥 최대 동시 포지션 수", 1, 10, CFG.MAX_POSITIONS, step=1, key="main_max_pos",
                         on_change=sync_p, args=("main_max_pos", "sb_max_pos", "MAX_POSITIONS"),
-                        help="동시에 열어둘 수 있는 최대 포지션 개수입니다.\n\n• 이 수를 초과하면 새로운 신호가 발생해도 신규 진입을 차단\n• 분산 진입으로 리스크를 나눌수록 개별 포지션 손실 영향이 줄어듦\n• 너무 많은 포지션은 증거금 분산으로 각 포지션 규모 축소\n• 권장값: 자본 대비 3~5개")
+                        help="동시에 보유할 수 있는 최대 포지션(종목) 개수입니다. 이 한도에 도달하면 신규 진입 신호가 감지되어도 추가 진입하지 않습니다.")
         st.number_input("⏱️ 스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10, key="main_scan_interval",
-                        on_change=sync_p, args=("main_scan_interval", "sb_scan_interval", "SCAN_INTERVAL_SEC"),
-                        help="마켓 스캔너가 신호를 탐색하는 주기(초)입니다.\n\n• 짧을수록 신호를 빠르게 포착하지만 API 호출 횟수 증가\n• 길수록 API 요청 부하가 줄어듦\n• 권장값: 30초 (잠짜 스캔에 적합, API 한도 안전하게 유지)")
+                        on_change=sync_p, args=("main_scan_interval", "main_scan_interval", "SCAN_INTERVAL_SEC"),
+                        help="마켓 스캐너가 Binance 거래소의 시세를 조회하고 돌파 신호를 탐지하는 주기(초 단위)입니다. 너무 짧으면 API 레이트 리밋에 걸릴 수 있으므로 10~30초를 권장합니다.")
         st.number_input("💵 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
-                        on_change=sync_p, args=("main_min_vol", "sb_min_vol", "MIN_VOLUME_USDT"),
-                        help="스캔 대상 코인을 필터링할 최소 24시간 거래대금 기준입니다.\n\n• 이 값 미만인 저유동성 코인은 스캔 문에서 지동 제외\n• 유동성이 높은 코인일수록 슬리피지 및 체결 실패 위험 감소\n• 권장값: 100만~200만 USDT (안정적 체결 확보)")
-        st.toggle("⚡ 지정가 주문 활성화 (Limit Order)", value=st.session_state.main_order_mode, key="main_order_mode",
-                  on_change=sync_p, args=("main_order_mode", "sb_order_mode", "USE_LIMIT_ORDER"),
-                  help="ON: 지정가(Limit) 주문을 제출하여 수수료와 슬리피지를 절감합니다. / OFF: 시장가(Market) 주문을 제출하여 즉시 체결을 보장합니다.")
-        if st.session_state.main_order_mode:
-            st.number_input("⚡ 진입 지정가 틱 오프셋", 0, 5, int(st.session_state.main_tick_offset), step=1, key="main_tick_offset",
-                            on_change=sync_p, args=("main_tick_offset", "sb_tick_offset", "LIMIT_TICK_OFFSET"),
-                            help="시장가 대비 몇 틱 유리/불리한 가격에 지정가 주문을 올릴지 설정합니다. (1틱 권장)")
-            st.number_input("⏱️ 미체결 지정가 취소 대기 시간 (분)", 1, 30, int(st.session_state.main_order_timeout), step=1, key="main_order_timeout",
-                            on_change=sync_p, args=("main_order_timeout", "sb_order_timeout", "LIMIT_ORDER_TIMEOUT_MINUTES"),
-                            help="지정가 주문 진입 후 체결되지 않고 대기할 최대 시간입니다.")
+                        on_change=sync_p, args=("main_min_vol", "main_min_vol", "MIN_VOLUME_USDT"),
+                        help="거래 대상 종목을 선별할 때 기준이 되는 최소 24시간 거래대금(USDT)입니다. 유동성이 풍부하고 슬리피지가 적은 메이저/우량 종목들 위주로 필터링하여 안전성을 확보합니다.")
 
     with s2:
-        st.number_input("🎯 익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",
+        st.checkbox("✨ ATR 다이내믹 청산 사용", value=getattr(CFG, "USE_DYNAMIC_SLTP", True), key="main_use_dynamic_sltp", on_change=sync_p, args=("main_use_dynamic_sltp", "sb_use_dynamic_sltp", "USE_DYNAMIC_SLTP"))
+        m_col1, m_col2 = st.columns(2)
+        with m_col1:
+            st.number_input("🎯 익절 ATR 배수", 0.5, 10.0, float(getattr(CFG, "ATR_TP_MULT", 2.0)), step=0.1, key="main_atr_tp_mult", on_change=sync_p, args=("main_atr_tp_mult", "sb_atr_tp_mult", "ATR_TP_MULT"),
+                            help="평균 실제 변동폭(ATR)을 활용한 다이내믹 익절 배수입니다. 진입 시점의 ATR 값에 이 배수를 곱한 금액만큼 상승(롱) 또는 하락(숏)하면 익절합니다.")
+        with m_col2:
+            st.number_input("🛡️ 손절 ATR 배수", 0.5, 10.0, float(getattr(CFG, "ATR_SL_MULT", 1.5)), step=0.1, key="main_atr_sl_mult", on_change=sync_p, args=("main_atr_sl_mult", "sb_atr_sl_mult", "ATR_SL_MULT"),
+                            help="평균 실제 변동폭(ATR)을 활용한 다이내믹 손절 배수입니다. 진입 시점의 ATR 값에 이 배수를 곱한 금액만큼 반대로 움직이면 손절을 감행하여 리스크를 제한합니다.")
+        st.markdown("---")
+        st.checkbox("✨ 하이브리드 트레일링 스톱 사용", value=getattr(CFG, "USE_TRAILING_STOP", False) or False, key="main_use_trailing_stop", on_change=sync_p, args=("main_use_trailing_stop", "sb_use_trailing_stop", "USE_TRAILING_STOP"))
+        m_ts1, m_ts2 = st.columns(2)
+        with m_ts1:
+            st.number_input("🚀 트레일링 발동 (%)", 0.1, 10.0, float(getattr(CFG, "TRAILING_ACTIVATE_PCT", 0.015) or 0.015)*100, step=0.1, key="main_trailing_activate_pct", on_change=sync_p, args=("main_trailing_activate_pct", "sb_trailing_activate_pct", "TRAILING_ACTIVATE_PCT", True),
+                            help="수익이 이 비율(%) 이상 도달했을 때 실시간 추적 청산(Trailing Stop)을 감시 작동하기 시작합니다.")
+        with m_ts2:
+            st.number_input("📉 수익 반납 청산 (%)", 0.1, 5.0, float(getattr(CFG, "TRAILING_CALLBACK_PCT", 0.003) or 0.003)*100, step=0.1, key="main_trailing_callback_pct", on_change=sync_p, args=("main_trailing_callback_pct", "sb_trailing_callback_pct", "TRAILING_CALLBACK_PCT", True),
+                            help="트레일링 스톱이 발동된 후, 최고수익점 대비 가격이 이 비율(%)만큼 후퇴(수익 반납)하면 포지션을 정리하여 수익을 보존합니다.")
+        st.markdown("---")
+        st.number_input("🎯 고정 익절 (%)", 0.1, 20.0, float(CFG.TAKE_PROFIT_PCT * 100), step=0.1, key="main_tp",
                         on_change=sync_p, args=("main_tp", "sb_tp", "TAKE_PROFIT_PCT", True),
-                        help="목표 수익률에 도달하면 포지션을 자동으로 청산하는 익절 기준입니다.\n\n• 진입가 대비 이 비율만큼 수익이 발생하면 TP(Take Profit) 주문 체결\n• 트레일링 스탑 발동 조건 달성 전 도달 시 먼저 청산\n• 레버리지 반영 전 기초자산 기준 비율\n• 권장값: 손절 대비 1.5배 이상 (Risk-Reward Ratio 준수)")
-        st.number_input("🛡️ 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
+                        help="ATR 다이내믹 청산을 사용하지 않을 때 적용되는 전통적인 % 기준 고정 익절 비율입니다. (단위: %)")
+        st.number_input("🛡️ 고정 손절 (%)", 0.1, 10.0, float(CFG.STOP_LOSS_PCT * 100), step=0.1, key="main_sl",
                         on_change=sync_p, args=("main_sl", "sb_sl", "STOP_LOSS_PCT", True),
-                        help="최대 허용 손실률에 도달하면 포지션을 자동으로 청산하는 손절 기준입니다.\n\n• 진입가 대비 이 비율만큼 손실이 발생하면 SL(Stop Loss) 주문 체결\n• 손절은 자본 보존을 위한 필수 안전장치\n• 레버리지 반영 전 기초자산 기준 비율\n• ⚠️ 손절이 너무 쌁으면 정상 변동성에도 청산됨 / 너무 넓으면 손실 과다")
-        st.number_input("⏱️ 트레일링 발동 (%)", 0.1, 20.0, float(CFG.TRAILING_ACTIVATE_PCT * 100), step=0.1, key="main_trailing_activate",
-                        on_change=sync_p, args=("main_trailing_activate", "sb_trailing_activate", "TRAILING_ACTIVATE_PCT", True),
-                        help="트레일링 스탑(Trailing Stop)이 활성화되는 수익률 임계값입니다.\n\n• 포지션이 이 수익률에 도달하는 순간 고정 손절이 해제되고 추적형 손절로 전환\n• 이후 가격이 역행하면 콜백(%) 범위에서 자동 청산\n• 이익을 최대한 추적하면서 수익을 보호하는 전략\n• 권장값: 익절(TP)과 같거나 조금 낮게 설정")
-        st.number_input("↩️ 트레일링 콜백 (%)", 0.05, 5.0, float(CFG.TRAILING_CALLBACK_PCT * 100), step=0.05, key="main_trailing_callback",
-                        on_change=sync_p, args=("main_trailing_callback", "sb_trailing_callback", "TRAILING_CALLBACK_PCT", True),
-                        help="트레일링 스탑 활성화 후 고점 대비 이 비율만큼 역행하면 청산합니다.\n\n• 값이 작을수록(ex: 0.2%) 조금만 빠져도 청산 → 수익 확보에 유리하나 조기 청산 위험\n• 값이 클수록(ex: 1.0%) 더 많은 역행을 허용 → 추가 상승 기회를 주지만 수익 반납 위험\n• 권장값: 0.3~0.5% (변동성에 따라 조정)")
+                        help="ATR 다이내믹 청산을 사용하지 않을 때 적용되는 전통적인 % 기준 고정 손절 비율입니다. (단위: %)")
         st.number_input("🛡️ 일일 손실 한도 (USDT)", 1.0, 100.0, float(CFG.DAILY_LOSS_LIMIT_USDT), step=1.0, key="main_daily_loss_limit",
                         on_change=sync_p, args=("main_daily_loss_limit", "main_daily_loss_limit", "DAILY_LOSS_LIMIT_USDT"),
-                        help="하루 동안 누적 실현 손실가 이 금액을 초과하면 자동매매를 전면 중지하는 일일 손실 한도입니다.\n\n• 서킷브레이커 발동 조건: 일일 누적 실현 손실 ≥ 이 한도\n• 발동 시 모든 포지션을 즉시 강제청산하고 신규 진입을 차단\n• 연속 손실로 인한 계좌 소진을 방지하는 필수 리스크 관리 안전장치\n• 권장값: 일일 전체 증거금의 15~20% 이하")
+                        help="하루 동안 허용할 수 있는 최대 실현 손실액(USDT)입니다. 당일 누적 손실이 이 값에 도달하면 봇이 모든 신규 진입을 중단하고 당일 거래를 정지하여 추가 손실을 차단합니다.")
 
     st.markdown("---")
     st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#ff9900;letter-spacing:0.1em;margin-top:10px;">TTM SQUEEZE INDICATORS</p>', unsafe_allow_html=True)
@@ -2026,22 +2051,34 @@ with tabs[4]:
     with t1:
         st.number_input("📈 BB 기간", 5, 100, CFG.BB_PERIOD, step=1, key="main_bb_period",
                         on_change=sync_p, args=("main_bb_period", "sb_bb_period", "BB_PERIOD"),
-                        help="볼린저 밴드(BB) 산출에 사용하는 이동평균 기간(캔들 수)입니다.\n\n• 기간이 짧을수록 밴드가 민감하게 반응해 신호 빈도 증가\n• 기간이 길수록 추세 기반의 안정적인 신호 생성\n• 표준값: 20")
+                        help="볼린저 밴드(Bollinger Bands)를 산출하기 위한 단순이동평균(SMA) 기준 캔들 개수(기본값 20)입니다.")
         tf_options = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "1d"]
         st.selectbox("⏱️ 타임프레임", tf_options, index=tf_options.index(CFG.TIMEFRAME), key="main_timeframe",
                      on_change=sync_p, args=("main_timeframe", "sb_timeframe", "TIMEFRAME"),
-                     help="전략 신호 판단에 사용할 캔들봉 단위입니다.\n\n• 짧은 봉(1m~15m): 단기 스캘핑·빠른 진입에 유리하지만 노이즈 많음\n• 긴 봉(1h~4h): 추세 추종·안정성에 유리하지만 신호 빈도 낮음\n• 현재 기본값 30m: 단기 데이트레이딩 최적 균형점")
+                     help="스퀴즈 지표 및 200 EMA 추세 필터를 탐지할 차트 봉의 타임프레임 단위입니다. (예: 15m, 1h, 4h 등)")
     with t2:
         st.number_input("📏 BB 편차 배수", 1.0, 5.0, float(CFG.BB_STD), step=0.1, key="main_bb_std",
                         on_change=sync_p, args=("main_bb_std", "sb_bb_std", "BB_STD"),
-                        help="볼린저 밴드 상·하단 폭을 결정하는 표준편차 배수입니다.\n\n• 값이 클수록 밴드가 넓어져 Squeeze(수축) 상태가 줄어듦\n• 값이 작을수록 밴드가 쐁아져 Squeeze 빈도 증가\n• 표준값: 2.0")
+                        help="볼린저 밴드의 상/하한선을 그리기 위한 표준편차 승수(기본값 2.0)입니다. 이 값이 커질수록 밴드가 넓어져 스퀴즈 진입 조건이 엄격해집니다.")
         st.number_input("📏 KC ATR 배수", 0.5, 5.0, float(CFG.TTM_KC_MULT), step=0.1, key="main_kc_mult",
                         on_change=sync_p, args=("main_kc_mult", "sb_kc_mult", "TTM_KC_MULT"),
-                        help="켈트너 채널(KC) 폭을 결정하는 ATR 승수입니다.\n\n• 값이 클수록 채널이 넓어져 Squeeze 진입 신호가 줄고 정확도가 높아집니다.\n• 값이 작을수록 신호가 늘지만 노이즈에 민감해집니다.\n• 권장값: 1.5")
+                        help="켈트너 채널(Keltner Channel)의 폭을 결정하는 ATR 배수(기본값 1.5)입니다. 볼린저 밴드가 이 채널 안으로 수축하면 변동성 수축(Squeeze ON)으로 판단합니다.")
     with t3:
         st.number_input("⏱️ TTM 모멘텀 기간", 5, 100, CFG.TTM_MOM_PERIOD, step=1, key="main_ttm_mom_period",
                         on_change=sync_p, args=("main_ttm_mom_period", "sb_ttm_mom_period", "TTM_MOM_PERIOD"),
-                        help="TTM Squeeze 모멘텀 히스토그램 산출 기간(캔들 수)입니다.\n\n• 모멘텀은 현재 가격이 과거 N봉 고/저/종가 범위 중 어디에 위치하는지로 측정\n• 기간이 짧을수록 반응이 빠르고 길수록 필터 강도가 강해집\n• 표준값: 20")
+                        help="TTM Squeeze의 모멘텀(선형 회귀선)을 계산할 캔들 기준 기간(기본값 20)입니다. 이 기간 동안의 시세를 선형 회귀하여 오실레이터로 표기합니다.")
+                        
+    st.markdown("---")
+    st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#00ff99;letter-spacing:0.1em;margin-top:10px;">VOLUME SURGE FILTER</p>', unsafe_allow_html=True)
+    v1, v2 = st.columns(2)
+    with v1:
+        st.checkbox("📊 거래량 급증 필터 활성화", value=getattr(CFG, "USE_VOL_FILTER", False) or False, key="main_use_vol_filter", on_change=sync_p, args=("main_use_vol_filter", "sb_use_vol_filter", "USE_VOL_FILTER"),
+            help="⚠️ 진입 차단 주의: ON이면 현재 거래량 > 평균×배수 조건 미충족 시 신호강도=80이어도 방향=— 로 전종목 진입 차단.\n하락장·횡보장에서 거래량이 평균 이상으로 급증하지 않으면 아무리 스퀴즈 신호가 좋아도 진입 불가.\n▶ 진입이 안 될 때 첫 번째로 확인할 항목. OFF로 끄거나 배수를 1.0~1.2로 낮출 것.")
+        st.number_input("⏱️ 기준 MA 기간", 5, 100, int(getattr(CFG, "VOL_MA_PERIOD", 20) or 20), step=1, key="main_vol_ma_period", on_change=sync_p, args=("main_vol_ma_period", "sb_vol_ma_period", "VOL_MA_PERIOD"),
+            help="거래량 이동평균 계산 기간. 기본값 20봉. 이 평균의 '돌파 배수'배 이상일 때만 진입.")
+    with v2:
+        st.number_input("📈 돌파 요구 배수 (x)", 1.0, 5.0, float(getattr(CFG, "VOL_SURGE_MULT", 1.5) or 1.5), step=0.1, key="main_vol_surge_mult", on_change=sync_p, args=("main_vol_surge_mult", "sb_vol_surge_mult", "VOL_SURGE_MULT"),
+            help="⚠️ 핵심 파라미터: 현재 거래량 > 평균 × 이 배수 일 때만 진입 허용.\n기본값 1.5 = 평균보다 50% 더 많아야 함. 하락장에서 진입이 안 될 때 1.0~1.2로 낮출 것.\n필터를 완전히 끄려면 왼쪽 '거래량 급증 필터 활성화' 체크 해제.")
 
     st.markdown("---")
     st.markdown(
@@ -2052,34 +2089,48 @@ with tabs[4]:
     with r1:
         st.number_input("RSI 기간", 2, 100, CFG.RSI_PERIOD, step=1, key="settings_rsi_period",
                         on_change=sync_p, args=("settings_rsi_period", "sb_rsi_period,main_rsi_period", "RSI_PERIOD"),
-                        help="RSI(Relative Strength Index) 산출에 사용하는 기간(캔들 수)입니다.\n\n• 기간이 짧을수록 빠른 과열·과매도 신호\n• 짧을수록 노이즈 증가, 길수록 안정적 신호\n• 표준값: 14")
+                        help="상대강도지수(RSI)를 산출하기 위한 캔들 기간(기본값 13 또는 14봉)입니다.")
     with r2:
         st.number_input("RSI 롱 상한선", 10.0, 90.0, float(CFG.RSI_OVERBOUGHT), step=1.0, key="settings_rsi_overbought",
                         on_change=sync_p, args=("settings_rsi_overbought", "sb_rsi_overbought,main_rsi_overbought", "RSI_OVERBOUGHT"),
-                        help="롱 포지션 진입 시 RSI가 이 값 이하일 때만 허용합니다.\n\n• 과열권 추격 매수를 차단해 고점 매수 리스크 감소\n• 권장값: 75")
+                        help="롱(매수) 포지션 진입 시 허용할 수 있는 최대 RSI 수치입니다. RSI가 이 상한값보다 높으면 과매수권으로 판단해 추격 롱 진입을 차단합니다.")
     with r3:
         st.number_input("RSI 숏 하한선", 10.0, 90.0, float(CFG.RSI_OVERSOLD), step=1.0, key="settings_rsi_oversold",
                         on_change=sync_p, args=("settings_rsi_oversold", "sb_rsi_oversold,main_rsi_oversold", "RSI_OVERSOLD"),
-                        help="숏 포지션 진입 시 RSI가 이 값 이상일 때만 허용합니다.\n\n• 과매도권 추격 매도를 차단해 저점 공매도 리스크 감소\n• 권장값: 25")
+                        help="숏(매도) 포지션 진입 시 허용할 수 있는 최소 RSI 수치입니다. RSI가 이 하한값보다 낮으면 과매도권으로 판단해 추격 숏 진입을 차단합니다.")
 
     st.markdown("---")
-    st.markdown(
-        '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#ff9900;letter-spacing:0.1em;margin-top:10px;">VOLUME SURGE FILTER PARAMETERS</p>',
-        unsafe_allow_html=True,
-    )
-    v1, v2, v3 = st.columns(3)
-    with v1:
-        st.toggle("거래량 서지 필터 활성화", value=st.session_state.main_use_vol_surge, key="main_use_vol_surge",
-                  on_change=sync_p, args=("main_use_vol_surge", "sb_use_vol_surge", "USE_VOLUME_SURGE_FILTER"),
-                  help="ON: 현재 캔들 거래량이 평균 대비 설정 배수 이상일 때만 신호를 허용합니다.\n\n• OFF: 거래량 조건 없이 모든 TTM Squeeze 신호를 허용\n• 변동성이 큰 장세에서 노이즈 감소에 효과적")
-    with v2:
-        st.number_input("거래량 서지 평균 기간", 5, 100, int(st.session_state.settings_vol_surge_period), step=1, key="settings_vol_surge_period",
-                        on_change=sync_p, args=("settings_vol_surge_period", "sb_vol_surge_period,main_vol_surge_period", "VOLUME_SURGE_PERIOD"),
-                        help="거래량 평균을 계산할 기간(캔들 수)입니다.\n\n• 이 기간 동안의 평균 거래량을 기준으로 서지(폭발) 여부를 판단\n• 권장값: 20")
-    with v3:
-        st.number_input("거래량 서지 배수", 1.0, 10.0, float(st.session_state.settings_vol_surge_mult), step=0.1, key="settings_vol_surge_mult",
-                        on_change=sync_p, args=("settings_vol_surge_mult", "sb_vol_surge_mult,main_vol_surge_mult", "VOLUME_SURGE_MULTIPLIER"),
-                        help="현재 거래량이 평균의 몇 배 이상일 때 서지로 인정할지 결정하는 배수입니다.\n\n• 1.25배: 평균보다 25% 이상 시 서지 인정 (기본값)\n• 배수가 높을수록 강한 폭발만 허용 / 낙을수록 더 많은 신호 허용\n• 권장값: 1.25~2.0")
+    st.markdown('<p style="font-family:\'IBM Plex Mono\',monospace;font-size:0.75rem;color:#00e0ff;letter-spacing:0.1em;margin-top:10px;">TELEGRAM NOTIFICATION SETTINGS</p>', unsafe_allow_html=True)
+    tel_col1, tel_col2 = st.columns(2)
+    with tel_col1:
+        st.text_input(
+            "🔑 Telegram Bot Token",
+            value=getattr(CFG, "TELEGRAM_BOT_TOKEN", ""),
+            type="password",
+            key="settings_telegram_token",
+            on_change=sync_p,
+            args=("settings_telegram_token", "settings_telegram_token", "TELEGRAM_BOT_TOKEN"),
+            help="텔레그램 BotFather를 통해 생성한 봇 토큰을 입력하세요."
+        )
+    with tel_col2:
+        st.text_input(
+            "🆔 Telegram Chat ID",
+            value=getattr(CFG, "TELEGRAM_CHAT_ID", ""),
+            key="settings_telegram_chat_id",
+            on_change=sync_p,
+            args=("settings_telegram_chat_id", "settings_telegram_chat_id", "TELEGRAM_CHAT_ID"),
+            help="메시지를 수신할 텔레그램 채팅방 ID 혹은 개인 사용자 ID를 입력하세요."
+        )
+    
+    if st.button("🔔 텔레그램 알림 테스트 전송", use_container_width=True):
+        token = getattr(CFG, "TELEGRAM_BOT_TOKEN", "")
+        chat_id = getattr(CFG, "TELEGRAM_CHAT_ID", "")
+        if not token or not chat_id:
+            st.error("❌ 텔레그램 토큰과 채팅 ID를 모두 입력해주세요.")
+        else:
+            from core.alert import send_telegram_alert
+            send_telegram_alert("🔔 *[AI QUANTUM]* 텔레그램 알림 테스트 메시지 전송 성공!")
+            st.success("✅ 테스트 메시지를 백그라운드로 전송하였습니다. 텔레그램 메신저를 확인하세요.")
 
     st.markdown("---")
     st.markdown(
@@ -2089,10 +2140,7 @@ with tabs[4]:
         일일 손실 한도: ${CFG.DAILY_LOSS_LIMIT_USDT:.2f} USDT <br>
         RSI 설정: 기간 {CFG.RSI_PERIOD} &nbsp;|&nbsp;
         롱 진입 상한: {CFG.RSI_OVERBOUGHT:.1f} &nbsp;|&nbsp;
-        숏 진입 하한: {CFG.RSI_OVERSOLD:.1f} <br>
-        거래량 서지: 활성화 {CFG.USE_VOLUME_SURGE_FILTER} &nbsp;|&nbsp;
-        평균 기간 {CFG.VOLUME_SURGE_PERIOD} &nbsp;|&nbsp;
-        배수 {CFG.VOLUME_SURGE_MULTIPLIER:.1f}배
+        숏 진입 하한: {CFG.RSI_OVERSOLD:.1f}
         </div>""",
         unsafe_allow_html=True,
     )
@@ -2106,9 +2154,9 @@ with tabs[4]:
     if st.button("📊  수익률,승률 초기화", use_container_width=True,
                  help="이 버튼을 누르면 지금까지 쌓인 누적 수익률, 승률(몇 번 이기고 졌는지), 주문 횟수 같은 모든 성적표가 싹 다 0으로 리셋돼요! 현재 잔고를 새로운 '원금'으로 잡고 처음부터 다시 기록을 시작해요. 한 번 누르면 되돌릴 수 없으니 신중하게!"):
         d_data = engine.get_dashboard_data()
-        current_bal = d_data.get("total_balance", 30.0)
+        current_bal = d_data.get("total_balance", 50.0)
         if current_bal <= 0:
-            current_bal = 30.0
+            current_bal = 50.0
         stats_store.reset_stats(current_bal)
         if engine and engine.trader:
             engine.trader.daily_pnl_usdt = 0.0

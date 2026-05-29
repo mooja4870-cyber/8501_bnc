@@ -83,7 +83,7 @@ class TradeOptimizer:
         entry_price = trade["entry_price"]
         side = trade["side"]
         
-        # KST -> UTC 변환 (Binance API는 ms timestamp 사용)
+        # KST -> UTC 변환 (OKX API는 ms timestamp 사용)
         entry_ms = int((entry_time - pd.Timedelta(hours=9)).timestamp() * 1000)
         
         try:

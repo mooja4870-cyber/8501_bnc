@@ -1,6 +1,11 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v3.0.0] OKX 봇 최신 엔터프라이즈 코드베이스 이식 및 바이낸스 API 결합:**
+  - [Core/Migration] `8501_bnc` 내 바이낸스 API 어댑터(`core/exchange.py`) 및 핵심 설정 파일을 제외한 구버전 소스코드를 전면 클리닝했습니다.
+  - [Core/Migration] OKX 봇(`8401_okx`)의 검증된 고성능 `QuantumEngine` v2(FSM 상태머신, 쿨다운 가드 등), 최신 전략 및 UI 소스코드를 완벽하게 이식했습니다.
+  - [Core/Migration] 바이낸스 API 어댑터 하단에 `OKXClient = BinanceClient` 에일리어스를 추가하고, `cancel_algo_orders` 등 호환 메소드를 정의하여 OKX 엔터프라이즈 코드와의 호환 레이어를 구축했습니다.
+  - [Test] 123개 단위/통합 테스트 슈트를 100% 정상 통과함을 검증 완료했습니다.
 - **[v2.8.2] 서킷 브레이커 상태 정리 누락 버그 해결 및 테스트 가상 환경 격리:**
   - [Core/Test] 일일 손실 한도 또는 MDD 초과로 인한 서킷 브레이커 가동 중단 시, 기존 포지션 목록의 흔적을 비우는 `_prev_position_symbols` 초기화(`set()`) 처리가 조기 리턴으로 인해 누락되는 런타임 버그를 해결했습니다.
   - [Core/Test] 테스트 헬퍼 `_create_engine` 실행 시 생성되는 `AutoTrader`의 `enabled` 상태를 기본 `False`로 고정하여, 가짜 데이터의 모의 손실로 인해 테스트 수행 도중 엉뚱하게 서킷브레이커가 작동해 검증 흐름을 차단하지 않도록 수정했습니다.

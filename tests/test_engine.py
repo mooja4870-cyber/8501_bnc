@@ -25,8 +25,6 @@ def _create_mock_engine(scenario="default"):
     engine.scanner.on_scan_complete = engine._check_closed_positions_async
     engine._initialized = True
     engine._state = EngineState.CONNECTED
-    # Populate the dashboard cache for test verification
-    asyncio.run(engine._update_dashboard_cache_async())
     return engine, mock
 
 
@@ -46,7 +44,6 @@ class TestFSM:
     def test_scanning_to_trading(self):
         e, _ = _create_mock_engine()
         e.start_scanner()
-        time.sleep(0.1)
         e.enable_trading()
         time.sleep(0.1)
         assert e.state == EngineState.TRADING
@@ -54,9 +51,7 @@ class TestFSM:
     def test_trading_to_scanning(self):
         e, _ = _create_mock_engine()
         e.start_scanner()
-        time.sleep(0.1)
         e.enable_trading()
-        time.sleep(0.1)
         e.disable_trading()
         time.sleep(0.1)
         assert e.state == EngineState.SCANNING
@@ -64,7 +59,6 @@ class TestFSM:
     def test_stop_returns_connected(self):
         e, _ = _create_mock_engine()
         e.start_scanner()
-        time.sleep(0.1)
         e.stop_scanner()
         time.sleep(0.1)
         assert e.state == EngineState.CONNECTED

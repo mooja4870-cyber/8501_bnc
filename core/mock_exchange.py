@@ -11,7 +11,7 @@ from core.config import CFG
 
 logger = logging.getLogger(__name__)
 
-class MockBinanceClient:
+class MockOKXClient:
     def __init__(self, api_key: str = "", secret_key: str = "", passphrase: Optional[str] = None):
         self._markets: Dict = {}
         self._balance: Dict = {"total": 100.0, "free": 80.0, "used": 20.0}
@@ -144,28 +144,8 @@ class MockBinanceClient:
         leverage = limits.get("leverage", {})
         return int(leverage.get("max", 20))
 
-    async def fetch_order(self, id: str, symbol: str) -> Dict:
-        for t in self._trade_history:
-            if t.get("order_id") == id:
-                return {
-                    "id": id,
-                    "symbol": symbol,
-                    "status": "closed",
-                    "filled": t.get("amount", 0.0),
-                    "amount": t.get("amount", 0.0),
-                    "price": t.get("price", 0.0)
-                }
-        for o in self._orders:
-            if o.get("id") == id:
-                return o
-        return {"id": id, "symbol": symbol, "status": "open", "filled": 0.0, "amount": 1.0}
-
     async def cancel_all_orders(self, symbol: str) -> bool:
         self._orders = [o for o in self._orders if o["symbol"] != symbol]
-        return True
-
-    async def cancel_order(self, order_id: str, symbol: str) -> bool:
-        self._orders = [o for o in self._orders if o["id"] != order_id]
         return True
 
     async def place_order(self, symbol: str, side: str, margin_usdt: float, stop_loss_pct: float = CFG.STOP_LOSS_PCT, take_profit_pct: float = CFG.TAKE_PROFIT_PCT) -> Optional[Dict]:
@@ -209,10 +189,33 @@ class MockBinanceClient:
         return True
 
     async def close_all_positions(self) -> int:
-        positions_to_close = list(self._positions)
-        if not positions_to_close:
-            return 0
-        tasks = [self.close_position(p["symbol"], p["side"]) for p in positions_to_close]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        success_count = sum(1 for r in results if r is True)
-        return success_count
+        count = len(self._positions)
+        for p in list(self._positions):
+            await self.close_position(p["symbol"], p["side"])
+        return count
+
+    async def cancel_algo_orders(self, symbol: str) -> bool:
+        return True
+
+    def generate_signal_ohlcv(self, direction: str, limit: int = 300) -> pd.DataFrame:
+        """테스트용으로 롱/숏 신호를 유발하는 OHLCV 데이터를 생성합니다."""
+        n = limit
+        timestamps = pd.date_range(end=pd.Timestamp.now(), periods=n, freq="15min")
+        
+        if direction == "long":
+            prices = 100.0 * (1 + np.linspace(0.01, 0.05, n))
+        else:
+            prices = 100.0 * (1 - np.linspace(0.01, 0.05, n))
+            
+        high = prices * 1.005
+        low = prices * 0.995
+        volume = [10_000_000.0] * n
+        
+        df = pd.DataFrame({
+            "open": prices, "high": high, "low": low, "close": prices, "volume": volume
+        }, index=timestamps)
+        df.index.name = "timestamp"
+        return df.astype(float)
+
+# Backward compatibility alias for legacy test files
+MockBinanceClient = MockOKXClient

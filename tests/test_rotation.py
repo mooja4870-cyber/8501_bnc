@@ -6,6 +6,7 @@ import pytest
 import sys
 import os
 import time
+import asyncio
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -20,7 +21,7 @@ from core.strategy import Signal
 class TestPositionRotation:
     def setup_method(self):
         self.mock = MockBinanceClient()
-        self.mock.load_markets()
+        asyncio.run(self.mock.load_markets())
         
         # 엔진 및 의존성 주입 초기화
         self.engine = QuantumEngine()
@@ -28,7 +29,7 @@ class TestPositionRotation:
         self.engine.scanner = Scanner(self.mock)
         self.engine.trader = AutoTrader(self.mock)
         self.engine.scanner.on_signal = self.engine.trader.on_signal
-        self.engine.scanner.on_scan_complete = self.engine._check_closed_positions
+        self.engine.scanner.on_scan_complete = self.engine._check_closed_positions_async
         self.engine._initialized = True
         self.engine._state = EngineState.CONNECTED
         
@@ -38,7 +39,6 @@ class TestPositionRotation:
         self.cfg.ROTATION_MIN_SIGNALS = 3
         self.cfg.ROTATION_STALE_HOURS = 1.5
         self.cfg.ROTATION_FLOW_CHECK = "momentum"
-        self.cfg.MAX_HOLDING_HOURS = 4.0
 
     def test_rotation_executed_on_bad_momentum(self):
         """1안 모멘텀 이탈에 따라 정체 포지션 로테이션 청산이 성공적으로 수행되는지 검증"""

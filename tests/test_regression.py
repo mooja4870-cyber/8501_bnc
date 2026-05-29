@@ -10,6 +10,7 @@ import pytest
 import sys
 import os
 import pandas as pd
+import asyncio
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -21,7 +22,6 @@ from core.config import CFG, TradingConfig
 
 class TestRegressionSuite:
     def setup_method(self):
-        import asyncio
         self.mock = MockBinanceClient()
         asyncio.run(self.mock.load_markets())
         self.mock.set_scenario("default")
@@ -75,7 +75,7 @@ class TestRegressionSuite:
 
     def test_regression_quote_volume_fallback(self):
         """Regression 3: quoteVolume 누락 시 baseVolume * last로 자동 백업 계산 검증"""
-        # Binance fetch_ticker API에서 quoteVolume이 None(또는 누락)으로 반환되었을 때를 시뮬레이션
+        # OKX fetch_ticker API에서 quoteVolume이 None(또는 누락)으로 반환되었을 때를 시뮬레이션
         t_raw = {
             "symbol": "BTC/USDT:USDT",
             "last": 50000.0,
@@ -98,7 +98,6 @@ class TestRegressionSuite:
 
     def test_regression_bulk_tickers_optimization(self):
         """Bulk tickers fetch check to ensure scanner query overhead is reduced"""
-        import asyncio
         tickers = asyncio.run(self.mock.get_tickers())
         assert len(tickers) > 0
         assert "BTC/USDT:USDT" in tickers
@@ -107,7 +106,7 @@ class TestRegressionSuite:
     def test_regression_ghosting_prevention(self):
         """Regression 4: 청산 대기 캐시(closing_symbols)를 활용한 UI 포지션 즉시 은폐(잔상 방지) 로직 검증"""
         # UI 세션 캐시 모사
-        closing_symbols = set()
+        closing_symbols = {}
         
         raw_positions = [
             {"symbol": "BTC/USDT:USDT", "amount_usdt": 10.5},
@@ -116,7 +115,8 @@ class TestRegressionSuite:
         ]
         
         # ETH 청산 시도 시점 가정
-        closing_symbols.add("ETH/USDT:USDT")
+        import time
+        closing_symbols["ETH/USDT:USDT"] = time.time()
         
         # app.py 필터링 로직 구현 검증
         filtered_positions = [
@@ -131,10 +131,10 @@ class TestRegressionSuite:
 
     def test_regression_ticker_normalization_and_fallback(self):
         """Regression 5: Ticker 키 매핑 보정, 예외 시 빈 딕셔너리 반환, 스캐너 호출 차단 검증"""
-        from core.exchange import BinanceClient
-        from unittest.mock import MagicMock
+        from core.exchange import OKXClient
+        from unittest.mock import AsyncMock
         
-        client = BinanceClient(api_key="fake", secret_key="fake")
+        client = OKXClient(api_key="fake", secret_key="fake")
         
         client._markets = {
             "ETH/USDT:USDT": {"quote": "USDT", "type": "swap", "active": True},
@@ -150,13 +150,12 @@ class TestRegressionSuite:
             "BTCUSDT": "BTC/USDT:USDT",
         }
         
-        client.exchange = MagicMock()
-        client.exchange.fetch_tickers = MagicMock(return_value={
+        client.exchange = AsyncMock()
+        client.exchange.fetch_tickers.return_value = {
             "ETH/USDT": {"last": 3000.0, "quoteVolume": 50000000.0, "bid": 2999.0, "ask": 3001.0, "percentage": 2.5},
             "BTC/USDT:USDT": {"last": 60000.0, "quoteVolume": 100000000.0, "bid": 59990.0, "ask": 60010.0, "percentage": 1.1},
-        })
+        }
         
-        import asyncio
         tickers = asyncio.run(client.get_tickers())
         
         assert "ETH/USDT:USDT" in tickers
@@ -166,7 +165,7 @@ class TestRegressionSuite:
         assert tickers["BTC/USDT:USDT"]["last"] == 60000.0
         
         # 예외 처리 검증
-        client.exchange.fetch_tickers = MagicMock(side_effect=Exception("Binance Rate Limit (HTTP 418)"))
+        client.exchange.fetch_tickers = AsyncMock(side_effect=Exception("Binance Rate Limit (HTTP 418)"))
         tickers_err = asyncio.run(client.get_tickers())
         assert tickers_err == {}
 
