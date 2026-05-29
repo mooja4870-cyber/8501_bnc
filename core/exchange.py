@@ -471,15 +471,20 @@ class BinanceClient:
                     side=side,
                     amount=float(amount)
                 )
-            # [필수 수정 3] 부분 체결 대응 주문 상태 동기화 및 잔여 주문 즉시 취소
-            # 1초간 대기하며 거래소 체결 상태 갱신 시도 (최대 2회)
-            for _ in range(2):
+            # [v4.0.2 - Bug#4] 바이낙스 시장가 주문 False Cancel 버그 수정
+            # Binance 시장가는 체결까지 수백ms 소요가능. 최소 1회 폴링 후 체결 확인
+            use_limit = CFG.USE_LIMIT_ORDER
+            for poll_idx in range(2):
                 status = order.get("status")
                 filled = order.get("filled")
-                if status is None and filled is None and order.get("id"):
+                # 시장가 주문: status/filled이 None인 경우 처음에는 항상 1회 폴링 후 확인 (바로 break 금지)
+                if not use_limit and poll_idx == 0 and status is None and filled is None:
+                    pass  # 시장가: 첫 폴링 강제
+                elif status in ("closed", "canceled") or (filled is not None and float(filled) > 0):
                     break
-                if status in ("closed", "canceled") or (filled is not None and float(filled) > 0):
-                    break
+                elif not use_limit and status is None and filled is None and order.get("id"):
+                    # 시장가 원래 전송 성공인데 아직 전파 전 폴링 기다림
+                    pass
                 await asyncio.sleep(0.5)
                 try:
                     order = await self._execute_with_retry(self.exchange.fetch_order, id=order.get("id"), symbol=symbol)

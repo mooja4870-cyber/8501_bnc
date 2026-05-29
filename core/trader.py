@@ -42,6 +42,8 @@ class AutoTrader:
         self.global_cooldown_until: Optional[datetime] = None
         self.symbol_cooldown_until: Dict[str, datetime] = {}
         self._daily_loss_alert_sent = False
+        # [v4.0.2] 동일 캔들 중복 진입 방지 — 마지막 진입한 캔들 타임스탬프 추적
+        self.last_entered_candle_ts: Dict[str, object] = {}
 
     def enable(self):
         self.enabled = True
@@ -65,6 +67,20 @@ class AutoTrader:
         if sig.direction == "none":
             return
 
+        # [v4.0.2 - Bug#2] 스캐너 루프 진행 중 청산이 완료된 종목에 대해 즉각 쿨다운 가동
+        # (청산 완료가 on_scan_complete보다 늦게 감지되면 쿨다운 없이 재진입 가능해지는 문제 방지)
+        try:
+            live_positions = await self.client.get_positions()
+            live_symbols = {p["symbol"] for p in live_positions}
+            for sym in list(self.recently_entered.keys()):
+                was_held = sym not in live_symbols
+                had_recent = (datetime.now() - self.recently_entered[sym]).total_seconds() < 180
+                if was_held and had_recent and sym not in self.symbol_cooldown_until:
+                    logger.info(f"[COOLDOWN AUTO] {sym} 청산 감지 → 즉시 60초 쿨다운 가동")
+                    self.trigger_symbol_cooldown(sym, 60)
+        except Exception as e:
+            logger.warning(f"[on_signal] 실시간 포지션 감지 중 예외: {e}")
+
         async with self._lock:
             self._reset_daily_if_needed()
 
@@ -85,10 +101,20 @@ class AutoTrader:
                 return
 
             now_time = datetime.now()
+            # [v4.0.2 - Bug#1] TTL을 180초로 수정 (LIMIT_ORDER_TIMEOUT_MINUTES=3분=180초와 일치)
             self.recently_entered = {
                 sym: ts for sym, ts in self.recently_entered.items()
-                if (now_time - ts).total_seconds() < 120
+                if (now_time - ts).total_seconds() < 180
             }
+
+            # [v4.0.2 - Bug#3] 동일 캔들 내 중복 진입 방지
+            # Signal.timestamp가 있으면 같은 캔들(15분봉) 내 이미 진입한 종목이면 Skip
+            sig_ts = getattr(sig, 'timestamp', None)
+            if sig_ts is not None:
+                prev_ts = self.last_entered_candle_ts.get(sig.symbol)
+                if prev_ts is not None and prev_ts == sig_ts:
+                    logger.info(f"[SKIP] {sig.symbol} — 동일 캔들 내 중복 진입 방지 (ts={sig_ts})")
+                    return
 
             try:
                 positions = await self.client.get_positions()
@@ -152,6 +178,10 @@ class AutoTrader:
 
             if result:
                 self.recently_entered[sig.symbol] = datetime.now()
+                # [v4.0.2 - Bug#3] 동일 캔들 진입 타임스탬프 기록
+                sig_ts = getattr(sig, 'timestamp', None)
+                if sig_ts is not None:
+                    self.last_entered_candle_ts[sig.symbol] = sig_ts
                 self.orders_today += 1
                 stats_store.record_order()
                 self._log_trade(sig, status="EXECUTED", result=result)

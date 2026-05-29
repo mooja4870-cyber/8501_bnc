@@ -312,7 +312,7 @@ class QuantumEngine:
                     except Exception as re:
                         logger.error(f"초기 PnL Reconcile 실패: {re}")
                     
-                    send_telegram_alert("🤖 *[AI QUANTUM]* OKX 자동매매 엔진 초기화 및 가동 성공")
+                    send_telegram_alert("🤖 *[AI QUANTUM]* Binance 자동매매 엔진 초기화 및 가동 성공")
                     asyncio.create_task(self._health_check_loop())
                     return True, "✅ 엔진 초기화 및 마켓 로드 성공"
 
