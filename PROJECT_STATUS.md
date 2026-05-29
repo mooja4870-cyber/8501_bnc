@@ -1,6 +1,9 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v3.1.3] ADA/USDT '진입유실' 버그 해결 및 history_helper.py 보강 (2026-05-29):**
+  - [Core/History] 24시간을 초과하여 페어링되지 않고 방치된 미청산(Stale) 진입 건들을 자동으로 만료하여 `청산 완료 (미기록)`으로 은폐 보정하는 유효시간 만료 시스템 도입.
+  - 이를 통해 과거 누적된 가짜/유령 진입 건들이 오늘 새로 발생한 청산 건의 1대1 FIFO 매칭을 교란하여 유발되던 "진입유실" 문제를 완벽하게 예방하고 원상복구.
 - **[v3.1.2] 신규 로직 반영에 따른 테스트 모킹 보강 (2026-05-29):**
   - [Test] `tests/test_liquidation.py` — `test_no_rollback_when_algo_succeeds` 내 `mock_order`에 `status='closed'`, `filled=5.0`을 보강하여 v3.1.1 미체결 자동 취소(None 반환) 로직에 따른 단위 테스트 실패 해결.
   - [Test] 로컬 패키지 의존성 (`pytest-asyncio`) 연동 정상화 및 126개 전체 테스트 스위트 100% 정상 패스 완료.

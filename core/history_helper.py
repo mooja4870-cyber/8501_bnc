@@ -1,4 +1,4 @@
-﻿"""
+"""
 매매 이력 파싱, 병합 및 진입/청산 페어링 헬퍼 모듈
 """
 import os
@@ -244,6 +244,30 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
                 total_exit_pnl = o["pnl"]
                 
                 if direction == "LONG":
+                    # 24시간 초과하여 매칭되지 않은 Stale LONG 진입 건 만료 처리
+                    while active_longs:
+                        time_diff = o["timestamp"] - active_longs[0]["timestamp"]
+                        if time_diff.total_seconds() > 24 * 3600:
+                            entry = active_longs.pop(0)
+                            is_actually_holding = False
+                            if active_positions_set is not None:
+                                is_actually_holding = ((sym, "LONG") in active_positions_set)
+                            status_str = "보유 중" if is_actually_holding else "청산 완료 (미기록)"
+                            paired_cycles.append({
+                                "entry_time": entry["timestamp"],
+                                "exit_time": None,
+                                "symbol": sym,
+                                "direction": "🟢 LONG",
+                                "entry_price": entry["price"],
+                                "exit_price": None,
+                                "amount": entry["amount_remaining"],
+                                "pnl_usdt": None,
+                                "pnl_pct": None,
+                                "status": status_str
+                            })
+                        else:
+                            break
+
                     while remaining_exit_amount > 1e-8 and active_longs:
                         entry = active_longs[0]
                         match_amount = min(entry["amount_remaining"], remaining_exit_amount)
@@ -285,6 +309,30 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
                             "status": "청산 완료 (진입유실)"
                         })
                 else:  # SHORT
+                    # 24시간 초과하여 매칭되지 않은 Stale SHORT 진입 건 만료 처리
+                    while active_shorts:
+                        time_diff = o["timestamp"] - active_shorts[0]["timestamp"]
+                        if time_diff.total_seconds() > 24 * 3600:
+                            entry = active_shorts.pop(0)
+                            is_actually_holding = False
+                            if active_positions_set is not None:
+                                is_actually_holding = ((sym, "SHORT") in active_positions_set)
+                            status_str = "보유 중" if is_actually_holding else "청산 완료 (미기록)"
+                            paired_cycles.append({
+                                "entry_time": entry["timestamp"],
+                                "exit_time": None,
+                                "symbol": sym,
+                                "direction": "🔴 SHORT",
+                                "entry_price": entry["price"],
+                                "exit_price": None,
+                                "amount": entry["amount_remaining"],
+                                "pnl_usdt": None,
+                                "pnl_pct": None,
+                                "status": status_str
+                            })
+                        else:
+                            break
+
                     while remaining_exit_amount > 1e-8 and active_shorts:
                         entry = active_shorts[0]
                         match_amount = min(entry["amount_remaining"], remaining_exit_amount)
