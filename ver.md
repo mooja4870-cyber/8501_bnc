@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v3.1.5 | 2026-05-29 15:50:00 | [Core/Trader] 청산 후 쿨다운 즉시 동기화 및 무한 재진입(채터링) 방지 버그 수정: 스캐너 루프 종료 시점보다 신호 격발이 먼저 발생하여 쿨다운 가드가 무력화되던 버그를 trader.on_signal 초입 실시간 포지션 청산 감지 및 즉시 쿨다운(60초) 격발로 원천 차단 | Core/Trader |
 | v3.1.4 | 2026-05-29 15:05:00 | [Core/History] 분할 체결(Split-Fill) 및 분할 진입 행 자동 병합 구현: 동일 청산 시각(exit_time)을 갖는 여러 개의 쪼개진 행들을 총 수량 및 가중평균 가격/수익률로 단일 행 통합하여 가독성 개선 | Core/History |
 | v3.1.3 | 2026-05-29 15:20:00 | [Core/History] ADA/USDT 페어링 누락 및 '진입유실' 버그 근본 수정: 24시간 초과 Stale 진입 자동 만료 및 '청산 완료 (미기록)' 치환 로직 도입으로 FIFO 매칭 꼬임 원천 제거 | Core/History |
 | v3.1.2 | 2026-05-29 12:12:00 | [Test] test_liquidation.py 내 test_no_rollback_when_algo_succeeds의 mock_order에 status='closed' 및 filled=5.0 모킹을 보강하여 v3.1.1의 place_order 미체결 즉시 취소 로직(None 리턴)과의 호환성 해결 | Test |
