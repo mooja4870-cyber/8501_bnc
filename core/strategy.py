@@ -200,10 +200,10 @@ class StrategyEngine:
                         squeeze_fired = True
                         break
 
-            # [방안 B] 현재 squeeze_on=False(해제 상태) + 확장 윈도우(lookback×3) 내 ON 이력 존재 → fired 인정
-            # 스퀴즈 전환점을 놓쳤어도 에너지 응축 후 해제 중이라면 진입 허용
+            # [수정 B] 현재 squeeze_on=False(해제 상태) + 확장 윈도우(lookback+4) 내 ON 이력 존재 → fired 인정
+            # [v3.1.1] lookback*3(24봉)에서 lookback+4(12봉)으로 축소 → 과신호(가짜 티럭) 방지
             if not squeeze_fired and not bool(curr['squeeze_on']):
-                extended_window = min(lookback * 3, len(df) - 1)
+                extended_window = min(lookback + 4, len(df) - 1)
                 had_squeeze = df.iloc[-extended_window:]['squeeze_on'].any()
                 if had_squeeze:
                     squeeze_fired = True

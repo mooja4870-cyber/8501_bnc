@@ -165,6 +165,8 @@ class QuantumEngine:
         except concurrent.futures.TimeoutError:
             logger.error(f"[CLOSE TIMEOUT] {symbol} 청산 API 응답 없음 (15초 초과) — 청산 실패 처리")
             self._closing_in_progress.pop(symbol, None)  # [v2.8.0] 락 해제
+            self._cached_positions = None   # [v3.1.1] 청산 timeout 시 캐시 즉시 무효화
+            self._cached_balance = None     # [v3.1.1] 다음 대시보드 실시간 재조회 강제
             return False
         except Exception as e:
             logger.error(f"[CLOSE ERROR] {symbol} 청산 중 예외: {e}")

@@ -487,8 +487,14 @@ class BinanceClient:
                     except Exception as ce:
                         logger.warning(f"부분 체결 후 잔여 주문 취소 실패: {ce}")
                 else:
-                    # 완전히 미체결 상태라면 보호 주문의 안전을 위해 원래 요청 수량(amount)을 사용 (이후 3분 대기 후 취소됨)
-                    filled_amount = float(amount)
+                    # [v3.1.1] 완전 미체결 상태 → 즉시 주문 취소 후 None 반환 (유령 SL/TP 생성 방지)
+                    logger.warning(f"[UNFILLED] {symbol} 주문 {order.get('id')} 완전 미체결 감지. 주문 취소 후 진입 포기.")
+                    try:
+                        await self._execute_with_retry(self.exchange.cancel_order, id=order.get("id"), symbol=symbol)
+                        logger.info(f"[UNFILLED] {symbol} 미체결 주문 취소 완료.")
+                    except Exception as uce:
+                        logger.warning(f"[UNFILLED] {symbol} 미체결 주문 취소 실패: {uce}")
+                    return None
             elif filled_amount <= 0:
                 # 주문 완료 혹은 취소 상태이나 filled 수량이 0인 경우 폴백
                 filled_amount = float(amount)

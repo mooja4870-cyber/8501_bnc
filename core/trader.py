@@ -87,7 +87,7 @@ class AutoTrader:
             now_time = datetime.now()
             self.recently_entered = {
                 sym: ts for sym, ts in self.recently_entered.items()
-                if (now_time - ts).total_seconds() < 120
+                if (now_time - ts).total_seconds() < 180  # [v3.1.1] LIMIT_ORDER_TIMEOUT(180초)와 일치 (120초 → 180초)
             }
 
             try:
