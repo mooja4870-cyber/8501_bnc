@@ -426,6 +426,70 @@ def aggregate_and_pair_trades(trades: List[Dict], active_positions_set: Optional
                 "status": status_str
             })
 
+    # ── 3. 동일 청산 시간(exit_time) 기준 분할 행 병합 ──
+    merged_cycles = []
+    groups = {}
+    for c in paired_cycles:
+        if c["exit_time"] is None or pd.isna(c["exit_time"]):
+            merged_cycles.append(c)
+            continue
+        
+        ts_key = c["exit_time"]
+        if hasattr(ts_key, "strftime"):
+            ts_key = ts_key.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            ts_key = str(ts_key)
+            
+        key = (c["symbol"], c["direction"], ts_key, c["status"])
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(c)
+        
+    for key, items in groups.items():
+        if len(items) == 1:
+            merged_cycles.append(items[0])
+            continue
+            
+        total_amount = sum(item["amount"] for item in items)
+        if total_amount <= 0:
+            merged_cycles.append(items[0])
+            continue
+            
+        total_pnl = sum((item["pnl_usdt"] or 0.0) for item in items)
+        
+        def get_weighted_avg(field_name):
+            val_sum = 0.0
+            for item in items:
+                val = item.get(field_name)
+                if val is not None and not pd.isna(val):
+                    val_sum += float(val) * item["amount"]
+            return val_sum / total_amount
+            
+        entry_price = get_weighted_avg("entry_price")
+        if entry_price <= 0 or any(item.get("entry_price") is None for item in items):
+            entry_price = None
+            
+        exit_price = get_weighted_avg("exit_price")
+        pnl_pct = get_weighted_avg("pnl_pct")
+        
+        entry_times = [item["entry_time"] for item in items if item["entry_time"] is not None]
+        entry_time = min(entry_times) if entry_times else None
+        
+        merged_cycles.append({
+            "entry_time": entry_time,
+            "exit_time": items[0]["exit_time"],
+            "symbol": items[0]["symbol"],
+            "direction": items[0]["direction"],
+            "entry_price": entry_price,
+            "exit_price": exit_price,
+            "amount": total_amount,
+            "pnl_usdt": total_pnl,
+            "pnl_pct": pnl_pct,
+            "status": items[0]["status"]
+        })
+        
+    paired_cycles = merged_cycles
+
     # 전체 사이클을 최신 종료 시각(exit_time이 없으면 entry_time) 기준으로 내림차순 정렬
     def sort_key(x):
         t = x["exit_time"] if x["exit_time"] is not None else x["entry_time"]

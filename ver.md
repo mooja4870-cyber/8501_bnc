@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v3.1.4 | 2026-05-29 15:05:00 | [Core/History] 분할 체결(Split-Fill) 및 분할 진입 행 자동 병합 구현: 동일 청산 시각(exit_time)을 갖는 여러 개의 쪼개진 행들을 총 수량 및 가중평균 가격/수익률로 단일 행 통합하여 가독성 개선 | Core/History |
 | v3.1.3 | 2026-05-29 15:20:00 | [Core/History] ADA/USDT 페어링 누락 및 '진입유실' 버그 근본 수정: 24시간 초과 Stale 진입 자동 만료 및 '청산 완료 (미기록)' 치환 로직 도입으로 FIFO 매칭 꼬임 원천 제거 | Core/History |
 | v3.1.2 | 2026-05-29 12:12:00 | [Test] test_liquidation.py 내 test_no_rollback_when_algo_succeeds의 mock_order에 status='closed' 및 filled=5.0 모킹을 보강하여 v3.1.1의 place_order 미체결 즉시 취소 로직(None 리턴)과의 호환성 해결 | Test |
 | v3.1.1 | 2026-05-29 11:53:00 | [Core/QA] 실전 감사(QA Audit) 기반 4개 핵심 버그 즉시 수정: 1) exchange.py — Limit 주문 완전 미체결 시 요청 수량으로 SL/TP 생성하던 유령 주문 버그 수정 → 주문 즉시 취소 후 None 반환으로 변경, 2) trader.py — recently_entered TTL 120초를 LIMIT_ORDER_TIMEOUT(180초)과 일치하도록 연장하여 Limit 주문 체결 전 동일 심볼 재진입 허용 버그 차단, 3) engine.py — 청산 timeout(15초) 후 _cached_positions/_cached_balance 즉시 무효화 추가로 Stale 캐시 상태 불일치 방지, 4) strategy.py — 스퀴즈 확장 윈도우 lookback*3(24봉) → lookback+4(12봉) 축소로 수십 봉 전 스퀴즈 이력 기반 과신호 진입 방지 | Core/QA |
