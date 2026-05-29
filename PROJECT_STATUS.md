@@ -1,6 +1,9 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v3.1.2] 신규 로직 반영에 따른 테스트 모킹 보강 (2026-05-29):**
+  - [Test] `tests/test_liquidation.py` — `test_no_rollback_when_algo_succeeds` 내 `mock_order`에 `status='closed'`, `filled=5.0`을 보강하여 v3.1.1 미체결 자동 취소(None 반환) 로직에 따른 단위 테스트 실패 해결.
+  - [Test] 로컬 패키지 의존성 (`pytest-asyncio`) 연동 정상화 및 126개 전체 테스트 스위트 100% 정상 패스 완료.
 - **[v3.1.1] 실전 감사(QA Audit) 기반 4개 핵심 버그 즉시 수정 (2026-05-29):**
   - [Core/QA] `exchange.py` — Limit 주문 완전 미체결(filled=0, status=open) 시 원래 요청 수량으로 SL/TP 주문을 생성하던 유령 주문 버그 수정 → 즉시 주문 취소 후 `None` 반환으로 변경하여 포지션 없는 SL/TP 원천 차단.
   - [Core/QA] `trader.py` — `recently_entered` TTL을 120초에서 180초로 연장하여 `LIMIT_ORDER_TIMEOUT_MINUTES=3`(180초)과 일치. Limit 주문 체결 전 동일 심볼 재진입 허용 버그 차단.

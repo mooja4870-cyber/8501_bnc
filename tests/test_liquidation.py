@@ -356,7 +356,7 @@ class TestAlgoOrderRollback:
             client.get_ticker = AsyncMock(return_value={"last": 100.0})
             client.close_position = AsyncMock()
 
-            mock_order = {"id": "ORDER123", "average": 100.0, "price": 100.0}
+            mock_order = {"id": "ORDER123", "average": 100.0, "price": 100.0, "status": "closed", "filled": 5.0}
             client.exchange.create_order = AsyncMock(return_value=mock_order)
             client.exchange.amount_to_precision = MagicMock(return_value="0.5")
             client.exchange.price_to_precision = MagicMock(side_effect=lambda s, p: p)
