@@ -1,6 +1,12 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v3.1.1] 실전 감사(QA Audit) 기반 4개 핵심 버그 즉시 수정 (2026-05-29):**
+  - [Core/QA] `exchange.py` — Limit 주문 완전 미체결(filled=0, status=open) 시 원래 요청 수량으로 SL/TP 주문을 생성하던 유령 주문 버그 수정 → 즉시 주문 취소 후 `None` 반환으로 변경하여 포지션 없는 SL/TP 원천 차단.
+  - [Core/QA] `trader.py` — `recently_entered` TTL을 120초에서 180초로 연장하여 `LIMIT_ORDER_TIMEOUT_MINUTES=3`(180초)과 일치. Limit 주문 체결 전 동일 심볼 재진입 허용 버그 차단.
+  - [Core/QA] `engine.py` — 청산 timeout(15초 초과) 발생 시 `_cached_positions`/`_cached_balance`를 즉시 `None`으로 무효화. 타임아웃 후 Stale 캐시로 인한 UI 상태 불일치 방지.
+  - [Core/QA] `strategy.py` — 스퀴즈 확장 윈도우를 `lookback*3`(24봉) → `lookback+4`(12봉)으로 축소. 수십 봉 전 스퀴즈 이력으로 인한 과신호(false positive) 진입 방지.
+  - [Test] 18개 sync 테스트 100% 무오류 통과 검증 완료.
 - **[v3.1.0] 수익성 극대화를 위한 변동성(ATR) 동적 SL/TP 및 Chandelier Exit, 모멘텀 기울기 가드 구현:**
   - [Core/Profitability] `core/config.py` 에 ATR 기반 손익절 및 Chandelier Exit, 모멘텀 임계치 설정을 이식하고 `.env` 로더와 연동하였습니다.
   - [Core/Profitability] `core/strategy.py` 에 TTM Momentum 가속도(기울기) 필터를 추가하여 미미한 변화율을 갖는 휩소 신호를 차단하도록 개선했습니다.
