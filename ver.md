@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v4.0.6 | 2026-05-29 17:53:00 | [Core/Exchange] Binance Trailing Stop 주문 시 callbackRate 소수점 1자리(0.1% 단위) 정밀도 제한 대응 패치 추가 (Invalid callBack rate 에러로 인한 진입 즉시 롤백 현상 해결) | Core/Exchange |
 | v4.0.5 | 2026-05-29 17:47:00 | [Core/Scanner] 실시간 웹소켓 선진입에 따른 OHLCV 캐시 1봉 조기 오염(지표 계산 먹통) 버그 수정: 캐시 150봉 미만 시 REST API 강제 리로딩 보장 | Core/Scanner |
 | v4.0.4 | 2026-05-29 17:19:00 | [Docs/Config] PROJECT_STATUS.md 최신 릴리즈 히스토리 업데이트 및 settings.json 기본 마진/필터 옵션 바이낸스 실거래 최적화 세팅 반영 | Docs/Config |
 | v4.0.3 | 2026-05-29 16:11:31 | [Core/UI] 매매이력 완전 초기화 및 재동기화 차단: 1) trade_history.csv/.bak 전체 삭제(헤더만 보존), 2) stats.json 통계 전체 리셋(perf_start_time=2026-05-29 16:09:59 기준), 3) engine.py _sync_trades_to_csv_async에 perf_start_time 이전 거래소 이력 재동기화 차단 컷오프 필터 추가, 4) app.py 매매이력 탭 렌더링 시 perf_start_time 이전 raw_trades 표시 제외 필터 추가, 5) app.py SINCE 표시 및 기준 시각 기본값 2026-05-29 16:09로 업데이트 | Core/UI |

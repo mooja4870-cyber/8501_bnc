@@ -1,6 +1,8 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v4.0.6] Binance Trailing Stop 콜백 정밀도 API 에러 패치 (2026-05-29):**
+  - [Core/Exchange] 바이낸스 무기한 선물에서 트레일링 스탑(`TRAILING_STOP_MARKET`) 주문 실행 시, `callbackRate` 소수점 자릿수 정밀도 제한(0.1% 단위만 지원)으로 인해 `Invalid callBack rate` 예외가 반환되고 포지션이 즉시 롤백되던 현상을 해결하기 위해 `round(callback_rate, 1)` 처리를 보강했습니다.
 - **[v4.0.5] 실시간 웹소켓 선진입에 따른 OHLCV 캐시 1봉 조기 오염(지표 계산 먹통) 버그 수정 (2026-05-29):**
   - [Core/Scanner] 웹소켓 실시간 캔들 수신이 첫 스캔 루프 이전에 먼저 수급될 때, 캐시에 1봉만 존재하는 상태에서 스캐너가 REST API 과거 300봉 조회 단계를 생략(Skip)해버리는 오염 버그를 해결했습니다.
   - [Core/Scanner] 캐시의 봉 개수가 150봉 미만일 때 캐시 유효성을 인정하지 않고 바이낸스 서버에서 300봉을 강제 재다운로드하도록 조치하여, 데이터 부족에 따른 지표 계산(RSI 50 고정, EMA200 0 고정) 오류 및 강도 0% 현상을 완벽히 해결했습니다.

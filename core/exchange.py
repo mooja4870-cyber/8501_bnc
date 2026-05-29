@@ -551,6 +551,7 @@ class BinanceClient:
                         if CFG.TRAILING_ACTIVATE_PCT > 0 and CFG.TRAILING_CALLBACK_PCT > 0:
                             # [필수 수정 2] Binance 네이티브 트레일링 스탑 적용
                             callback_rate = float(CFG.TRAILING_CALLBACK_PCT * 100) # 백분율 환산 (0.43% -> 0.43)
+                            callback_rate = round(callback_rate, 1) # 바이낸스 소수점 1자리(0.1% 단위) 제한 대응
                             callback_rate = min(max(callback_rate, 0.1), 5.0) # 바이낸스 허용치 클램핑 (0.1% ~ 5.0%)
                             
                             params = {
