@@ -72,6 +72,9 @@ class TradingConfig:
         self.TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
         self.TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
         self.AUTO_TRADING = True
+        self.USE_CHANDELIER_EXIT = True
+        self.CHANDELIER_MULT = 3.0
+        self.MOMENTUM_SLOPE_THRESHOLD = 0.0
 
         self.load_settings()
 
@@ -171,6 +174,9 @@ class TradingConfig:
         self.TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
         self.TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
         self.AUTO_TRADING = True
+        self.USE_CHANDELIER_EXIT = True
+        self.CHANDELIER_MULT = 3.0
+        self.MOMENTUM_SLOPE_THRESHOLD = 0.0
         self.save_settings()
         logger.info("[CONFIG] 모든 설정이 초기 기본값으로 리셋되었습니다.")
 

@@ -1,6 +1,12 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v3.1.0] 수익성 극대화를 위한 변동성(ATR) 동적 SL/TP 및 Chandelier Exit, 모멘텀 기울기 가드 구현:**
+  - [Core/Profitability] `core/config.py` 에 ATR 기반 손익절 및 Chandelier Exit, 모멘텀 임계치 설정을 이식하고 `.env` 로더와 연동하였습니다.
+  - [Core/Profitability] `core/strategy.py` 에 TTM Momentum 가속도(기울기) 필터를 추가하여 미미한 변화율을 갖는 휩소 신호를 차단하도록 개선했습니다.
+  - [Core/Profitability] `core/trader.py` 에 포지션 진입 시점의 ATR에 비례한 동적 TP/SL 수량/가격 연동을 구현했습니다.
+  - [Core/Profitability] `core/engine.py` 에 Chandelier Exit 트레일링 스탑 루틴을 탑재하여 포지션 진입 이후 최고가/최저가 대비 ATR 배수 후퇴 시 시장가 강제 청산이 비동기로 자동 격발되도록 보강했습니다.
+  - [Test] `tests/test_atr_strategy.py` 에 유닛 및 통합 검증 코드를 작성하고, 전체 126개 테스트 슈트 100% 정상 통과를 검증하였습니다.
 - **[v3.0.0] OKX 봇 최신 엔터프라이즈 코드베이스 이식 및 바이낸스 API 결합:**
   - [Core/Migration] `8501_bnc` 내 바이낸스 API 어댑터(`core/exchange.py`) 및 핵심 설정 파일을 제외한 구버전 소스코드를 전면 클리닝했습니다.
   - [Core/Migration] OKX 봇(`8401_okx`)의 검증된 고성능 `QuantumEngine` v2(FSM 상태머신, 쿨다운 가드 등), 최신 전략 및 UI 소스코드를 완벽하게 이식했습니다.

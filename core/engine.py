@@ -502,6 +502,7 @@ class QuantumEngine:
             self._prev_position_symbols = current
             await self._run_position_rotation_check_async(raw_positions)
             await self._run_trailing_stop_check_async(raw_positions)
+            await self._run_chandelier_exit_check_async(raw_positions)
         except Exception as e:
             logger.error(f"청산 감지 오류: {e}")
 
@@ -567,6 +568,66 @@ class QuantumEngine:
                             self._trailing_lows.pop(sym, None)
                             if self.trader:
                                 self.trader.trigger_symbol_cooldown(sym, 60)
+
+    async def _run_chandelier_exit_check_async(self, raw_positions: List[Dict]):
+        if not getattr(self.cfg, "USE_CHANDELIER_EXIT", False):
+            return
+
+        chandelier_mult = getattr(self.cfg, "CHANDELIER_MULT", 3.0)
+        scan_results = await self._maybe_await(self.scanner.get_results()) if self.scanner else []
+        atr_map = {r["symbol"]: r["atr"] for r in scan_results if "atr" in r}
+
+        current_symbols = {p["symbol"] for p in raw_positions}
+        for sym in list(self._trailing_highs.keys()):
+            if sym not in current_symbols:
+                self._trailing_highs.pop(sym, None)
+        for sym in list(self._trailing_lows.keys()):
+            if sym not in current_symbols:
+                self._trailing_lows.pop(sym, None)
+
+        for p in raw_positions:
+            sym = p["symbol"]
+            side = p["side"]
+            entry_price = float(p.get("entry_price", 0.0))
+            mark_price = float(p.get("mark_price", 0.0))
+            if entry_price <= 0 or mark_price <= 0:
+                continue
+
+            atr_val = atr_map.get(sym, 0.0)
+            if atr_val <= 0:
+                atr_val = mark_price * 0.01
+
+            if side == "long":
+                if sym not in self._trailing_highs:
+                    self._trailing_highs[sym] = mark_price
+                else:
+                    self._trailing_highs[sym] = max(self._trailing_highs[sym], mark_price)
+
+                highest = self._trailing_highs[sym]
+                trigger_price = highest - (chandelier_mult * atr_val)
+                if mark_price <= trigger_price:
+                    logger.warning(f"[CHANDELIER EXIT] {sym} 롱 청산 발동! (최고가 {highest:.6f}, 현재 {mark_price:.6f} <= 트리거 {trigger_price:.6f}, ATR {atr_val:.6f})")
+                    success = await self._maybe_await(self.client.close_position(sym, side))
+                    if success:
+                        self._trailing_highs.pop(sym, None)
+                        if self.trader:
+                            self.trader.trigger_symbol_cooldown(sym, 60)
+
+            elif side == "short":
+                if sym not in self._trailing_lows:
+                    self._trailing_lows[sym] = mark_price
+                else:
+                    self._trailing_lows[sym] = min(self._trailing_lows[sym], mark_price)
+
+                lowest = self._trailing_lows[sym]
+                trigger_price = lowest + (chandelier_mult * atr_val)
+                if mark_price >= trigger_price:
+                    logger.warning(f"[CHANDELIER EXIT] {sym} 숏 청산 발동! (최저가 {lowest:.6f}, 현재 {mark_price:.6f} >= 트리거 {trigger_price:.6f}, ATR {atr_val:.6f})")
+                    success = await self._maybe_await(self.client.close_position(sym, side))
+                    if success:
+                        self._trailing_lows.pop(sym, None)
+                        if self.trader:
+                            self.trader.trigger_symbol_cooldown(sym, 60)
 
     async def _run_position_rotation_check_async(self, raw_positions: List[Dict]):
         if not self.cfg.ROTATION_ENABLED:

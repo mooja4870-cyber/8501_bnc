@@ -220,11 +220,16 @@ class StrategyEngine:
                         squeeze_fired = True
                         break
 
-        # 2. 모멘텀 필터
+        # 2. 모멘텀 및 기울기 필터
         cond_long_mom = macd_hist > 0
         cond_short_mom = macd_hist < 0
-        # [수정 2] candle_color 조건 제거 — candle_color=='blue' ≡ macd_hist>0 으로 완전 중복
-        # 강도 재배분: 35(추세)+35(fired)+30(모멘텀) = 100
+
+        # 모멘텀 기울기 계산
+        macd_prev = prev.get('macd_hist', 0.0)
+        macd_slope = macd_hist - macd_prev
+        slope_threshold = getattr(self.cfg, 'MOMENTUM_SLOPE_THRESHOLD', 0.0)
+        cond_long_slope = macd_slope >= slope_threshold
+        cond_short_slope = macd_slope <= -slope_threshold
 
         # 3. RSI 필터
         # [수정 3] squeeze_fired 시 RSI 필터 면제: 돌파 직후 강한 양봉은 RSI 과열이 자연스러움
@@ -255,6 +260,16 @@ class StrategyEngine:
 
         # ── 롱 진입 판단 ──
         if cond_long_trend and squeeze_fired and cond_long_mom and self.cfg.ALLOW_LONG:
+            if not cond_long_slope:
+                return Signal(
+                    symbol=symbol, direction="none", strength=60,
+                    ema_ok=ema_ok, bb_ok=bb_ok, macd_ok=macd_ok,
+                    close=close, ema200=ema200_val,
+                    bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
+                    macd_hist=macd_hist, rsi=rsi_val, rsi_ok=cond_long_rsi,
+                    ema200_ok=bool(cond_long_trend), atr=atr_val,
+                    reason=f"롱 돌파 조건 충족했으나 모멘텀 기울기({macd_slope:.6f} <= {slope_threshold:.6f}) 미달로 차단"
+                )
             if not cond_long_rsi:
                 return Signal(
                     symbol=symbol, direction="none", strength=80,
@@ -288,6 +303,16 @@ class StrategyEngine:
 
         # ── 숏 진입 판단 ──
         if cond_short_trend and squeeze_fired and cond_short_mom and self.cfg.ALLOW_SHORT:
+            if not cond_short_slope:
+                return Signal(
+                    symbol=symbol, direction="none", strength=60,
+                    ema_ok=ema_ok, bb_ok=bb_ok, macd_ok=macd_ok,
+                    close=close, ema200=ema200_val,
+                    bb_upper=curr.get('bb_upper', 0.0), bb_lower=curr.get('bb_lower', 0.0),
+                    macd_hist=macd_hist, rsi=rsi_val, rsi_ok=cond_short_rsi,
+                    ema200_ok=bool(cond_short_trend), atr=atr_val,
+                    reason=f"숏 돌파 조건 충족했으나 모멘텀 기울기({macd_slope:.6f} >= {-slope_threshold:.6f}) 미달로 차단"
+                )
             if not cond_short_rsi:
                 return Signal(
                     symbol=symbol, direction="none", strength=80,

@@ -133,7 +133,7 @@ class AutoTrader:
                 logger.warning(f"[SKIP] 증거금 설정 오류 (최소 $1): {margin_usdt:.2f} USDT")
                 return
 
-            if self.cfg.USE_DYNAMIC_SLTP and sig.atr > 0 and sig.close > 0:
+            if (getattr(self.cfg, "USE_ATR_SL_TP", False) or getattr(self.cfg, "USE_DYNAMIC_SLTP", False)) and sig.atr > 0 and sig.close > 0:
                 atr_pct = sig.atr / sig.close
                 dynamic_sl_pct = atr_pct * self.cfg.ATR_SL_MULT
                 dynamic_tp_pct = atr_pct * self.cfg.ATR_TP_MULT
