@@ -719,10 +719,36 @@ class QuantumEngine:
                 logger.error(f"{symbol} 거래소 체결 이력 조회 실패: {e}")
 
         new_count = 0
+        # [v4.0.3] 이력 초기화 기준 시각 (stats.json perf_start_time) 이전 거래는 동기화 제외
+        _st_cutoff = stats_store.load_stats()
+        _cutoff_str = _st_cutoff.get("perf_start_time", "")
+        _cutoff_dt = None
+        if _cutoff_str:
+            try:
+                from datetime import timezone as _tz
+                _cutoff_dt = datetime.strptime(_cutoff_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=None)
+                logger.info(f"[SYNC CUTOFF] {_cutoff_str} 이전 거래는 동기화 제외")
+            except Exception:
+                _cutoff_dt = None
+
         for trade in sorted(exchange_trades, key=lambda x: x.get("timestamp")):
             key = self._exchange_trade_key(trade)
             if key in logged_keys:
                 continue
+
+            # [v4.0.3] 컷오프 이전 거래 필터링
+            if _cutoff_dt is not None:
+                trade_ts = trade.get("timestamp")
+                if trade_ts is not None:
+                    try:
+                        if isinstance(trade_ts, datetime):
+                            ts_naive = trade_ts.replace(tzinfo=None) if trade_ts.tzinfo else trade_ts
+                        else:
+                            ts_naive = pd.to_datetime(trade_ts).to_pydatetime().replace(tzinfo=None)
+                        if ts_naive < _cutoff_dt:
+                            continue
+                    except Exception:
+                        pass
 
             category = self._infer_trade_category(trade, lots)
             leverage = self.cfg.LEVERAGE

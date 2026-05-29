@@ -730,7 +730,7 @@ with st.sidebar:
         '2. TTM Squeeze 돌파: 볼린저 밴드와 켈트너 채널의 변동성 돌파 감지 (Squeeze OFF 시 진입)&#10;'
         '3. 모멘텀 및 캔들 색상 필터: 선행 추세 확증 (Momentum 히스토그램 및 캔들 색상 일치)&#10;'
         '4. RSI 필터: 과열권 진입 제한 및 추격 매매 노이즈 필터링">'
-        f'<span class="rainbow-text" style="font-size: 95%;">TTM-Squeeze-EMA</span><br><span style="font-size:calc(0.75rem * 1.33 * 1.22);">{APP_VERSION}</span><br><span style="font-size:15px; color:#888; font-family:\'JetBrains Mono\', monospace;">SINCE 2026.05.27 22:06</span></div>',
+        f'<span class="rainbow-text" style="font-size: 95%;">TTM-Squeeze-EMA</span><br><span style="font-size:calc(0.75rem * 1.33 * 1.22);">{APP_VERSION}</span><br><span style="font-size:15px; color:#888; font-family:\'JetBrains Mono\', monospace;">SINCE 2026.05.29 16:09</span></div>',,
         unsafe_allow_html=True,
     )
 
@@ -1247,11 +1247,11 @@ with tabs[0]:
             seed_money_tmp = _st_tmp.get("seed_money", 50.0)
             total_pnl_pct_tmp = ((dash['total_balance'] / seed_money_tmp) - 1) * 100 if seed_money_tmp > 0 else 0.0
             
-            perf_start_str_tmp = _st_tmp.get("perf_start_time", "2026-05-27 22:06:00")
+            perf_start_str_tmp = _st_tmp.get("perf_start_time", "2026-05-29 16:09:59")
             try:
                 perf_start_dt_tmp = datetime.strptime(perf_start_str_tmp, "%Y-%m-%d %H:%M:%S")
             except Exception:
-                perf_start_dt_tmp = datetime(2026, 5, 27, 22, 6, 0)
+                perf_start_dt_tmp = datetime(2026, 5, 29, 16, 9, 59)
                 
             now_kst_tmp = datetime.utcnow() + timedelta(hours=9)
             elapsed_seconds_tmp = (now_kst_tmp - perf_start_dt_tmp).total_seconds()
@@ -1430,11 +1430,11 @@ with tabs[0]:
         daily_pnl_pct = (daily_pnl / seed_money) * 100 if seed_money > 0 else 0.0
         
         # [v1.2.40] 일 평균 수익률 계산 보정 (최소 1일 기준 - 뻥튀기 방지)
-        perf_start_str = _st.get("perf_start_time", "2026-05-27 22:06:00")
+        perf_start_str = _st.get("perf_start_time", "2026-05-29 16:09:59")
         try:
             perf_start_dt = datetime.strptime(perf_start_str, "%Y-%m-%d %H:%M:%S")
         except Exception:
-            perf_start_dt = datetime(2026, 5, 27, 22, 6, 0)
+            perf_start_dt = datetime(2026, 5, 29, 16, 9, 59)
             
         now_kst = datetime.utcnow() + timedelta(hours=9)
         elapsed_seconds = (now_kst - perf_start_dt).total_seconds()
@@ -1822,6 +1822,25 @@ with tabs[2]:
 
     # [v2.0.8] 로컬 CSV 이력 로드 및 진입/청산 페어링 (API 미연결 시에도 로컬 이력 항시 조회 허용)
     raw_trades = load_local_trade_history()
+    # [v4.0.3] 초기화 기준 시각 이전 거래 렌더링 제외
+    try:
+        import core.stats as _stats_mod
+        _st_hist = _stats_mod.load_stats()
+        _hist_cutoff_str = _st_hist.get("perf_start_time", "")
+        if _hist_cutoff_str:
+            from datetime import datetime as _dt_cls
+            _hist_cutoff = _dt_cls.strptime(_hist_cutoff_str, "%Y-%m-%d %H:%M:%S")
+            def _ts_to_naive(ts):
+                if isinstance(ts, _dt_cls):
+                    return ts.replace(tzinfo=None) if ts.tzinfo else ts
+                try:
+                    import pandas as _pd
+                    return _pd.to_datetime(ts).to_pydatetime().replace(tzinfo=None)
+                except Exception:
+                    return None
+            raw_trades = [t for t in raw_trades if (_ts_to_naive(t.get("timestamp")) or _hist_cutoff) >= _hist_cutoff]
+    except Exception:
+        pass
     paired_history = aggregate_and_pair_trades(raw_trades, active_positions_set=active_positions_set)
 
     # 동적 종목 및 상태 필터 리스트 구성
