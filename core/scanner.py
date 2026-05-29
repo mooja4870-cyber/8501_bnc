@@ -100,12 +100,12 @@ class Scanner:
         if self.ws_client and self.ws_client._running:
             async with self._lock:
                 cached = self._ohlcv_cache.get(sym)
-            if cached is not None and not cached.empty:
+            if cached is not None and len(cached) >= 150:
                 return cached
 
         cached = self._ohlcv_cache.get(sym)
 
-        if cached is None or cached.empty:
+        if cached is None or len(cached) < 150:
             df = await self.client.get_ohlcv(sym, limit=300)
             if not df.empty:
                 self._ohlcv_cache[sym] = df
