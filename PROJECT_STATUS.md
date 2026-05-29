@@ -1,19 +1,17 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
-- **[v2.8.0] OKX 봇 매매기법 이식 및 안정성 검증 완료:**
-  - [Core/Strategy/Test] OKX 자동매매봇의 핵심 로직 3가지를 바이낸스 봇에 이식하고 기존 기능과의 무충돌 검증을 완료했습니다.
-  - 1. 스퀴즈 돌파(Breakout) 시 RSI 필터 우회(면제) 적용으로 추세 진입 최적화.
-  - 2. 스퀴즈 진입 Lookback 윈도우(5봉) 탐색 및 dot_color 전환 시점 확장 탐색(방안 B) 적용.
-  - 3. ATR 및 멀티플라이어 기반 동적 손절(SL)/익절(TP) 비율 계산 연동(USE_DYNAMIC_SLTP = True).
-  - 4. pytest async 러너의 anyio backend를 asyncio로 고정 피팅하여 147개 유닛 테스트 100% 통과 완료.
+- **[v2.8.2] 서킷 브레이커 상태 정리 누락 버그 해결 및 테스트 가상 환경 격리:**
+  - [Core/Test] 일일 손실 한도 또는 MDD 초과로 인한 서킷 브레이커 가동 중단 시, 기존 포지션 목록의 흔적을 비우는 `_prev_position_symbols` 초기화(`set()`) 처리가 조기 리턴으로 인해 누락되는 런타임 버그를 해결했습니다.
+  - [Core/Test] 테스트 헬퍼 `_create_engine` 실행 시 생성되는 `AutoTrader`의 `enabled` 상태를 기본 `False`로 고정하여, 가짜 데이터의 모의 손실로 인해 테스트 수행 도중 엉뚱하게 서킷브레이커가 작동해 검증 흐름을 차단하지 않도록 수정했습니다.
+- **[v2.8.1] 자동매매 가동 스위치 기본값 ON 적용 및 새로고침 대응:**
+  - [Core/UI] AutoTrader의 기동 시 기본 `enabled` 값을 `True`로 수정하였습니다.
+  - [Core/UI] 브라우저 F5 새로고침 또는 웹 앱 최초 실행 시 st.session_state 및 백엔드 엔진 가동을 항상 `ON`으로 강제 초기화하여 자동 기동되도록 보장하는 `refresh_initialized` 세션 가드를 구현했습니다.
+- **[v2.8.0] 일 평균 수익률 산출 기준 시간 보정 및 한국어 상세 툴팁 전면 적용:**
+  - [Core/UI] 일 평균 수익률 계산의 기준 시점을 기존 5월 15일에서 `2026-05-28 01:34:00`로 변경하였습니다 (`core/stats.py`, `app.py`, `data/stats.json` 일괄 적용).
+  - [Core/UI] 대시보드 화면상에 노출되는 서브텍스트 표기를 `SINCE 2026.05.28 01:34`로 직관적이고 깔끔하게 수정하였습니다.
+  - [Core/UI] 사이드바와 설정 탭의 모든 파라미터(레버리지, 증거금, 포지션 수, 지표 주기 등) 입력 위젯에 설명형+개조식 한국어 도움말(`help=`)을 전면 탑재하고 완전히 동기화했습니다.
 - **[v2.7.0] 대시보드 비동기 캐시화 및 설정값 스냅샷 바인딩 적용:**
-  - [Architecture/Performance] Streamlit UI의 REST API 동기 블로킹 방지를 위한 백그라운드 텔레메트리 10초 주기 캐시 업데이트 구현, 포지션 종료/주문 체결 등 이벤트 발생 시 즉각 캐시를 강제 갱신하여 UI 실시간 반응성 보장, 런타임 경쟁 상태 및 스레드 안전성 확보를 위한 Scanner/AutoTrader 실행 주기별 config 스냅샷 바인딩 구현, UI와 엔진 설정 가변 갱신 코드의 Decoupling 및 단위 테스트 검증 통과.
-- **[v2.6.1] 포지션 청산 로직 강인성 보완:**
-  - [Core/Test] 실수 표현 오차로 인한 절사 오류 방지차 8자리 반올림 적용, 폴링 루프 내 get_positions 오류 발생 시 예외 처리 추가로 붕괴 방지, bulk 청산 병렬 실행(asyncio.gather)으로 UI 프리징/타임아웃 해소, UI/인자 side와 상관없이 실제 포지션 방향(target["side"]) 기반 close_side 판정.
-- **[v2.6.0] 5개 필수 수정 통합 릴리즈:**
-  - [Core/UI/Test] 완성 캔들(iloc[-2]) 기준 신호 판단 전환으로 리페인팅 완전 제거, Binance 네이티브 TRAILING_STOP_MARKET 주문 진입 시 전송, 부분 체결 대응 실시간 수량 조회 기반 SL/TP 생성 (fetch_order 폴링 + 잔여 취소), 일방적 UI 은폐 캐시(Fast Hide) 제거 및 st.spinner 추가, 서킷 브레이커(일일 손실 한도 + MDD 초과 시 일괄 청산 및 봇 정지) 연동.
-- **[v2.5.2] 파이썬 인터프리터 경로 설정 및 경고 해결:**
   - [Config] `.vscode/settings.json` 내의 `python.defaultInterpreterPath` 파이썬 가상환경(venv) 경로 지정을 변수 치환 오류가 발생하는 `${workspaceFolder}` 형태에서 상대 경로(`venv/Scripts/python.exe`)로 변경하여 IDE 경고창을 완전히 해결했습니다.
 - **[v2.5.1] 대시보드 로그인 패스워드 검증 제거:**
   - [Security] `app.py` 내 `check_password()` 메서드가 즉시 `True`를 반환하도록 하여, 초기 실행 시의 비밀번호 입력 단계를 완전 배제하고 접속 편의성을 향상했습니다.
