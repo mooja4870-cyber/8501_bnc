@@ -1,5 +1,5 @@
 """
-AI QUANTUM — OKX Auto-Trading Dashboard
+AI QUANTUM — Binance Auto-Trading Dashboard
 Streamlit 기반 전문가용 실시간 대시보드
 """
 import streamlit as st
@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
-from core.exchange import OKXClient
+from core.exchange import BinanceClient
 from core.scanner import Scanner
 from core.trader import AutoTrader
 from core.engine import QuantumEngine, EngineState
@@ -39,15 +39,15 @@ def get_app_version():
     try:
         import subprocess
         tag = subprocess.check_output(["git", "describe", "--tags", "--abbrev=0"]).strip().decode("utf-8")
-        return f"OKX {tag}"
+        return f"Binance {tag}"
     except Exception:
-        return "OKX v2.5.1"
+        return "Binance v4.0.0"
 
 APP_VERSION = get_app_version()
 
 # ── 페이지 설정 ───────────────────────────────────────
 st.set_page_config(
-    page_title="AI QUANTUM · OKX Trader",
+    page_title="AI QUANTUM · Binance Trader",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -624,9 +624,9 @@ def init_session():
         st.session_state.closing_symbols = {}
 
     # .env 값이 있으면 UI 입력창 세션 상태 강제 초기화
-    for state_key, env_keys in [("api_key_input", ["OKX_API_KEY"]), 
-                                ("secret_input", ["OKX_SECRET_KEY"]), 
-                                ("pass_input", ["OKX_PASSPHRASE"]),
+    for state_key, env_keys in [("api_key_input", ["BINANCE_API_KEY"]), 
+                                ("secret_input", ["BINANCE_SECRET_KEY"]), 
+                                ("pass_input", ["BINANCE_PASSPHRASE"]),
                                 ("settings_telegram_token", ["TELEGRAM_BOT_TOKEN"]),
                                 ("settings_telegram_chat_id", ["TELEGRAM_CHAT_ID"])]:
         env_val = ""
@@ -690,9 +690,9 @@ def sync_p(src_key: str, dst_key: str, cfg_attr: str, is_pct: bool = False):
     st.toast(f"⚙️ 설정 값이 변경되었습니다: {cfg_attr} ➔ {val}{'%' if is_pct else ''}")
 
 if not st.session_state.api_connected:
-    ak = os.getenv("OKX_API_KEY", "")
-    sk = os.getenv("OKX_SECRET_KEY", "")
-    pw = os.getenv("OKX_PASSPHRASE", "")
+    ak = os.getenv("BINANCE_API_KEY", "")
+    sk = os.getenv("BINANCE_SECRET_KEY", "")
+    pw = os.getenv("BINANCE_PASSPHRASE", "")
     if ak and sk:
         connect_api(ak, sk, pw)
 
@@ -737,20 +737,20 @@ with st.sidebar:
     st.markdown("---")
 
     api_key = st.text_input(
-        "🔑 API Key", value=os.getenv("OKX_API_KEY", ""), type="password", key="api_key_input"
+        "🔑 API Key", value=os.getenv("BINANCE_API_KEY", ""), type="password", key="api_key_input"
     )
     secret_key = st.text_input(
-        "🔑 Secret Key", value=os.getenv("OKX_SECRET_KEY", ""), type="password", key="secret_input"
+        "🔑 Secret Key", value=os.getenv("BINANCE_SECRET_KEY", ""), type="password", key="secret_input"
     )
     passphrase = st.text_input(
-        "🔑 Passphrase", value=os.getenv("OKX_PASSPHRASE", ""), type="password", key="pass_input"
+        "🔑 Passphrase", value=os.getenv("BINANCE_PASSPHRASE", ""), type="password", key="pass_input"
     )
 
-    if st.button("🔗  OKX 연결", use_container_width=True):
+    if st.button("🔗  Binance 연결", use_container_width=True):
         with st.spinner("연결 중..."):
-            ak = api_key if api_key else os.getenv("OKX_API_KEY", "")
-            sk = secret_key if secret_key else os.getenv("OKX_SECRET_KEY", "")
-            pw = passphrase if passphrase else os.getenv("OKX_PASSPHRASE", "")
+            ak = api_key if api_key else os.getenv("BINANCE_API_KEY", "")
+            sk = secret_key if secret_key else os.getenv("BINANCE_SECRET_KEY", "")
+            pw = passphrase if passphrase else os.getenv("BINANCE_PASSPHRASE", "")
             success, msg = connect_api(ak, sk, pw)
             if success:
                 st.success(msg)
@@ -1150,7 +1150,7 @@ with tabs[0]:
     engine: QuantumEngine = st.session_state.engine
 
     if not st.session_state.api_connected or not engine.is_ready:
-        st.info("사이드바에서 OKX API를 연결하세요.")
+        st.info("사이드바에서 Binance API를 연결하세요.")
     else:
         # ── 데이터 통합 조회 ──────────────────────────
         dash = engine.get_dashboard_data()
@@ -1710,7 +1710,7 @@ with tabs[1]:
     engine: QuantumEngine = st.session_state.engine
 
     if not st.session_state.api_connected or not engine.is_ready:
-        st.info("사이드바에서 OKX API를 연결하세요.")
+        st.info("사이드바에서 Binance API를 연결하세요.")
     else:
         # 상태 배지 및 마지막 스캔 시각 표시 영역
         last = engine.scanner.last_scan_time if engine.scanner else None
@@ -2011,7 +2011,7 @@ with tabs[4]:
                         help="동시에 보유할 수 있는 최대 포지션(종목) 개수입니다. 이 한도에 도달하면 신규 진입 신호가 감지되어도 추가 진입하지 않습니다.")
         st.number_input("⏱️ 스캔 주기 (초)", 10, 300, CFG.SCAN_INTERVAL_SEC, step=10, key="main_scan_interval",
                         on_change=sync_p, args=("main_scan_interval", "main_scan_interval", "SCAN_INTERVAL_SEC"),
-                        help="마켓 스캐너가 OKX 거래소의 시세를 조회하고 돌파 신호를 탐지하는 주기(초 단위)입니다. 너무 짧으면 API 레이트 리밋에 걸릴 수 있으므로 10~30초를 권장합니다.")
+                        help="마켓 스캐너가 Binance 거래소의 시세를 조회하고 돌파 신호를 탐지하는 주기(초 단위)입니다. 너무 짧으면 API 레이트 리밋에 걸릴 수 있으므로 10~30초를 권장합니다.")
         st.number_input("💵 최소 거래대금 (USDT)", 100000.0, 50000000.0, float(CFG.MIN_VOLUME_USDT), step=1000000.0, key="main_min_vol",
                         on_change=sync_p, args=("main_min_vol", "main_min_vol", "MIN_VOLUME_USDT"),
                         help="거래 대상 종목을 선별할 때 기준이 되는 최소 24시간 거래대금(USDT)입니다. 유동성이 풍부하고 슬리피지가 적은 메이저/우량 종목들 위주로 필터링하여 안전성을 확보합니다.")

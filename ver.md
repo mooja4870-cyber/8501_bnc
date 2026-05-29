@@ -2,6 +2,7 @@
 
 | 버전 | 일시 | 내용 | 비고 |
 | :--- | :--- | :--- | :--- |
+| v4.0.1 | 2026-05-29 15:48:00 | [UI/Config] 대시보드 및 설정 내 하드코딩된 OKX 브랜드 명칭 및 환경변수 맵핑 Binance 동기화 완료: 1) app.py 내 API Key/Secret/Passphrase 환경변수를 BINANCE_ 로 변경, 2) 사이드바 및 탭 내 OKX 연결 안내 및 버튼 레이블을 Binance로 수정, 3) settings.json의 EXCHANGE_ID 및 BASE_URL을 바이낸스로 강제 패치 | UI/Config |
 | v4.0.0 | 2026-05-29 15:42:00 | [Architecture/Migration] OKX 봇 최신 소스코드 복제 및 바이낸스 결합 완료 (v4.0.0 메이저 릴리즈): 1) 8501_bnc의 exchange.py 및 .env 제외 소스 전면 클리닝 후 8401_okx 소스 복제 이식, 2) core/config.py 에 바이낸스 전용 설정(USE_LIMIT_ORDER, LIMIT_TICK_OFFSET 등) 및 __getattr__ 헬퍼 복원 적용, 3) tests/test_liquidation.py 내 모킹 오류 보정 패치 반영, 4) 123개 단위/통합 테스트 100% 정상 통과 검증 완료 | Core/Migration |
 | v3.2.0 | 2026-05-29 15:52:00 | [Core/Exchange/Trader/Engine] 실전 감사 결과 6대 취약점 일괄 개선 및 패치: 1) Binance Futures One-way Mode 강제 설정 API 연동, 2) 동일 캔들 내 중복 진입 방지 가드(Signal timestamp 및 last_entered_candle_ts) 탑재, 3) 서킷 브레이커 가동/에러 상태 전이 시 _prev_position_symbols 초기화 추가, 4) cancel_algo_orders 실제 CCXT API 연동 및 3회 재시도 루프 복구, 5) closed 포지션 감지 즉시 cancel_all_orders OCO 청소 보강, 6) get_trade_history limit 100 상향 | Core/Exchange/Trader/Engine |
 | v3.1.5 | 2026-05-29 15:50:00 | [Core/Trader] 청산 후 쿨다운 즉시 동기화 및 무한 재진입(채터링) 방지 버그 수정: 스캐너 루프 종료 시점보다 신호 격발이 먼저 발생하여 쿨다운 가드가 무력화되던 버그를 trader.on_signal 초입 실시간 포지션 청산 감지 및 즉시 쿨다운(60초) 격발로 원천 차단 | Core/Trader |

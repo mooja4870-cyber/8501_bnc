@@ -1,6 +1,6 @@
 {
-    "EXCHANGE_ID": "okx",
-    "BASE_URL": "https://www.okx.com",
+    "EXCHANGE_ID": "binance",
+    "BASE_URL": "https://www.binance.com",
     "LEVERAGE": 10,
     "MARGIN_MODE": "isolated",
     "MARGIN_USDT": 5.0,

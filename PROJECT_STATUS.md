@@ -1,6 +1,10 @@
 # Project Status: AI QUANTUM Binance Auto-Trader
 
 ## Current Status
+- **[v4.0.1] 대시보드 및 설정 내 하드코딩된 OKX 브랜드 명칭 및 환경변수 맵핑 Binance 동기화 (2026-05-29):**
+  - [Core/UI/Config] `app.py` 에서 수집 및 참조하는 API 키 환경변수를 `OKX_` -> `BINANCE_` 로 수정하여 `.env` 내의 바이낸스 키가 정상적으로 연동되도록 하였습니다.
+  - [Core/UI] 사이드바 및 탭 전반에 걸친 OKX 연결 안내 및 버튼 텍스트 레이블을 "Binance"로 수정 적용하였습니다.
+  - [Config] `settings.json` 내의 `EXCHANGE_ID`를 `"binance"`, `BASE_URL`을 `"https://www.binance.com"`으로 설정 변경하여 최초 로드 시의 브랜드 명칭 캐싱 문제를 완전히 해결했습니다.
 - **[v4.0.0] OKX 봇 최신 소스코드 복제 및 바이낸스 결합 완료 (2026-05-29):**
   - [Core/Migration] `8501_bnc` 내의 바이낸스 어댑터(`core/exchange.py`) 및 `.env` 등 필수 인증/설정 파일을 제외한 소스 코드를 전면 클리닝했습니다.
   - [Core/Migration] `8401_okx` 로부터 최신 전략, 엔진 구조, 대시보드 UI 및 테스트 스위트 폴더를 그대로 복제하여 이식했습니다.
